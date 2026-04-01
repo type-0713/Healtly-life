@@ -136,7 +136,6 @@ type AppContextValue = {
   signInWithCredentials: (email: string, password: string) => Promise<void>;
   registerWithCredentials: (email: string, password: string) => Promise<void>;
   signInAsAdmin: (email: string, password: string) => Promise<void>;
-  registerAsAdmin: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
   signInWithMicrosoft: () => Promise<void>;
@@ -205,6 +204,9 @@ const defaultProfile: UserProfile = {
 const USER_SESSION_KEY = "medelite-user-session";
 const USER_ID_KEY = "medelite-user-id";
 const THEME_KEY = "medelite-theme";
+const ADMIN_SESSION_KEY = "medelite-admin-session";
+const ADMIN_LOGIN = "admin13579";
+const ADMIN_PASSWORD = "2486";
 
 const AppContext = createContext<AppContextValue | null>(null);
 
@@ -315,6 +317,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     typeof window === "undefined"
       ? "dark"
       : ((window.localStorage.getItem(THEME_KEY) as ThemeMode | null) ?? "dark");
+  const initialAdminSession =
+    typeof window === "undefined"
+      ? false
+      : window.localStorage.getItem(ADMIN_SESSION_KEY) === "active";
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [profile, setProfile] = useState<UserProfile>({
@@ -325,11 +331,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [accountRole, setAccountRole] = useState<AccountRole>(null);
   const [localUserEmail, setLocalUserEmail] = useState(initialLocalEmail);
   const [localUserId, setLocalUserId] = useState(initialLocalUserId);
+  const [adminSessionActive, setAdminSessionActive] = useState(initialAdminSession);
   const [theme, setThemeState] = useState<ThemeMode>(initialTheme);
   const [authLoading, setAuthLoading] = useState(true);
 
-  const isAdminAuthenticated = Boolean(currentUser && accountRole === "admin");
-  const isUserAuthenticated = Boolean(currentUser || isAdminAuthenticated);
+  const isAdminAuthenticated = adminSessionActive;
+  const isUserAuthenticated = Boolean(currentUser);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -343,17 +350,31 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [localUserEmail, localUserId]);
 
   useEffect(() => {
+    if (adminSessionActive) {
+      window.localStorage.setItem(ADMIN_SESSION_KEY, "active");
+      return;
+    }
+
+    window.localStorage.removeItem(ADMIN_SESSION_KEY);
+  }, [adminSessionActive]);
+
+  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
+      if (user) {
+        setAdminSessionActive(false);
+      }
       if (!user) {
-        setAccountRole(null);
+        if (!adminSessionActive) {
+          setAccountRole(null);
+        }
         setProfile(defaultProfile);
       }
       setAuthLoading(false);
     });
 
     return unsubscribe;
-  }, []);
+  }, [adminSessionActive]);
 
   useEffect(() => {
     const seedDoctorsIfNeeded = async () => {
@@ -660,6 +681,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     const credential = await signInWithEmailAndPassword(auth, email.trim(), password);
     setAccountRole(await ensureRole(credential.user.uid, "user"));
+    setAdminSessionActive(false);
     setLocalUserEmail("");
     setLocalUserId("");
     window.localStorage.removeItem(USER_SESSION_KEY);
@@ -677,6 +699,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     await setDoc(getRoleRef(credential.user.uid), { role: "user" }, { merge: true });
     setAccountRole("user");
+    setAdminSessionActive(false);
     setLocalUserEmail("");
     setLocalUserId("");
     window.localStorage.removeItem(USER_SESSION_KEY);
@@ -684,51 +707,25 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signInAsAdminHandler = useCallback(async (email: string, password: string) => {
-    const normalizedEmail = email.trim();
+    const normalizedLogin = email.trim();
+    const normalizedPassword = password.trim();
 
-    if (!normalizedEmail || !password.trim()) {
-      throw new Error("Email va parolni to'liq kiriting.");
+    if (!normalizedLogin || !normalizedPassword) {
+      throw new Error("Admin login va parolini to'liq kiriting.");
     }
 
-    const credential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
-    const role = await getStoredRole(credential.user.uid);
+    if (normalizedLogin !== ADMIN_LOGIN || normalizedPassword !== ADMIN_PASSWORD) {
+      throw new Error("Admin login yoki paroli noto'g'ri.");
+    }
 
-    if (role !== "admin") {
+    if (auth.currentUser) {
       await signOut(auth);
-      throw new Error("Bu hisob admin roliga ega emas.");
     }
 
+    setCurrentUser(null);
+    setProfile(defaultProfile);
     setAccountRole("admin");
-    setLocalUserEmail("");
-    setLocalUserId("");
-    window.localStorage.removeItem(USER_SESSION_KEY);
-    window.localStorage.removeItem(USER_ID_KEY);
-  }, []);
-
-  const registerAsAdminHandler = useCallback(async (email: string, password: string) => {
-    const normalizedEmail = email.trim();
-
-    if (!normalizedEmail || !password.trim()) {
-      throw new Error("Email va parolni to'liq kiriting.");
-    }
-
-    try {
-      const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
-      await setDoc(getRoleRef(credential.user.uid), { role: "admin" }, { merge: true });
-      setAccountRole("admin");
-    } catch (error) {
-      const errorCode =
-        typeof error === "object" && error && "code" in error ? String(error.code) : "";
-
-      if (errorCode !== "auth/email-already-in-use") {
-        throw error;
-      }
-
-      const credential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
-      await setDoc(getRoleRef(credential.user.uid), { role: "admin" }, { merge: true });
-      setAccountRole("admin");
-    }
-
+    setAdminSessionActive(true);
     setLocalUserEmail("");
     setLocalUserId("");
     window.localStorage.removeItem(USER_SESSION_KEY);
@@ -740,6 +737,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     provider.setCustomParameters({ prompt: "select_account" });
     const credential = await signInWithPopup(auth, provider);
     await ensureRole(credential.user.uid, "user");
+    setAdminSessionActive(false);
   }, []);
 
   const signInWithAppleHandler = useCallback(async () => {
@@ -748,6 +746,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     provider.addScope("name");
     const credential = await signInWithPopup(auth, provider);
     await ensureRole(credential.user.uid, "user");
+    setAdminSessionActive(false);
   }, []);
 
   const signInWithMicrosoftHandler = useCallback(async () => {
@@ -755,14 +754,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     provider.setCustomParameters({ prompt: "select_account", tenant: "common" });
     const credential = await signInWithPopup(auth, provider);
     await ensureRole(credential.user.uid, "user");
+    setAdminSessionActive(false);
   }, []);
 
   const signOutHandler = useCallback(async () => {
     setAccountRole(null);
+    setAdminSessionActive(false);
     setLocalUserEmail("");
     setLocalUserId("");
     window.localStorage.removeItem(USER_SESSION_KEY);
     window.localStorage.removeItem(USER_ID_KEY);
+    window.localStorage.removeItem(ADMIN_SESSION_KEY);
 
     if (auth.currentUser) {
       await signOut(auth);
@@ -801,7 +803,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       signInWithCredentials: signInWithCredentialsHandler,
       registerWithCredentials: registerWithCredentialsHandler,
       signInAsAdmin: signInAsAdminHandler,
-      registerAsAdmin: registerAsAdminHandler,
       signInWithGoogle: signInWithGoogleHandler,
       signInWithApple: signInWithAppleHandler,
       signInWithMicrosoft: signInWithMicrosoftHandler,
@@ -823,7 +824,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       localUserId,
       profile,
       removeDoctorHandler,
-      registerAsAdminHandler,
       registerWithCredentialsHandler,
       signInAsAdminHandler,
       signInWithCredentialsHandler,

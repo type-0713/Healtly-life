@@ -1452,12 +1452,14 @@ textarea {
   align-items: center;
   justify-content: center;
   padding: 40px 0;
+  min-height: 100vh;
 }
 
 .auth-layout {
   width: var(--container);
   grid-template-columns: minmax(0, 1fr) minmax(420px, 0.96fr);
   align-items: stretch;
+  gap: 28px;
 }
 
 .auth-showcase {
@@ -1468,16 +1470,23 @@ textarea {
   margin-bottom: 0;
 }
 
+.auth-showcase p {
+  max-width: 56ch;
+}
+
 .auth-showcase-top {
   margin-bottom: 26px;
 }
 
 .auth-card-wrapper {
   display: flex;
+  justify-content: flex-end;
+  align-items: center;
 }
 
 .auth-card-wrapper .auth-card {
-  width: 100%;
+  width: min(100%, 560px);
+  min-height: 0;
 }
 
 .auth-mode-switch {
@@ -1529,6 +1538,10 @@ textarea {
   border-radius: 0 18px 18px 0;
 }
 
+.auth-card-compact {
+  max-width: 520px;
+}
+
 .auth-benefits article {
   padding: 18px 20px;
   border-radius: var(--radius-md);
@@ -1556,6 +1569,10 @@ textarea {
 .auth-card-head p,
 .panel-heading p {
   max-width: 48ch;
+}
+
+.auth-card-head {
+  gap: 10px;
 }
 
 .auth-stats div {
@@ -1586,12 +1603,34 @@ textarea {
   margin: 14px 0 0;
   color: var(--danger);
   line-height: 1.6;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 18%, transparent);
 }
 
 .auth-success-text {
   margin: 14px 0 0;
   color: var(--success);
   line-height: 1.6;
+}
+
+.auth-admin-note {
+  display: grid;
+  gap: 6px;
+  padding: 16px 18px;
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  border: 1px solid var(--border);
+}
+
+.auth-admin-note strong {
+  color: var(--heading);
+}
+
+.auth-admin-note span {
+  color: var(--muted);
+  line-height: 1.55;
 }
 
 .field {

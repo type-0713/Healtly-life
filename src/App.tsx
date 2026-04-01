@@ -23,9 +23,9 @@ const UserGuard = ({ children }: { children: ReactElement }) => {
 };
 
 const AdminGuard = ({ children }: { children: ReactElement }) => {
-  const { accountRole, authLoading, currentUser, isAdminAuthenticated } = useAppContext();
+  const { authLoading, isAdminAuthenticated } = useAppContext();
 
-  if (authLoading || (currentUser && accountRole === null)) {
+  if (authLoading) {
     return <LoadingScreen />;
   }
 

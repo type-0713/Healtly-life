@@ -25,7 +25,6 @@ const LoginPage = () => {
     currentUser,
     isAdminAuthenticated,
     profile,
-    registerAsAdmin,
     registerWithCredentials,
     signInAsAdmin,
     signInWithApple,
@@ -48,12 +47,15 @@ const LoginPage = () => {
   const mode = searchParams.get("mode") === "admin" ? "admin" : "user";
   const isAdminMode = mode === "admin";
   const nextPath = searchParams.get("next") ?? (mode === "admin" ? "/admin" : "/user");
-  const isRegisterMode = authAction === "register";
-  const buildLoginLink = (targetMode: "user" | "admin", targetAction: "login" | "register" = authAction) => {
+  const isRegisterMode = !isAdminMode && authAction === "register";
+  const buildLoginLink = (
+    targetMode: "user" | "admin",
+    targetAction: "login" | "register" = authAction,
+  ) => {
     const params = new URLSearchParams();
     params.set("mode", targetMode);
 
-    if (targetAction === "register") {
+    if (targetMode === "user" && targetAction === "register") {
       params.set("action", "register");
     }
 
@@ -70,9 +72,7 @@ const LoginPage = () => {
   const cardTitle = useMemo(
     () =>
       isAdminMode
-        ? isRegisterMode
-          ? "Admin hisobini tayyorlash"
-          : "Admin nazorat markaziga kirish"
+        ? "Admin nazorat markaziga kirish"
         : isRegisterMode
           ? "Yangi kabinetni yaratish"
           : "Kabinetga premium darajadagi kirish",
@@ -80,7 +80,13 @@ const LoginPage = () => {
   );
 
   useEffect(() => {
-    setAuthAction(searchParams.get("action") === "register" ? "register" : "login");
+    setAuthAction(
+      searchParams.get("mode") === "admin"
+        ? "login"
+        : searchParams.get("action") === "register"
+          ? "register"
+          : "login",
+    );
     setAuthMessage("");
     setPassword("");
     setConfirmPassword("");
@@ -102,11 +108,7 @@ const LoginPage = () => {
       }
 
       if (isAdminMode) {
-        if (isRegisterMode) {
-          await registerAsAdmin(email, password);
-        } else {
-          await signInAsAdmin(email, password);
-        }
+        await signInAsAdmin(email, password);
         navigate("/admin");
         return;
       }
@@ -166,9 +168,7 @@ const LoginPage = () => {
           <h1>{cardTitle}</h1>
           <p>
             {isAdminMode
-              ? isRegisterMode
-                ? "Admin ham endi Firebase orqali alohida rol bilan ro'yhatdan o'tadi va so'ng panelga kira oladi."
-                : "Faqat admin roli biriktirilgan hisob boshqaruv paneliga kira oladi."
+              ? "Faqat ruxsat berilgan admin login va paroli bilan boshqaruv paneliga kirish mumkin."
               : isRegisterMode
                 ? "Yangi foydalanuvchi hisobi ochib bronlash, tarix va profil oqimini birdaniga ishga tushiring."
                 : "Ro'yhatdan o'tmagan foydalanuvchi ichki sahifalarga kira olmaydi. Faqat bosh sahifa ochiq."}
@@ -189,22 +189,24 @@ const LoginPage = () => {
             </Link>
           </div>
 
-          <div className="auth-mode-switch auth-action-switch">
-            <button
-              type="button"
-              className={`auth-mode-pill ${!isRegisterMode ? "auth-mode-pill-active" : ""}`}
-              onClick={() => handleActionChange("login")}
-            >
-              Kirish
-            </button>
-            <button
-              type="button"
-              className={`auth-mode-pill ${isRegisterMode ? "auth-mode-pill-active" : ""}`}
-              onClick={() => handleActionChange("register")}
-            >
-              Ro'yhatdan o'tish
-            </button>
-          </div>
+          {!isAdminMode && (
+            <div className="auth-mode-switch auth-action-switch">
+              <button
+                type="button"
+                className={`auth-mode-pill ${!isRegisterMode ? "auth-mode-pill-active" : ""}`}
+                onClick={() => handleActionChange("login")}
+              >
+                Kirish
+              </button>
+              <button
+                type="button"
+                className={`auth-mode-pill ${isRegisterMode ? "auth-mode-pill-active" : ""}`}
+                onClick={() => handleActionChange("register")}
+              >
+                Ro'yhatdan o'tish
+              </button>
+            </div>
+          )}
 
           <div className="auth-stats">
             <div>
@@ -253,13 +255,13 @@ const LoginPage = () => {
 
           <div className="auth-luxury-note">
             {isAdminMode
-              ? "Admin kirish va ro'yhatdan o'tish Firebase'dagi rol tizimi bilan boshqariladi."
+              ? "Admin uchun alohida ro'yhatdan o'tish yo'q. Faqat berilgan login va parol bilan kiriladi."
               : "User login qilmasdan yoki ro'yhatdan o'tmasdan ichki bo'limlarga kira olmaydi."}
           </div>
         </section>
 
         <section className="auth-card-wrapper">
-          <div className="auth-card">
+          <div className={`auth-card ${isAdminMode ? "auth-card-compact" : ""}`}>
             <div className="auth-card-head">
               <span className="badge badge-gold">
                 <SparkIcon />
@@ -267,18 +269,14 @@ const LoginPage = () => {
               </span>
               <h2>
                 {isAdminMode
-                  ? isRegisterMode
-                    ? "Admin ro'yxati"
-                    : "Admin tasdiqlash"
+                  ? "Admin tasdiqlash"
                   : isRegisterMode
                     ? "Hisob yaratish"
                     : "Xush kelibsiz"}
               </h2>
               <p>
                 {isAdminMode
-                  ? isRegisterMode
-                    ? "Admin roli bilan yangi hisob yaratiladi va shu zahoti boshqaruv paneliga tayyor bo'ladi."
-                    : "Admin roli biriktirilgan hisob bilan tizimga kiring."
+                  ? "Admin bo'limi faqat login orqali ochiladi. Login va parol to'g'ri kiritilganda boshqaruv paneliga o'tasiz."
                   : isRegisterMode
                     ? "Email va parol bilan yangi hisob ochib tizimga kiring."
                     : "Tizimga kirib bronlash, tashrif tarixi va tibbiy fayllarni boshqaring."}
@@ -287,15 +285,16 @@ const LoginPage = () => {
 
             <form className="auth-form" onSubmit={handleSubmit}>
               <label className="field">
-                <span>Email manzil</span>
+                <span>{isAdminMode ? "Admin login" : "Email manzil"}</span>
                 <div className="field-box">
                   <MailIcon />
                   <input
                     type="text"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
-                    placeholder={isAdminMode ? "Admin hisob emaili" : "sizning.email@medelite.uz"}
+                    placeholder={isAdminMode ? "admin13579" : "sizning.email@medelite.uz"}
                     required
+                    autoComplete={isAdminMode ? "username" : "email"}
                   />
                 </div>
               </label>
@@ -308,8 +307,9 @@ const LoginPage = () => {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    placeholder={isAdminMode ? "Parolni kiriting" : "Kamida 4 ta belgi"}
+                    placeholder={isAdminMode ? "2486" : "Kamida 4 ta belgi"}
                     required
+                    autoComplete={isAdminMode ? "current-password" : isRegisterMode ? "new-password" : "current-password"}
                   />
                   <button
                     type="button"
@@ -321,6 +321,13 @@ const LoginPage = () => {
                   </button>
                 </div>
               </label>
+
+              {isAdminMode && (
+                <div className="auth-admin-note">
+                  <strong>Faqat kirish</strong>
+                  <span>Admin bo'limida ro'yhatdan o'tish yopiq. Login va parolni kiriting.</span>
+                </div>
+              )}
 
               {isRegisterMode && (
                 <label className="field">
@@ -346,11 +353,13 @@ const LoginPage = () => {
                 <a href="/">Bosh sahifaga qaytish</a>
               </div>
 
-              <button type="submit" className="button button-primary button-block button-large" disabled={isSubmittingAuth}>
+              <button
+                type="submit"
+                className="button button-primary button-block button-large"
+                disabled={isSubmittingAuth}
+              >
                 {isAdminMode
-                  ? isRegisterMode
-                    ? "Admin hisobini yaratish"
-                    : "Admin panelga kirish"
+                  ? "Admin panelga kirish"
                   : isRegisterMode
                     ? "Kabinet yaratish"
                     : "Kabinetga kirish"}
@@ -415,7 +424,7 @@ const LoginPage = () => {
             <div className="auth-footer">
               <p>
                 {isAdminMode
-                  ? "Admin panelga kirish Firebase'dagi admin rol orqali boshqariladi."
+                  ? "Admin bo'limi yopiq rejimda ishlaydi va faqat login orqali ochiladi."
                   : isRegisterMode
                     ? "Ro'yhatdan o'tganingizdan keyin kabinet va bronlash bo'limlari darhol ochiladi."
                     : "Bosh sahifa ochiq, qolgan ichki sahifalar login talab qiladi."}
