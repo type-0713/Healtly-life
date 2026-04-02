@@ -2509,9 +2509,17 @@ textarea {
     pointer-events: auto;
   }
 
+  .nav-cluster {
+    z-index: 45;
+  }
+
+  .topbar-inner {
+    flex-direction: row;
+    align-items: center;
+  }
+
   .nav-links,
   .nav-actions,
-  .topbar-inner,
   .hero-actions,
   .cta-actions,
   .auth-shortcuts,
