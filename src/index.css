@@ -1610,8 +1610,9 @@ textarea {
 .auth-mode-switch {
   width: fit-content;
   padding: 6px;
-  margin: 24px 0 0;
+  margin: 24px 0 16px;
   flex-wrap: wrap;
+  gap: 12px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--surface);
@@ -1641,6 +1642,11 @@ textarea {
 
 .auth-action-switch {
   margin-top: 12px;
+  margin-bottom: 20px;
+}
+
+.auth-stats {
+  margin-top: 8px;
 }
 
 .auth-shortcuts {
@@ -1698,6 +1704,10 @@ textarea {
   align-content: center;
   gap: 10px;
   min-height: 112px;
+  padding: 18px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
 }
 
 .auth-stats strong,
