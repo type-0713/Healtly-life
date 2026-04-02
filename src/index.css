@@ -1588,6 +1588,22 @@ textarea {
   gap: 24px;
   padding: 0;
   min-width: 0;
+  overflow-y: auto;
+  max-height: 100vh;
+  padding-right: 8px;
+}
+
+.auth-showcase::-webkit-scrollbar {
+  width: 6px;
+}
+
+.auth-showcase::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--border) 60%, transparent);
+  border-radius: 3px;
+}
+
+.auth-showcase::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .auth-showcase .brand {
@@ -1686,9 +1702,16 @@ textarea {
   max-width: 520px;
 }
 
+.auth-benefits {
+  display: grid;
+  gap: 16px;
+}
+
 .auth-benefits article {
   padding: 18px 20px;
   border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
 }
 
 .auth-form,
@@ -2588,6 +2611,13 @@ textarea {
     padding: 20px 0;
     gap: 20px;
     order: 2;
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
+  }
+
+  .auth-showcase::-webkit-scrollbar {
+    display: none;
   }
 
   .auth-showcase-top {
