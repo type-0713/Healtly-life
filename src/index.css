@@ -2212,6 +2212,10 @@ textarea {
   margin: 22px 0;
 }
 
+.preview-list > div + div {
+  margin-top: 3px;
+}
+
 .preview-subtext {
   margin-top: -2px;
 }
