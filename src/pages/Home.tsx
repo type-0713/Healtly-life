@@ -409,10 +409,16 @@ const Home = () => {
                     </span>
                   </div>
 
-                  <h3>{doctor.name}</h3>
-                  <p>{translateSpecialty(doctor.specialty)}</p>
-                  <p>{doctor.bio}</p>
-                  <span className="doctor-region-tag">{translateRegion(doctor.region)}</span>
+                  <div className="doctor-card-copy">
+                    <h3>{doctor.name}</h3>
+                    <p className="doctor-specialty-text">{translateSpecialty(doctor.specialty)}</p>
+                    <p className="doctor-clinic-text">{doctor.clinic}</p>
+                    <p className="doctor-bio-text">{doctor.bio}</p>
+                  </div>
+
+                  <div className="doctor-card-tags">
+                    <span className="doctor-region-tag">{translateRegion(doctor.region)}</span>
+                  </div>
 
                   <div className="doctor-card-quickline">
                     <span>{doctor.price}</span>
@@ -420,8 +426,8 @@ const Home = () => {
                   </div>
 
                   <div className="doctor-meta">
-                    <span>{doctor.clinic}</span>
                     <span>{format(copy.reviews, { count: doctor.reviewCount })}</span>
+                    <span>{doctor.experience}</span>
                   </div>
 
                   <div className="doctor-location-line">
@@ -617,9 +623,9 @@ const Home = () => {
 
           <div>
             <h4>{copy.contact}</h4>
-            <p>+998 71 200 00 00</p>
-            <p>Toshkent sh., Navoiy ko'chasi</p>
-            <p>support@medelite.uz</p>
+            <p><a href="tel:+998978040728">+998978040728</a></p>
+            <p>Buxoro viloyati</p>
+            <p><a href="https://t.me/jasur_07282012" target="_blank" rel="noreferrer">Telegram</a></p>
           </div>
         </div>
       </footer>

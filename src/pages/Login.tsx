@@ -54,9 +54,15 @@ const LoginPage = () => {
   const nextPath = searchParams.get("next") ?? (mode === "admin" ? "/admin" : "/user");
   const isRegisterMode = !isAdminMode && authAction === "register";
   const sessionLogoutLabel =
-    language === "ru" ? "Ð’Ñ‹Ð¹Ñ‚Ð¸" : language === "en" ? "Logout" : "Chiqish";
+    language === "ru" ? "Âûéòè" : language === "en" ? "Logout" : "Chiqish";
   const userViewLabel =
-    language === "ru" ? "Ð ÐµÐ¶Ð¸Ð¼ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»Ñ" : language === "en" ? "User view" : "User ko'rinishi";
+    language === "ru" ? "Ðåæèì ïîëüçîâàòåëÿ" : language === "en" ? "User view" : "User ko'rinishi";
+  const passwordToggleLabel =
+    language === "ru" ? "\u041F\u043E\u043A\u0430\u0437\u0430\u0442\u044C \u0438\u043B\u0438 \u0441\u043A\u0440\u044B\u0442\u044C \u043F\u0430\u0440\u043E\u043B\u044C" : language === "en" ? "Show or hide password" : "Parolni ko'rsatish yoki yashirish";
+  const providerFallbackError =
+    language === "ru" ? "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0432\u043E\u0439\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u043E\u0433\u043E \u043F\u0440\u043E\u0432\u0430\u0439\u0434\u0435\u0440\u0430." : language === "en" ? "Could not sign in with the selected provider." : "Tanlangan provider orqali kirib bo'lmadi.";
+  const adminLoginHint =
+    language === "ru" ? "\u0410\u0434\u043C\u0438\u043D email \u0435\u043C\u0430\u0441, \u0430\u0439\u043D\u0430\u043D \u043B\u043E\u0433\u0438\u043D\u043D\u0438 \u043A\u0438\u0440\u0438\u0442\u0435." : language === "en" ? "Enter the admin login itself, not an email address." : "Email emas, aynan admin loginni kiriting.";
   const buildLoginLink = (
     targetMode: "user" | "admin",
     targetAction: "login" | "register" = authAction,
@@ -89,17 +95,21 @@ const LoginPage = () => {
   );
 
   useEffect(() => {
+    const nextMode = searchParams.get("mode") === "admin" ? "admin" : "user";
+
     setAuthAction(
-      searchParams.get("mode") === "admin"
+      nextMode === "admin"
         ? "login"
         : searchParams.get("action") === "register"
           ? "register"
           : "login",
     );
+    setEmail(nextMode === "admin" ? "" : profile.email);
     setAuthMessage("");
     setPassword("");
     setConfirmPassword("");
-  }, [searchParams]);
+    setShowPassword(false);
+  }, [profile.email, searchParams]);
 
   const handleActionChange = (nextAction: "login" | "register") => {
     setAuthAction(nextAction);
@@ -107,6 +117,7 @@ const LoginPage = () => {
   };
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const normalizedLogin = email.trim();
 
     try {
       setAuthMessage("");
@@ -117,17 +128,17 @@ const LoginPage = () => {
       }
 
       if (isAdminMode) {
-        await signInAsAdmin(email, password);
+        await signInAsAdmin(normalizedLogin, password);
         navigate("/admin");
         return;
       }
 
       if (isRegisterMode) {
-        await registerWithCredentials(email, password);
+        await registerWithCredentials(normalizedLogin, password);
       } else {
-        await signInWithCredentials(email, password);
+        await signInWithCredentials(normalizedLogin, password);
       }
-      await updateProfile({ email });
+      await updateProfile({ email: normalizedLogin });
       navigate(nextPath);
     } catch (error) {
       setAuthMessage(
@@ -140,7 +151,6 @@ const LoginPage = () => {
 
   const handleProviderLogin = async (
     action: () => Promise<void>,
-    providerName: string,
   ) => {
     try {
       setAuthMessage("");
@@ -149,7 +159,7 @@ const LoginPage = () => {
       navigate("/user");
     } catch (error) {
       const message =
-        error instanceof Error ? translateError(error.message) : `${providerName} login error.`;
+        error instanceof Error ? translateError(error.message) : providerFallbackError;
       setAuthMessage(message);
     } finally {
       setIsSubmittingAuth(false);
@@ -304,13 +314,18 @@ const LoginPage = () => {
                   <MailIcon />
                   <input
                     type="text"
+                    name={isAdminMode ? "admin-login" : "email"}
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     placeholder={isAdminMode ? copy.adminLoginPlaceholder : copy.emailPlaceholder}
                     required
                     autoComplete={isAdminMode ? "username" : "email"}
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    inputMode={isAdminMode ? "text" : "email"}
                   />
                 </div>
+                {isAdminMode && <small className="field-note">{adminLoginHint}</small>}
               </label>
 
               <label className="field">
@@ -319,17 +334,20 @@ const LoginPage = () => {
                   <LockIcon />
                   <input
                     type={showPassword ? "text" : "password"}
+                    name="password"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     placeholder={isAdminMode ? copy.adminPasswordPlaceholder : copy.passwordPlaceholder}
                     required
                     autoComplete={isAdminMode ? "current-password" : isRegisterMode ? "new-password" : "current-password"}
+                    autoCapitalize="none"
+                    spellCheck={false}
                   />
                   <button
                     type="button"
                     className="icon-button"
                     onClick={() => setShowPassword((value) => !value)}
-                    aria-label="Parol ko'rinishini almashtirish"
+                    aria-label={passwordToggleLabel}
                   >
                     {showPassword ? <EyeOffIcon /> : <EyeIcon />}
                   </button>
@@ -350,10 +368,13 @@ const LoginPage = () => {
                     <LockIcon />
                     <input
                       type={showPassword ? "text" : "password"}
+                      name="confirm-password"
                       value={confirmPassword}
                       onChange={(event) => setConfirmPassword(event.target.value)}
                       placeholder={copy.confirmPasswordPlaceholder}
                       required
+                      autoCapitalize="none"
+                      spellCheck={false}
                     />
                   </div>
                 </label>
@@ -364,7 +385,7 @@ const LoginPage = () => {
                   <input type="checkbox" defaultChecked />
                   <span>{copy.remember}</span>
                 </label>
-                <a href="/">{copy.backHome}</a>
+                <Link to="/">{copy.backHome}</Link>
               </div>
 
               <button
@@ -389,7 +410,7 @@ const LoginPage = () => {
                     type="button"
                     className="button button-secondary button-block"
                     disabled={isSubmittingAuth}
-                    onClick={() => handleProviderLogin(signInWithGoogle, "Google")}
+                    onClick={() => handleProviderLogin(signInWithGoogle)}
                   >
                     {copy.google}
                   </button>
@@ -397,7 +418,7 @@ const LoginPage = () => {
                     type="button"
                     className="button button-secondary button-block"
                     disabled={isSubmittingAuth}
-                    onClick={() => handleProviderLogin(signInWithApple, "Apple")}
+                    onClick={() => handleProviderLogin(signInWithApple)}
                   >
                     {copy.apple}
                   </button>
@@ -405,7 +426,7 @@ const LoginPage = () => {
                     type="button"
                     className="button button-secondary button-block"
                     disabled={isSubmittingAuth}
-                    onClick={() => handleProviderLogin(signInWithMicrosoft, "Microsoft")}
+                    onClick={() => handleProviderLogin(signInWithMicrosoft)}
                   >
                     {copy.microsoft}
                   </button>

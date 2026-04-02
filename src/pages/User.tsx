@@ -604,9 +604,11 @@ const User = () => {
                           </span>
                         </div>
                         <strong>{doctor.name}</strong>
-                        <span>{translateSpecialty(doctor.specialty)}</span>
-                        <p>{doctor.clinic}</p>
-                        <span className="doctor-region-tag">{translateRegion(doctor.region)}</span>
+                        <span className="doctor-specialty-text">{translateSpecialty(doctor.specialty)}</span>
+                        <p className="doctor-clinic-text">{doctor.clinic}</p>
+                        <div className="doctor-card-tags">
+                          <span className="doctor-region-tag">{translateRegion(doctor.region)}</span>
+                        </div>
                         <span className="doctor-location-line">
                           <LocationIcon />
                           <span>{doctor.address}</span>
