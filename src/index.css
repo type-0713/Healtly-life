@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --container: min(1180px, calc(100% - 40px));
   --radius-xl: 34px;
   --radius-lg: 28px;
@@ -1345,6 +1345,48 @@ textarea {
   min-width: 0;
 }
 
+.doctor-admin-list {
+  max-height: min(72vh, 980px);
+  overflow-y: auto;
+  padding-right: 8px;
+  align-content: start;
+}
+
+.doctor-admin-list::-webkit-scrollbar {
+  width: 10px;
+}
+
+.doctor-admin-list::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent) 28%, var(--border));
+  border-radius: 999px;
+}
+
+.doctor-admin-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.doctor-admin-row {
+  padding: 20px 22px;
+  background: color-mix(in srgb, var(--surface) 94%, white);
+  border: 1px solid color-mix(in srgb, var(--border) 92%, transparent);
+  box-shadow: var(--shadow-soft);
+}
+
+.workspace-history-stack,
+.workspace-history-section {
+  display: grid;
+  gap: 20px;
+}
+
+.appointment-list-history {
+  gap: 18px;
+}
+
+.panel-heading-note {
+  margin: 10px 0 0;
+  color: var(--muted);
+}
+
 .doctor-slot-list {
   display: flex;
   flex-wrap: wrap;
@@ -2682,3 +2724,4 @@ textarea {
   width: 26px;
   height: 26px;
 }
+

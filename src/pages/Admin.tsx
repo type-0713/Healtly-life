@@ -1,4 +1,4 @@
-import type { FormEvent } from "react";
+﻿import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import LanguageSwitcher from "../components/LanguageSwitcher";
@@ -75,6 +75,18 @@ const Admin = () => {
       : language === "en"
         ? "Open menu"
         : "Menyuni ochish";
+  const fullNamePlaceholder =
+    language === "ru" ? "Например, Dr. Alisher Karimov" : language === "en" ? "For example, Dr. Alisher Karimov" : "Masalan, Dr. Alisher Karimov";
+  const specialtyPlaceholder =
+    language === "ru" ? "Например, кардиолог" : language === "en" ? "For example, cardiologist" : "Masalan, kardiolog";
+  const clinicPlaceholder =
+    language === "ru" ? "Например, MedElite Heart Center" : language === "en" ? "For example, MedElite Heart Center" : "Masalan, MedElite Heart Center";
+  const bioPlaceholder =
+    language === "ru"
+      ? "Кратко опишите опыт, стиль приёма и сильные стороны врача"
+      : language === "en"
+        ? "Briefly describe the doctor's experience, consultation style, and strengths"
+        : "Shifokorning tajribasi, qabul uslubi va kuchli tomonlarini qisqacha yozing";
   const experiencePlaceholder =
     language === "ru" ? "Например, 12 лет" : language === "en" ? "For example, 12 years" : "Masalan, 12 yil";
   const pricePlaceholder =
@@ -96,10 +108,16 @@ const Admin = () => {
         : "Viloyat tanlang, keyin to'liq manzil kiriting";
   const mapQueryPlaceholder =
     language === "ru"
-      ? "Например, 41.3111, 69.2797 или текст поиска Google Maps"
+      ? "Например, 41.3111, 69.2797 или поисковый запрос Google Maps"
       : language === "en"
         ? "For example, 41.3111, 69.2797 or a Google Maps search query"
         : "Masalan, 41.3111, 69.2797 yoki Google Maps qidiruv matni";
+  const doctorPanelHint =
+    language === "ru"
+      ? "Все врачи выводятся в одном списке. При большом количестве список прокручивается."
+      : language === "en"
+        ? "All doctors are shown in one list. When the number grows, the panel keeps scrolling."
+        : "Barcha shifokorlar bitta ro'yxatda ko'rinadi. Soni ko'payganda panel skroll bilan davom etadi.";
   const noBusySpecialty = language === "ru" ? "Нет" : language === "en" ? "None" : "Yo'q";
 
   const kpis = useMemo(
@@ -120,6 +138,11 @@ const Admin = () => {
       },
     ],
     [appointments, copy.kpis, doctors.length],
+  );
+
+  const sortedDoctors = useMemo(
+    () => [...doctors].sort((left, right) => left.name.localeCompare(right.name)),
+    [doctors],
   );
 
   const draftMapQuery = getDoctorMapQuery(doctorForm);
@@ -292,6 +315,7 @@ const Admin = () => {
                       onChange={(event) =>
                         setDoctorForm((current) => ({ ...current, name: event.target.value }))
                       }
+                      placeholder={fullNamePlaceholder}
                       required
                     />
                   </div>
@@ -307,6 +331,7 @@ const Admin = () => {
                       onChange={(event) =>
                         setDoctorForm((current) => ({ ...current, specialty: event.target.value }))
                       }
+                      placeholder={specialtyPlaceholder}
                       required
                     />
                   </div>
@@ -375,6 +400,7 @@ const Admin = () => {
                       onChange={(event) =>
                         setDoctorForm((current) => ({ ...current, clinic: event.target.value }))
                       }
+                      placeholder={clinicPlaceholder}
                       required
                     />
                   </div>
@@ -436,9 +462,7 @@ const Admin = () => {
                       );
                     })}
                   </div>
-                  <small className="field-note">
-                    {copy.slotsNote}
-                  </small>
+                  <small className="field-note">{copy.slotsNote}</small>
                   {selectedSlotPreview.length > 0 && (
                     <div className="doctor-slot-list">
                       {selectedSlotPreview.map((slot) => (
@@ -458,6 +482,7 @@ const Admin = () => {
                     onChange={(event) =>
                       setDoctorForm((current) => ({ ...current, bio: event.target.value }))
                     }
+                    placeholder={bioPlaceholder}
                     required
                   />
                 </label>
@@ -522,11 +547,16 @@ const Admin = () => {
               <div>
                 <span className="section-chip">{copy.doctors}</span>
                 <h2>{copy.activeDoctors}</h2>
+                <p className="panel-heading-note">{doctorPanelHint}</p>
               </div>
+              <span className="badge">
+                <UserGroupIcon />
+                {sortedDoctors.length}
+              </span>
             </div>
 
             <div className="doctor-admin-list">
-              {doctors.map((doctor) => (
+              {sortedDoctors.map((doctor) => (
                 <div key={doctor.id} className="doctor-admin-row">
                   <div className="doctor-admin-copy">
                     <strong>{doctor.name}</strong>
@@ -569,7 +599,7 @@ const Admin = () => {
                 </div>
               ))}
 
-              {doctors.length === 0 && (
+              {sortedDoctors.length === 0 && (
                 <div className="empty-state">
                   <h3>{copy.noDoctors}</h3>
                   <p>{copy.noDoctorsText}</p>
@@ -691,3 +721,4 @@ const Admin = () => {
 };
 
 export default Admin;
+

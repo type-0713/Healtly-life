@@ -1,4 +1,4 @@
-import type { FormEvent } from "react";
+﻿import type { FormEvent } from "react";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import LanguageSwitcher from "../components/LanguageSwitcher";
@@ -33,6 +33,16 @@ import {
 } from "../lib/schedule";
 
 type TabId = "booking" | "appointments" | "profile";
+
+const compareAppointmentsAsc = (left: Appointment, right: Appointment) =>
+  left.date.localeCompare(right.date) ||
+  left.time.localeCompare(right.time) ||
+  left.createdAt.localeCompare(right.createdAt);
+
+const compareAppointmentsDesc = (left: Appointment, right: Appointment) =>
+  right.date.localeCompare(left.date) ||
+  right.time.localeCompare(left.time) ||
+  right.createdAt.localeCompare(left.createdAt);
 
 const User = () => {
   const { language, format, translateError, translateRegion, translateSpecialty, translateStatus } =
@@ -98,6 +108,23 @@ const User = () => {
         : "Yangilanish muvaffaqiyatli bajarildi";
   const errorBannerTitle =
     language === "ru" ? "Произошла ошибка" : language === "en" ? "Something went wrong" : "Amalda xatolik yuz berdi";
+  const historyChip = language === "ru" ? "История" : language === "en" ? "History" : "Tarix";
+  const historyTitle =
+    language === "ru" ? "История приёмов" : language === "en" ? "Appointment history" : "Qabullar tarixi";
+  const historyText =
+    language === "ru"
+      ? "Здесь хранятся завершённые и отменённые приёмы из Firebase."
+      : language === "en"
+        ? "Completed and cancelled visits saved in Firebase appear here."
+        : "Firebase'da saqlangan yakunlangan va bekor qilingan qabullar shu yerda ko'rinadi.";
+  const noHistoryTitle =
+    language === "ru" ? "История пока пуста" : language === "en" ? "No history yet" : "Tarix hozircha bo'sh";
+  const noHistoryText =
+    language === "ru"
+      ? "Завершённые или отменённые записи появятся здесь отдельно от активных приёмов."
+      : language === "en"
+        ? "Completed or cancelled bookings appear here separately from active visits."
+        : "Yakunlangan yoki bekor qilingan bronlar aktiv qabullardan alohida shu yerda ko'rinadi.";
 
   const filteredDoctors = useMemo(() => {
     return doctors.filter((doctor) => {
@@ -155,19 +182,37 @@ const User = () => {
       return [];
     }
 
-    return appointments.filter(
-      (appointment) =>
-        appointment.patientKey.trim().toLowerCase() === activeUserKey ||
-        appointment.patientEmail.trim().toLowerCase() === activeUserEmail,
-    );
+    return appointments.filter((appointment) => {
+      const ownerKey = appointment.patientKey.trim().toLowerCase();
+      const ownerEmail = appointment.patientEmail.trim().toLowerCase();
+
+      if (ownerKey) {
+        return ownerKey === activeUserKey;
+      }
+
+      return Boolean(ownerEmail) && ownerEmail === activeUserEmail;
+    });
   }, [activeUserEmail, activeUserKey, appointments]);
 
   const activeAppointments = useMemo(
     () =>
-      userAppointments.filter(
-        (appointment) =>
-          appointment.status !== "Yakunlandi" && appointment.status !== "Bekor qilindi",
-      ),
+      userAppointments
+        .filter(
+          (appointment) =>
+            appointment.status !== "Yakunlandi" && appointment.status !== "Bekor qilindi",
+        )
+        .sort(compareAppointmentsAsc),
+    [userAppointments],
+  );
+
+  const appointmentHistory = useMemo(
+    () =>
+      userAppointments
+        .filter(
+          (appointment) =>
+            appointment.status === "Yakunlandi" || appointment.status === "Bekor qilindi",
+        )
+        .sort(compareAppointmentsDesc),
     [userAppointments],
   );
 
@@ -351,7 +396,7 @@ const User = () => {
       await updateAppointmentStatus(appointment.id, "Bekor qilindi");
       setConfirmationText(
         language === "ru"
-          ? `Запись к ${appointment.doctorName} на ${appointment.date} в ${appointment.time} была отменена. Этот слот снова стал доступен.`
+          ? `Запись к ${appointment.doctorName} на ${appointment.date} в ${appointment.time} была отменена. Этот слот снова доступен.`
           : language === "en"
             ? `Your booking with ${appointment.doctorName} on ${appointment.date} at ${appointment.time} was cancelled. This slot is available again.`
             : `${appointment.doctorName} bilan ${appointment.date} kuni ${appointment.time} dagi bron bekor qilindi. Ushbu slot yana bo'sh holatga qaytdi.`,
@@ -732,30 +777,142 @@ const User = () => {
             )}
 
             {activeTab === "appointments" && (
-              <div className="workspace-section">
-                <div className="panel-heading">
-                  <div>
-                    <span className="section-chip">{copy.appointmentsChip}</span>
-                    <h2>{copy.activeAppointments}</h2>
+              <div className="workspace-section workspace-history-stack">
+                <div className="workspace-history-section">
+                  <div className="panel-heading">
+                    <div>
+                      <span className="section-chip">{copy.appointmentsChip}</span>
+                      <h2>{copy.activeAppointments}</h2>
+                    </div>
+                    <span className="badge">
+                      <ClockIcon />
+                      {activeAppointments.length}
+                    </span>
+                  </div>
+
+                  <div className="appointment-list">
+                    {activeAppointments.map((appointment) => {
+                      const isCancelled = appointment.status === "Bekor qilindi";
+                      const alreadyReviewed = Boolean(appointment.reviewRating);
+                      const canCompleteAppointment = hasAppointmentStarted(
+                        appointment.date,
+                        appointment.time,
+                      );
+
+                      return (
+                        <article key={appointment.id} className="appointment-card">
+                          <div className="appointment-card-head">
+                            <div>
+                              <h3>{appointment.doctorName}</h3>
+                              <p>{translateSpecialty(appointment.specialty)}</p>
+                            </div>
+                            <span className="badge">{translateStatus(appointment.status)}</span>
+                          </div>
+
+                          <div className="appointment-meta-grid">
+                            <div>
+                              <CalendarIcon />
+                              <span>{appointment.date}</span>
+                            </div>
+                            <div>
+                              <ClockIcon />
+                              <span>{appointment.time}</span>
+                            </div>
+                            <div>
+                              <LocationIcon />
+                              <span>{appointment.clinic}</span>
+                            </div>
+                          </div>
+
+                          {appointment.notes && <p>{appointment.notes}</p>}
+
+                          {getMapSearchUrl(getDoctorMapQuery(appointment)) && (
+                            <a
+                              href={getMapSearchUrl(getDoctorMapQuery(appointment))}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-map-link"
+                            >
+                              {mapActionLabel}
+                              <ArrowRightIcon />
+                            </a>
+                          )}
+
+                          {alreadyReviewed && (
+                            <div className="review-summary-card">
+                              <div className="review-summary-head">
+                                <strong>{copy.reviewLeft}</strong>
+                                <span>{appointment.reviewRating} / 5</span>
+                              </div>
+                              <div className="review-stars-row review-stars-row-readonly">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <span
+                                    key={star}
+                                    className={`review-star-icon ${
+                                      star <= (appointment.reviewRating ?? 0) ? "review-star-icon-active" : ""
+                                    }`}
+                                  >
+                                    <StarIcon />
+                                  </span>
+                                ))}
+                              </div>
+                              {appointment.reviewComment && <p>{appointment.reviewComment}</p>}
+                            </div>
+                          )}
+
+                          <div className="appointment-actions">
+                            {canCompleteAppointment ? (
+                              <button
+                                type="button"
+                                className="button button-secondary"
+                                disabled={alreadyReviewed || isCancelled}
+                                onClick={() => openReviewModal(appointment)}
+                              >
+                                {alreadyReviewed ? copy.reviewSent : copy.completeReview}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="button button-ghost"
+                                onClick={() => void handleCancelAppointment(appointment)}
+                              >
+                                {copy.cancel}
+                              </button>
+                            )}
+                          </div>
+                        </article>
+                      );
+                    })}
+
+                    {activeAppointments.length === 0 && (
+                      <div className="empty-state">
+                        <h3>{copy.noAppointments}</h3>
+                        <p>{copy.noAppointmentsText}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                <div className="appointment-list">
-                  {activeAppointments.map((appointment) => {
-                    const isCompleted = appointment.status === "Yakunlandi";
-                    const isCancelled = appointment.status === "Bekor qilindi";
-                    const alreadyReviewed = Boolean(appointment.reviewRating);
-                    const canCompleteAppointment = hasAppointmentStarted(
-                      appointment.date,
-                      appointment.time,
-                    );
+                <div className="workspace-history-section">
+                  <div className="panel-heading">
+                    <div>
+                      <span className="section-chip">{historyChip}</span>
+                      <h2>{historyTitle}</h2>
+                    </div>
+                    <span className="badge">
+                      <ClockIcon />
+                      {appointmentHistory.length}
+                    </span>
+                  </div>
+                  <p className="preview-subtext">{historyText}</p>
 
-                    return (
-                      <article key={appointment.id} className="appointment-card">
+                  <div className="appointment-list appointment-list-history">
+                    {appointmentHistory.map((appointment) => (
+                      <article key={`history-${appointment.id}`} className="appointment-card appointment-card-history">
                         <div className="appointment-card-head">
                           <div>
                             <h3>{appointment.doctorName}</h3>
-                            <p>{appointment.specialty}</p>
+                            <p>{translateSpecialty(appointment.specialty)}</p>
                           </div>
                           <span className="badge">{translateStatus(appointment.status)}</span>
                         </div>
@@ -775,7 +932,7 @@ const User = () => {
                           </div>
                         </div>
 
-                        <p>{appointment.notes}</p>
+                        {appointment.notes && <p>{appointment.notes}</p>}
 
                         {getMapSearchUrl(getDoctorMapQuery(appointment)) && (
                           <a
@@ -789,7 +946,7 @@ const User = () => {
                           </a>
                         )}
 
-                        {alreadyReviewed && (
+                        {appointment.reviewRating && (
                           <div className="review-summary-card">
                             <div className="review-summary-head">
                               <strong>{copy.reviewLeft}</strong>
@@ -798,7 +955,7 @@ const User = () => {
                             <div className="review-stars-row review-stars-row-readonly">
                               {[1, 2, 3, 4, 5].map((star) => (
                                 <span
-                                  key={star}
+                                  key={`${appointment.id}-history-star-${star}`}
                                   className={`review-star-icon ${
                                     star <= (appointment.reviewRating ?? 0) ? "review-star-icon-active" : ""
                                   }`}
@@ -810,42 +967,16 @@ const User = () => {
                             {appointment.reviewComment && <p>{appointment.reviewComment}</p>}
                           </div>
                         )}
-
-                        <div className="appointment-actions">
-                          {canCompleteAppointment ? (
-                            <button
-                              type="button"
-                              className="button button-secondary"
-                              disabled={alreadyReviewed || isCancelled}
-                              onClick={() => openReviewModal(appointment)}
-                            >
-                              {alreadyReviewed
-                                ? copy.reviewSent
-                                : isCompleted
-                                  ? copy.leaveReview
-                                  : copy.completeReview}
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              className="button button-ghost"
-                              disabled={isCompleted}
-                              onClick={() => void handleCancelAppointment(appointment)}
-                            >
-                              {copy.cancel}
-                            </button>
-                          )}
-                        </div>
                       </article>
-                    );
-                  })}
+                    ))}
 
-                  {activeAppointments.length === 0 && (
-                    <div className="empty-state">
-                      <h3>{copy.noAppointments}</h3>
-                      <p>{copy.noAppointmentsText}</p>
-                    </div>
-                  )}
+                    {appointmentHistory.length === 0 && (
+                      <div className="empty-state">
+                        <h3>{noHistoryTitle}</h3>
+                        <p>{noHistoryText}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -1228,3 +1359,12 @@ const User = () => {
 };
 
 export default User;
+
+
+
+
+
+
+
+
+

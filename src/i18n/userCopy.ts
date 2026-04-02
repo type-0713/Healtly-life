@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+﻿/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Language } from "../context/I18nContext";
 
 export const userCopy: Record<Language, any> = {
@@ -9,7 +9,8 @@ export const userCopy: Record<Language, any> = {
     logout: "Chiqish",
     patientCabinet: "Bemor kabineti",
     heroTitle: "Bronlash, tarix va tavsiyalar bir panelda",
-    heroText: "Tizim sizga eng mos doktorni tanlash, slotni band qilish va qabul tafsilotlarini bir joyda kuzatish imkonini beradi.",
+    heroText:
+      "Tizim sizga eng mos doktorni tanlash, slotni band qilish va qabul tafsilotlarini bir joyda kuzatish imkonini beradi.",
     progress: ["Shifokor tanlash", "Vaqt tanlash", "Tasdiqlash"],
     step1: "1-bosqich",
     chooseDoctor: "Shifokorni tanlang",
@@ -18,7 +19,8 @@ export const userCopy: Record<Language, any> = {
     searchPlaceholder: "Ism, yo'nalish yoki klinika",
     region: "Viloyat",
     noDoctorsTitle: "Shifokorlar mavjud emas",
-    noDoctorsText: "Filterlarni o'zgartirib ko'ring yoki admin yangi shifokor qo'shgach ro'yxat to'ladi.",
+    noDoctorsText:
+      "Filterlarni o'zgartirib ko'ring yoki admin yangi shifokor qo'shgach ro'yxat to'ladi.",
     step2: "2-bosqich",
     details: "Qabul tafsilotlari",
     realtimeSlots: "Slotlar real vaqtda yangilanadi",
@@ -70,7 +72,8 @@ export const userCopy: Record<Language, any> = {
     ratingCount: "Baholar soni",
     experience: "Tajriba",
     nearestSlot: "Eng yaqin slot",
-    aboutDoctorText: "Tanlangan mutaxassis bo'yicha asosiy ko'rsatkichlar shu yerda jamlanadi, shuning uchun qaror qabul qilish osonlashadi.",
+    aboutDoctorText:
+      "Tanlangan mutaxassis bo'yicha asosiy ko'rsatkichlar shu yerda jamlanadi, shuning uchun qaror qabul qilish osonlashadi.",
     benefits: "Bron afzalliklari",
     benefitList: ["SMS eslatma", "Qabul tafsilotlari kabinetda", "Qayta bronlash tavsiyasi"],
     serviceLevel: "Xizmat darajasi",
@@ -78,7 +81,8 @@ export const userCopy: Record<Language, any> = {
     serviceText: "Tezkor tasdiq va raqamli kuzatuv",
     reviewChip: "Baho",
     reviewTitle: "Qabul yakunlandimi?",
-    reviewText: "{doctorName} uchun tarif qoldiring va xizmat sifatini 1 dan 5 gacha yulduzcha bilan baholang.",
+    reviewText:
+      "{doctorName} uchun tarif qoldiring va xizmat sifatini 1 dan 5 gacha yulduzcha bilan baholang.",
     yourRating: "Bahongiz",
     reviewLabel: "Tarif",
     reviewPlaceholder: "Doktor qabul sifati haqida qisqa fikringizni yozing",
@@ -86,9 +90,12 @@ export const userCopy: Record<Language, any> = {
     send: "Yuborish",
     successChip: "Bron tasdiqlandi",
     successTitle: "Broningiz muvaffaqiyatli yaratildi",
-    successText: "Hurmatli foydalanuvchi, siz qabulni muvaffaqiyatli bron qildingiz. Endi Qabullar bo'limiga o'tib bron tafsilotlarini shifokorga ko'rsatishingiz mumkin va konsultatsiya jarayoni boshlanadi.",
+    successText:
+      "Hurmatli foydalanuvchi, siz qabulni muvaffaqiyatli bron qildingiz. Endi Qabullar bo'limiga o'tib bron tafsilotlarini shifokorga ko'rsatishingiz mumkin va konsultatsiya jarayoni boshlanadi.",
     later: "Keyinroq",
     goAppointments: "Qabullar bo'limiga o'tish",
+    bookFailed: "Bronni yaratib bo'lmadi. Iltimos, qayta urinib ko'ring.",
+    bookingError: "Bronni saqlashda xatolik yuz berdi.",
   },
   ru: {
     tabs: ["Запись", "Приёмы", "Профиль"],
@@ -97,7 +104,8 @@ export const userCopy: Record<Language, any> = {
     logout: "Выйти",
     patientCabinet: "Кабинет пациента",
     heroTitle: "Запись, история и рекомендации в одной панели",
-    heroText: "Система помогает выбрать подходящего врача, забронировать слот и отслеживать детали приёма в одном месте.",
+    heroText:
+      "Система помогает выбрать подходящего врача, забронировать слот и отслеживать детали приёма в одном месте.",
     progress: ["Выбор врача", "Выбор времени", "Подтверждение"],
     step1: "Шаг 1",
     chooseDoctor: "Выберите врача",
@@ -106,7 +114,8 @@ export const userCopy: Record<Language, any> = {
     searchPlaceholder: "Имя, направление или клиника",
     region: "Регион",
     noDoctorsTitle: "Врачи не найдены",
-    noDoctorsText: "Попробуйте изменить фильтры или дождитесь, пока администратор добавит нового врача.",
+    noDoctorsText:
+      "Попробуйте изменить фильтры или подождите, пока администратор добавит нового врача.",
     step2: "Шаг 2",
     details: "Детали приёма",
     realtimeSlots: "Слоты обновляются в реальном времени",
@@ -120,13 +129,13 @@ export const userCopy: Record<Language, any> = {
     fullname: "Ф.И.О.",
     fullnamePlaceholder: "Введите ваше имя",
     note: "Комментарий",
-    notePlaceholder: "Жалоба или короткая заметка",
+    notePlaceholder: "Жалоба или краткая заметка",
     confirming: "Подтверждаем запись...",
     confirmBooking: "Подтвердить запись",
     appointmentsChip: "Приёмы",
     activeAppointments: "Ваши активные приёмы",
-    reviewLeft: "Оставленный отзыв",
-    reviewSent: "Отзыв отправлен",
+    reviewLeft: "Оставленная оценка",
+    reviewSent: "Оценка отправлена",
     leaveReview: "Оставить отзыв",
     completeReview: "Завершить и оценить",
     waitTime: "Ожидание времени приёма",
@@ -158,7 +167,8 @@ export const userCopy: Record<Language, any> = {
     ratingCount: "Количество отзывов",
     experience: "Опыт",
     nearestSlot: "Ближайший слот",
-    aboutDoctorText: "Ключевые показатели выбранного специалиста собраны здесь, чтобы принимать решение было проще.",
+    aboutDoctorText:
+      "Ключевые показатели выбранного специалиста собраны здесь, чтобы принять решение было проще.",
     benefits: "Преимущества записи",
     benefitList: ["SMS-напоминание", "Детали приёма в кабинете", "Рекомендация повторной записи"],
     serviceLevel: "Уровень сервиса",
@@ -166,17 +176,21 @@ export const userCopy: Record<Language, any> = {
     serviceText: "Быстрое подтверждение и цифровое сопровождение",
     reviewChip: "Оценка",
     reviewTitle: "Приём завершён?",
-    reviewText: "Оставьте отзыв для {doctorName} и оцените качество обслуживания по шкале от 1 до 5 звёзд.",
+    reviewText:
+      "Оставьте отзыв для {doctorName} и оцените качество обслуживания по шкале от 1 до 5 звёзд.",
     yourRating: "Ваша оценка",
     reviewLabel: "Отзыв",
     reviewPlaceholder: "Кратко опишите качество приёма у врача",
-    cancel: "Отмена",
+    cancel: "Отменить",
     send: "Отправить",
     successChip: "Запись подтверждена",
     successTitle: "Ваша запись успешно создана",
-    successText: "Уважаемый пользователь, вы успешно забронировали приём. Теперь перейдите в раздел Приёмы, покажите детали записи врачу и консультация начнётся.",
+    successText:
+      "Уважаемый пользователь, вы успешно забронировали приём. Теперь перейдите в раздел Приёмы, покажите детали записи врачу, и консультация начнётся.",
     later: "Позже",
-    goAppointments: "Перейти в раздел приёмов",
+    goAppointments: "Перейти к приёмам",
+    bookFailed: "Не удалось создать запись. Пожалуйста, попробуйте снова.",
+    bookingError: "Произошла ошибка при сохранении записи.",
   },
   en: {
     tabs: ["Booking", "Appointments", "Profile"],
@@ -185,7 +199,8 @@ export const userCopy: Record<Language, any> = {
     logout: "Logout",
     patientCabinet: "Patient cabinet",
     heroTitle: "Booking, history, and guidance in one dashboard",
-    heroText: "The system helps you choose the best doctor, reserve a slot, and follow all appointment details in one place.",
+    heroText:
+      "The system helps you choose the best doctor, reserve a slot, and follow all appointment details in one place.",
     progress: ["Choose doctor", "Choose time", "Confirm"],
     step1: "Step 1",
     chooseDoctor: "Choose a doctor",
@@ -246,7 +261,8 @@ export const userCopy: Record<Language, any> = {
     ratingCount: "Ratings count",
     experience: "Experience",
     nearestSlot: "Nearest slot",
-    aboutDoctorText: "The key indicators for the selected specialist are collected here, making decisions easier.",
+    aboutDoctorText:
+      "The key indicators for the selected specialist are collected here, making decisions easier.",
     benefits: "Booking benefits",
     benefitList: ["SMS reminder", "Appointment details inside account", "Rebooking recommendation"],
     serviceLevel: "Service level",
@@ -262,8 +278,11 @@ export const userCopy: Record<Language, any> = {
     send: "Send",
     successChip: "Booking confirmed",
     successTitle: "Your booking was created successfully",
-    successText: "Dear user, your appointment was booked successfully. Now go to the Appointments section, show the booking details to the doctor, and the consultation will begin.",
+    successText:
+      "Dear user, your appointment was booked successfully. Now go to the Appointments section, show the booking details to the doctor, and the consultation will begin.",
     later: "Later",
     goAppointments: "Go to appointments",
+    bookFailed: "The booking could not be created. Please try again.",
+    bookingError: "There was an error while saving the booking.",
   },
 };
