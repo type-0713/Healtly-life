@@ -1569,19 +1569,25 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px 0;
+  padding: 40px 20px;
   min-height: 100vh;
 }
 
 .auth-layout {
-  width: var(--container);
-  grid-template-columns: minmax(0, 1fr) minmax(420px, 0.96fr);
+  width: 100%;
+  max-width: var(--container);
+  display: grid;
+  grid-template-columns: minmax(500px, 1.2fr) minmax(0, 0.8fr);
   align-items: stretch;
-  gap: 28px;
+  gap: 40px;
 }
 
 .auth-showcase {
-  padding: 34px 18px 34px 0;
+  display: grid;
+  align-content: start;
+  gap: 24px;
+  padding: 0;
+  min-width: 0;
 }
 
 .auth-showcase .brand {
@@ -1590,29 +1596,43 @@ textarea {
 
 .auth-showcase p {
   max-width: 56ch;
+  margin: 0;
+}
+
+.auth-showcase h1 {
+  margin: 0;
 }
 
 .auth-showcase-top {
-  margin-bottom: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
 }
 
 .auth-card-wrapper {
   display: flex;
-  justify-content: flex-end;
-  align-items: center;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding-top: 0;
 }
 
 .auth-card-wrapper .auth-card {
-  width: min(100%, 560px);
+  width: 100%;
+  max-width: 560px;
   min-height: 0;
 }
 
 .auth-mode-switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
   width: fit-content;
   padding: 6px;
-  margin: 24px 0 16px;
-  flex-wrap: wrap;
-  gap: 12px;
+  margin: 18px 0 14px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--surface);
@@ -2445,9 +2465,13 @@ textarea {
   .experience-grid,
   .workspace-grid,
   .admin-management-grid,
-  .admin-grid,
-  .auth-layout {
+  .admin-grid {
     grid-template-columns: 1fr;
+  }
+
+  .auth-layout {
+    grid-template-columns: minmax(420px, 1fr) minmax(0, 0.7fr);
+    gap: 28px;
   }
 
   .feature-grid,
@@ -2538,8 +2562,7 @@ textarea {
   .cta-actions,
   .auth-shortcuts,
   .section-actions-row,
-  .section-heading-inline,
-  .auth-showcase-top {
+  .section-heading-inline {
     flex-direction: column;
     align-items: stretch;
   }
@@ -2547,6 +2570,157 @@ textarea {
   .nav-links a,
   .nav-actions > * {
     width: 100%;
+  }
+
+  .auth-page {
+    padding: 24px 14px;
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  .auth-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .auth-showcase {
+    padding: 20px 0;
+    gap: 20px;
+    order: 2;
+  }
+
+  .auth-showcase-top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    margin-bottom: 0;
+  }
+
+  .auth-showcase-top .brand {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .auth-showcase-top .nav-actions {
+    width: 100%;
+    flex-direction: row;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .auth-card-wrapper {
+    align-items: center;
+    justify-content: center;
+    order: 1;
+  }
+
+  .auth-card-wrapper .auth-card {
+    max-width: 100%;
+  }
+
+  .auth-showcase h1 {
+    font-size: 1.6rem;
+    text-align: center;
+  }
+
+  .auth-showcase p {
+    text-align: center;
+  }
+
+  .auth-card {
+    padding: 24px;
+  }
+
+  .auth-card-head h2 {
+    font-size: 1.4rem;
+  }
+
+  .auth-mode-switch {
+    width: 100%;
+    justify-content: stretch;
+    padding: 4px;
+    gap: 8px;
+    margin: 16px 0 12px;
+  }
+
+  .auth-mode-pill {
+    flex: 1;
+    min-height: 40px;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    padding: 0 10px;
+  }
+
+  .auth-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .auth-stats div {
+    padding: 12px;
+    font-size: 0.8rem;
+  }
+
+  .auth-benefits {
+    gap: 10px;
+  }
+
+  .auth-benefits article {
+    padding: 12px 14px;
+  }
+
+  .auth-form {
+    gap: 14px;
+  }
+
+  .field {
+    gap: 6px;
+  }
+
+  .field-box {
+    gap: 8px;
+    padding: 10px 12px;
+    font-size: 0.95rem;
+  }
+
+  .field span {
+    font-size: 0.9rem;
+  }
+
+  .provider-login-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .button-block {
+    width: 100%;
+    min-height: 42px;
+  }
+
+  .auth-footer {
+    margin-top: 16px;
+    padding-top: 16px;
+  }
+
+  .auth-shortcuts {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .badge {
+    font-size: 0.78rem;
+    padding: 4px 10px;
+  }
+
+  .icon-shell {
+    width: 48px;
+    height: 48px;
+  }
+
+  .glass-card {
+    border-radius: 12px;
   }
 
   .nav-links a,

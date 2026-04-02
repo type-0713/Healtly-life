@@ -54,9 +54,9 @@ const LoginPage = () => {
   const nextPath = searchParams.get("next") ?? (mode === "admin" ? "/admin" : "/user");
   const isRegisterMode = !isAdminMode && authAction === "register";
   const sessionLogoutLabel =
-    language === "ru" ? "Выйти" : language === "en" ? "Logout" : "Chiqish";
+    language === "ru" ? "пїЅпїЅпїЅпїЅпїЅ" : language === "en" ? "Logout" : "Chiqish";
   const userViewLabel =
-    language === "ru" ? "Режим пользователя" : language === "en" ? "User view" : "User ko'rinishi";
+    language === "ru" ? "пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ" : language === "en" ? "User view" : "User ko'rinishi";
   const passwordToggleLabel =
     language === "ru" ? "\u041F\u043E\u043A\u0430\u0437\u0430\u0442\u044C \u0438\u043B\u0438 \u0441\u043A\u0440\u044B\u0442\u044C \u043F\u0430\u0440\u043E\u043B\u044C" : language === "en" ? "Show or hide password" : "Parolni ko'rsatish yoki yashirish";
   const providerFallbackError =
@@ -172,119 +172,7 @@ const LoginPage = () => {
     <div className="auth-page">
       <div className="site-orb site-orb-three" />
       <div className="auth-layout">
-        <section className="auth-showcase">
-          <div className="auth-showcase-top">
-            <Link to="/" className="brand">
-              <span className="brand-mark">
-                <HeartPulseIcon />
-              </span>
-              <span>
-                Med<span className="brand-accent">Elite</span>
-              </span>
-            </Link>
-            <div className="nav-actions">
-              <LanguageSwitcher />
-              <ThemeToggle />
-            </div>
-          </div>
-
-          <span className="section-chip">{isAdminMode ? copy.restrictedAccess : copy.protectedAccess}</span>
-          <h1>{cardTitle}</h1>
-          <p>
-            {isAdminMode
-              ? copy.adminText
-              : isRegisterMode
-                ? copy.registerText
-                : copy.loginText}
-          </p>
-
-          <div className="auth-mode-switch">
-            <Link
-              to={userModeLink}
-              className={`auth-mode-pill ${mode === "user" ? "auth-mode-pill-active" : ""}`}
-            >
-              {copy.userCabinet}
-            </Link>
-            <Link
-              to={adminModeLink}
-              className={`auth-mode-pill ${mode === "admin" ? "auth-mode-pill-active" : ""}`}
-            >
-              {copy.adminCabinet}
-            </Link>
-          </div>
-
-          {!isAdminMode && (
-            <div className="auth-mode-switch auth-action-switch">
-              <button
-                type="button"
-                className={`auth-mode-pill ${!isRegisterMode ? "auth-mode-pill-active" : ""}`}
-                onClick={() => handleActionChange("login")}
-              >
-                {copy.signIn}
-              </button>
-              <button
-                type="button"
-                className={`auth-mode-pill ${isRegisterMode ? "auth-mode-pill-active" : ""}`}
-                onClick={() => handleActionChange("register")}
-              >
-                {copy.signUp}
-              </button>
-            </div>
-          )}
-
-          <div className="auth-stats">
-            <div>
-              <strong>62k+</strong>
-              <span>{copy.activeUsers}</span>
-            </div>
-            <div>
-              <strong>4.9</strong>
-              <span>{copy.serviceRating}</span>
-            </div>
-            <div>
-              <strong>24/7</strong>
-              <span>{copy.support}</span>
-            </div>
-          </div>
-
-          <div className="auth-benefits">
-            <article className="glass-card">
-              <div className="icon-shell">
-                <ShieldIcon />
-              </div>
-              <div>
-                <h3>{copy.secureTitle}</h3>
-                <p>{copy.secureText}</p>
-              </div>
-            </article>
-            <article className="glass-card">
-              <div className="icon-shell">
-                <CalendarIcon />
-              </div>
-              <div>
-                <h3>{copy.realtimeTitle}</h3>
-                <p>{copy.realtimeText}</p>
-              </div>
-            </article>
-            <article className="glass-card">
-              <div className="icon-shell">
-                <UserGroupIcon />
-              </div>
-              <div>
-                <h3>{copy.rolesTitle}</h3>
-                <p>{copy.rolesText}</p>
-              </div>
-            </article>
-          </div>
-
-          <div className="auth-luxury-note">
-            {isAdminMode
-              ? copy.adminNote
-              : copy.userNote}
-          </div>
-        </section>
-
-        <section className="auth-card-wrapper">
+        <div className="auth-card-wrapper">
           <div className={`auth-card ${isAdminMode ? "auth-card-compact" : ""}`}>
             <div className="auth-card-head">
               <span className="badge badge-gold">
@@ -476,10 +364,122 @@ const LoginPage = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        <section className="auth-showcase">
+          <div className="auth-showcase-top">
+            <Link to="/" className="brand">
+              <span className="brand-mark">
+                <HeartPulseIcon />
+              </span>
+              <span>
+                Med<span className="brand-accent">Elite</span>
+              </span>
+            </Link>
+            <div className="nav-actions">
+              <LanguageSwitcher />
+              <ThemeToggle />
+            </div>
+          </div>
+
+          <h1>{cardTitle}</h1>
+          <p>
+            {isAdminMode
+              ? copy.adminText
+              : isRegisterMode
+                ? copy.registerText
+                : copy.loginText}
+          </p>
+
+          <div className="auth-mode-switch">
+            <Link
+              to={userModeLink}
+              className={`auth-mode-pill ${mode === "user" ? "auth-mode-pill-active" : ""}`}
+            >
+              {copy.userCabinet}
+            </Link>
+            <Link
+              to={adminModeLink}
+              className={`auth-mode-pill ${mode === "admin" ? "auth-mode-pill-active" : ""}`}
+            >
+              {copy.adminCabinet}
+            </Link>
+          </div>
+
+          {!isAdminMode && (
+            <div className="auth-mode-switch auth-action-switch">
+              <button
+                type="button"
+                className={`auth-mode-pill ${!isRegisterMode ? "auth-mode-pill-active" : ""}`}
+                onClick={() => handleActionChange("login")}
+              >
+                {copy.signIn}
+              </button>
+              <button
+                type="button"
+                className={`auth-mode-pill ${isRegisterMode ? "auth-mode-pill-active" : ""}`}
+                onClick={() => handleActionChange("register")}
+              >
+                {copy.signUp}
+              </button>
+            </div>
+          )}
+
+          <div className="auth-stats">
+            <div>
+              <strong>62k+</strong>
+              <span>{copy.activeUsers}</span>
+            </div>
+            <div>
+              <strong>4.9</strong>
+              <span>{copy.serviceRating}</span>
+            </div>
+            <div>
+              <strong>24/7</strong>
+              <span>{copy.support}</span>
+            </div>
+          </div>
+
+          <div className="auth-benefits">
+            <article className="glass-card">
+              <div className="icon-shell">
+                <ShieldIcon />
+              </div>
+              <div>
+                <h3>{copy.secureTitle}</h3>
+                <p>{copy.secureText}</p>
+              </div>
+            </article>
+            <article className="glass-card">
+              <div className="icon-shell">
+                <CalendarIcon />
+              </div>
+              <div>
+                <h3>{copy.realtimeTitle}</h3>
+                <p>{copy.realtimeText}</p>
+              </div>
+            </article>
+            <article className="glass-card">
+              <div className="icon-shell">
+                <UserGroupIcon />
+              </div>
+              <div>
+                <h3>{copy.rolesTitle}</h3>
+                <p>{copy.rolesText}</p>
+              </div>
+            </article>
+          </div>
+
+          <div className="auth-luxury-note">
+            {isAdminMode
+              ? copy.adminNote
+              : copy.userNote}
+          </div>
         </section>
       </div>
     </div>
   );
+};
 };
 
 export default LoginPage;
