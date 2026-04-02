@@ -1,6 +1,7 @@
 import type { FormEvent } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 import ThemeToggle from "../components/ThemeToggle";
 import {
   ArrowRightIcon,
@@ -19,6 +20,8 @@ import {
   UserGroupIcon,
 } from "../components/PremiumIcons";
 import { useAppContext, type Appointment } from "../context/AppContext";
+import { useI18n } from "../context/I18nContext";
+import { userCopy } from "../i18n/userCopy";
 import { getDoctorMapQuery, getMapEmbedUrl, getMapSearchUrl } from "../lib/maps";
 import { ALL_REGIONS_OPTION, UZBEKISTAN_REGIONS } from "../lib/regions";
 import {
@@ -29,15 +32,12 @@ import {
   isSundayDate,
 } from "../lib/schedule";
 
-const tabs = [
-  { id: "booking", label: "Bronlash" },
-  { id: "appointments", label: "Qabullar" },
-  { id: "profile", label: "Profil" },
-] as const;
-
-type TabId = (typeof tabs)[number]["id"];
+type TabId = "booking" | "appointments" | "profile";
 
 const User = () => {
+  const { language, format, translateError, translateRegion, translateSpecialty, translateStatus } =
+    useI18n();
+  const copy = userCopy[language];
   const {
     appointments,
     bookAppointment,
@@ -53,7 +53,7 @@ const User = () => {
   } = useAppContext();
 
   const minimumBookingDate = getTodayInTashkent();
-  const bookingRulesMessage = getBookingRulesMessage();
+  const bookingRulesMessage = getBookingRulesMessage(language);
 
   const [activeTab, setActiveTab] = useState<TabId>("booking");
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>(doctors[0]?.id ?? "");
@@ -76,20 +76,42 @@ const User = () => {
   const [reviewError, setReviewError] = useState("");
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const deferredDoctorSearchTerm = useDeferredValue(doctorSearchTerm);
+  const mapActionLabel =
+    language === "ru" ? "Открыть на карте" : language === "en" ? "Open map" : "Xaritada ochish";
+  const menuLabel = menuOpen
+    ? language === "ru"
+      ? "Закрыть меню"
+      : language === "en"
+        ? "Close menu"
+        : "Menyuni yopish"
+    : language === "ru"
+      ? "Открыть меню"
+      : language === "en"
+        ? "Open menu"
+        : "Menyuni ochish";
+  const successBannerTitle =
+    language === "ru"
+      ? "Обновление выполнено успешно"
+      : language === "en"
+        ? "Update completed successfully"
+        : "Yangilanish muvaffaqiyatli bajarildi";
+  const errorBannerTitle =
+    language === "ru" ? "Произошла ошибка" : language === "en" ? "Something went wrong" : "Amalda xatolik yuz berdi";
 
   const filteredDoctors = useMemo(() => {
     return doctors.filter((doctor) => {
       const matchesSearch =
-        !doctorSearchTerm.trim() ||
+        !deferredDoctorSearchTerm.trim() ||
         `${doctor.name} ${doctor.specialty} ${doctor.clinic} ${doctor.address} ${doctor.bio}`
           .toLowerCase()
-          .includes(doctorSearchTerm.trim().toLowerCase());
+          .includes(deferredDoctorSearchTerm.trim().toLowerCase());
       const matchesRegion =
         doctorRegionFilter === ALL_REGIONS_OPTION || doctor.region === doctorRegionFilter;
 
       return matchesSearch && matchesRegion;
     });
-  }, [doctorRegionFilter, doctorSearchTerm, doctors]);
+  }, [deferredDoctorSearchTerm, doctorRegionFilter, doctors]);
 
   useEffect(() => {
     if (!filteredDoctors.some((doctor) => doctor.id === selectedDoctorId) && filteredDoctors[0]) {
@@ -185,13 +207,31 @@ const User = () => {
     }
   }, [availableSlots, bookedSlotSet, selectedDate, selectedTime]);
 
+  const localizedTabs = useMemo<Array<{ id: TabId; label: string }>>(
+    () => [
+      { id: "booking", label: copy.tabs[0] },
+      { id: "appointments", label: copy.tabs[1] },
+      { id: "profile", label: copy.tabs[2] },
+    ],
+    [copy.tabs],
+  );
+
   const dashboardStats = useMemo(
     () => [
-      { label: "Yaqin qabul", value: activeAppointments.length.toString() },
-      { label: "Aktiv eslatma", value: `${activeAppointments.filter((item) => item.status === "Tasdiqlandi").length} ta` },
-      { label: "Tibbiy fayl", value: `${Math.max(userAppointments.length * 3, 6)} ta` },
+      { label: copy.stats[0], value: activeAppointments.length.toString() },
+      {
+        label: copy.stats[1],
+        value:
+          language === "uz"
+            ? `${activeAppointments.filter((item) => item.status === "Tasdiqlandi").length} ta`
+            : activeAppointments.filter((item) => item.status === "Tasdiqlandi").length.toString(),
+      },
+      {
+        label: copy.stats[2],
+        value: language === "uz" ? `${Math.max(userAppointments.length * 3, 6)} ta` : `${Math.max(userAppointments.length * 3, 6)}`,
+      },
     ],
-    [activeAppointments, userAppointments.length],
+    [activeAppointments, copy.stats, language, userAppointments.length],
   );
 
   const handleBooking = async (event: FormEvent<HTMLFormElement>) => {
@@ -219,7 +259,7 @@ const User = () => {
       });
 
       if (!appointment) {
-        setBookingError("Tanlangan slotni bron qilib bo'lmadi.");
+        setBookingError(copy.bookFailed);
         return;
       }
 
@@ -230,14 +270,18 @@ const User = () => {
       });
 
       setConfirmationText(
-        `${appointment.doctorName} bilan ${appointment.date} kuni ${appointment.time} da qabul tasdiqlandi.`,
+        language === "ru"
+          ? `Приём у ${appointment.doctorName} подтверждён на ${appointment.date} в ${appointment.time}.`
+          : language === "en"
+            ? `Your appointment with ${appointment.doctorName} on ${appointment.date} at ${appointment.time} was confirmed.`
+            : `${appointment.doctorName} bilan ${appointment.date} kuni ${appointment.time} da qabul tasdiqlandi.`,
       );
       setBookingSuccessModal(appointment);
       setSelectedDate("");
       setSelectedTime("");
       setNotes("");
     } catch (error) {
-      setBookingError(error instanceof Error ? error.message : "Bronlashda xatolik yuz berdi.");
+      setBookingError(error instanceof Error ? translateError(error.message) : copy.bookingError);
     } finally {
       setIsSubmittingBooking(false);
     }
@@ -254,14 +298,16 @@ const User = () => {
     if (isSundayDate(value)) {
       setSelectedDate("");
       setSelectedTime("");
-      setBookingError("Yakshanba kuni bron qilib bo'lmaydi. Iltimos, boshqa sanani tanlang.");
+      setBookingError(
+        translateError("Yakshanba kuni bron qilib bo'lmaydi. Iltimos, boshqa sanani tanlang."),
+      );
       return;
     }
 
     if (value < minimumBookingDate) {
       setSelectedDate("");
       setSelectedTime("");
-      setBookingError("O'tib ketgan sana uchun bron qilib bo'lmaydi.");
+      setBookingError(translateError("O'tib ketgan sana uchun bron qilib bo'lmaydi."));
       return;
     }
 
@@ -276,10 +322,24 @@ const User = () => {
 
     try {
       await updateProfile(profileDraft);
-      setConfirmationText("Profil ma'lumotlari muvaffaqiyatli yangilandi.");
+      setConfirmationText(
+        language === "ru"
+          ? "Данные профиля успешно обновлены."
+          : language === "en"
+            ? "Profile details were updated successfully."
+            : "Profil ma'lumotlari muvaffaqiyatli yangilandi.",
+      );
       setActiveTab("profile");
     } catch (error) {
-      setWorkspaceError(error instanceof Error ? error.message : "Profilni saqlashda xatolik yuz berdi.");
+      setWorkspaceError(
+        error instanceof Error
+          ? translateError(error.message)
+          : language === "ru"
+            ? "Ошибка при сохранении профиля."
+            : language === "en"
+              ? "There was an error while saving the profile."
+              : "Profilni saqlashda xatolik yuz berdi.",
+      );
     }
   };
 
@@ -290,10 +350,22 @@ const User = () => {
     try {
       await updateAppointmentStatus(appointment.id, "Bekor qilindi");
       setConfirmationText(
-        `${appointment.doctorName} bilan ${appointment.date} kuni ${appointment.time} dagi bron bekor qilindi. Ushbu slot yana bo'sh holatga qaytdi.`,
+        language === "ru"
+          ? `Запись к ${appointment.doctorName} на ${appointment.date} в ${appointment.time} была отменена. Этот слот снова стал доступен.`
+          : language === "en"
+            ? `Your booking with ${appointment.doctorName} on ${appointment.date} at ${appointment.time} was cancelled. This slot is available again.`
+            : `${appointment.doctorName} bilan ${appointment.date} kuni ${appointment.time} dagi bron bekor qilindi. Ushbu slot yana bo'sh holatga qaytdi.`,
       );
     } catch (error) {
-      setWorkspaceError(error instanceof Error ? error.message : "Bronni bekor qilishda xatolik yuz berdi.");
+      setWorkspaceError(
+        error instanceof Error
+          ? translateError(error.message)
+          : language === "ru"
+            ? "Ошибка при отмене записи."
+            : language === "en"
+              ? "There was an error while cancelling the booking."
+              : "Bronni bekor qilishda xatolik yuz berdi.",
+      );
     }
   };
 
@@ -339,14 +411,26 @@ const User = () => {
     try {
       await submitDoctorReview(reviewTarget.id, reviewRating, reviewComment);
       setConfirmationText(
-        `${reviewTarget.doctorName} uchun ${reviewRating} yulduzli baho muvaffaqiyatli yuborildi.`,
+        language === "ru"
+          ? `Оценка ${reviewRating} звёзд для ${reviewTarget.doctorName} успешно отправлена.`
+          : language === "en"
+            ? `A ${reviewRating}-star rating for ${reviewTarget.doctorName} was submitted successfully.`
+            : `${reviewTarget.doctorName} uchun ${reviewRating} yulduzli baho muvaffaqiyatli yuborildi.`,
       );
       setReviewTarget(null);
       setReviewRating(5);
       setReviewComment("");
       setReviewError("");
     } catch (error) {
-      setReviewError(error instanceof Error ? error.message : "Bahoni yuborishda xatolik yuz berdi.");
+      setReviewError(
+        error instanceof Error
+          ? translateError(error.message)
+          : language === "ru"
+            ? "Ошибка при отправке оценки."
+            : language === "en"
+              ? "There was an error while submitting the review."
+              : "Bahoni yuborishda xatolik yuz berdi.",
+      );
     } finally {
       setIsSubmittingReview(false);
     }
@@ -369,6 +453,7 @@ const User = () => {
 
           <div className={`dashboard-menu ${menuOpen ? "dashboard-menu-open" : ""}`}>
             <div className="dashboard-actions">
+              <LanguageSwitcher compact />
               <ThemeToggle compact />
               <button
                 type="button"
@@ -378,7 +463,7 @@ const User = () => {
                   closeMenu();
                 }}
               >
-                Profil
+                {copy.profileButton}
               </button>
               <button
                 type="button"
@@ -388,7 +473,7 @@ const User = () => {
                   void signOutUser();
                 }}
               >
-                Chiqish
+                {copy.logout}
               </button>
             </div>
           </div>
@@ -397,7 +482,7 @@ const User = () => {
             type="button"
             className="mobile-menu-button"
             onClick={() => setMenuOpen((current) => !current)}
-            aria-label={menuOpen ? "Menyuni yopish" : "Menyuni ochish"}
+            aria-label={menuLabel}
           >
             {menuOpen ? <CloseIcon /> : <MenuIcon />}
           </button>
@@ -407,12 +492,9 @@ const User = () => {
       <main className="container dashboard-content">
         <section className="dashboard-hero">
           <div>
-            <span className="section-chip">Bemor kabineti</span>
-            <h1>Bronlash, tarix va tavsiyalar bir panelda</h1>
-            <p>
-              Tizim sizga eng mos doktorni tanlash, slotni band qilish va qabul tafsilotlarini bir
-              joyda kuzatish imkonini beradi.
-            </p>
+            <span className="section-chip">{copy.patientCabinet}</span>
+            <h1>{copy.heroTitle}</h1>
+            <p>{copy.heroText}</p>
           </div>
 
           <div className="dashboard-summary-grid">
@@ -426,7 +508,7 @@ const User = () => {
         </section>
 
         <section className="dashboard-tabbar">
-          {tabs.map((tab) => (
+          {localizedTabs.map((tab) => (
             <button
               key={tab.id}
               type="button"
@@ -445,55 +527,55 @@ const User = () => {
                 <div className="flow-progress">
                   <div className="flow-progress-item flow-progress-item-active">
                     <span>01</span>
-                    <strong>Shifokor tanlash</strong>
+                    <strong>{copy.progress[0]}</strong>
                   </div>
                   <div className="flow-progress-item flow-progress-item-active">
                     <span>02</span>
-                    <strong>Vaqt tanlash</strong>
+                    <strong>{copy.progress[1]}</strong>
                   </div>
                   <div className="flow-progress-item">
                     <span>03</span>
-                    <strong>Tasdiqlash</strong>
+                    <strong>{copy.progress[2]}</strong>
                   </div>
                 </div>
 
                 <div className="panel-heading">
                   <div>
-                    <span className="section-chip">1-bosqich</span>
-                    <h2>Shifokorni tanlang</h2>
+                    <span className="section-chip">{copy.step1}</span>
+                    <h2>{copy.chooseDoctor}</h2>
                   </div>
                   <span className="badge">
                     <ShieldIcon />
-                    Tasdiqlangan doktorlar
+                    {copy.approvedDoctors}
                   </span>
                 </div>
 
                 <div className="doctor-filter-bar">
                   <label className="field">
-                    <span>Qidiruv</span>
+                    <span>{copy.search}</span>
                     <div className="field-box">
                       <SparkIcon />
                       <input
                         type="text"
                         value={doctorSearchTerm}
                         onChange={(event) => setDoctorSearchTerm(event.target.value)}
-                        placeholder="Ism, yo'nalish yoki klinika"
+                        placeholder={copy.searchPlaceholder}
                       />
                     </div>
                   </label>
 
                   <label className="field">
-                    <span>Viloyat</span>
+                    <span>{copy.region}</span>
                     <div className="field-box field-box-select">
                       <LocationIcon />
                       <select
                         value={doctorRegionFilter}
                         onChange={(event) => setDoctorRegionFilter(event.target.value)}
                       >
-                        <option value={ALL_REGIONS_OPTION}>{ALL_REGIONS_OPTION}</option>
+                        <option value={ALL_REGIONS_OPTION}>{translateRegion(ALL_REGIONS_OPTION)}</option>
                         {UZBEKISTAN_REGIONS.map((region) => (
                           <option key={region} value={region}>
-                            {region}
+                            {translateRegion(region)}
                           </option>
                         ))}
                       </select>
@@ -522,9 +604,9 @@ const User = () => {
                           </span>
                         </div>
                         <strong>{doctor.name}</strong>
-                        <span>{doctor.specialty}</span>
+                        <span>{translateSpecialty(doctor.specialty)}</span>
                         <p>{doctor.clinic}</p>
-                        <span className="doctor-region-tag">{doctor.region}</span>
+                        <span className="doctor-region-tag">{translateRegion(doctor.region)}</span>
                         <span className="doctor-location-line">
                           <LocationIcon />
                           <span>{doctor.address}</span>
@@ -533,8 +615,8 @@ const User = () => {
                     ))
                   ) : (
                     <div className="empty-state">
-                      <h3>Shifokorlar mavjud emas</h3>
-                      <p>Filterlarni o'zgartirib ko'ring yoki admin yangi shifokor qo'shgach ro'yxat to'ladi.</p>
+                      <h3>{copy.noDoctorsTitle}</h3>
+                      <p>{copy.noDoctorsText}</p>
                     </div>
                   )}
                 </div>
@@ -542,18 +624,18 @@ const User = () => {
                 <form className="booking-form" onSubmit={handleBooking}>
                   <div className="panel-heading">
                     <div>
-                      <span className="section-chip">2-bosqich</span>
-                      <h2>Qabul tafsilotlari</h2>
+                      <span className="section-chip">{copy.step2}</span>
+                      <h2>{copy.details}</h2>
                     </div>
                     <span className="badge">
                       <ClockIcon />
-                      Slotlar real vaqtda yangilanadi
+                      {copy.realtimeSlots}
                     </span>
                   </div>
 
                   <div className="field-grid">
                     <label className="field">
-                      <span>Sana</span>
+                      <span>{copy.date}</span>
                       <div className="field-box">
                         <CalendarIcon />
                         <input
@@ -567,7 +649,7 @@ const User = () => {
                     </label>
 
                     <label className="field">
-                      <span>Telefon</span>
+                      <span>{copy.phone}</span>
                       <div className="field-box">
                         <PhoneIcon />
                         <input
@@ -595,43 +677,41 @@ const User = () => {
                             } ${isBooked ? "slot-button-disabled" : ""}`}
                             onClick={() => setSelectedTime(time)}
                           >
-                            {isBooked ? `${time} band` : time}
+                            {isBooked ? format(copy.slotBooked, { time }) : time}
                           </button>
                         );
                       })
                     ) : (
                       <div className="empty-state">
-                        <h3>{selectedDate ? "Mavjud slot topilmadi" : "Avval sanani tanlang"}</h3>
-                        <p>
-                          {selectedDate
-                            ? "Ushbu sana uchun barcha slotlar band yoki vaqt o'tib ketgan."
-                            : "Sana tanlanganidan keyin mavjud vaqtlar shu yerda ko'rinadi."}
-                        </p>
+                          <h3>{selectedDate ? copy.noSlots : copy.chooseDateFirst}</h3>
+                          <p>
+                            {selectedDate ? copy.noSlotsText : copy.chooseDateText}
+                          </p>
                       </div>
                     )}
                   </div>
 
                   <div className="field-grid">
                     <label className="field">
-                      <span>F.I.O</span>
+                      <span>{copy.fullname}</span>
                       <div className="field-box">
                         <UserGroupIcon />
                         <input
                           type="text"
                           value={patientName}
                           onChange={(event) => setPatientName(event.target.value)}
-                          placeholder="Ismingizni kiriting"
+                           placeholder={copy.fullnamePlaceholder}
                         />
                       </div>
                     </label>
 
                     <label className="field field-full">
-                      <span>Izoh</span>
+                      <span>{copy.note}</span>
                       <textarea
                         value={notes}
                         onChange={(event) => setNotes(event.target.value)}
                         rows={4}
-                        placeholder="Shikoyat yoki qisqa izoh"
+                        placeholder={copy.notePlaceholder}
                       />
                     </label>
                   </div>
@@ -641,7 +721,7 @@ const User = () => {
                     className="button button-primary button-large button-block"
                     disabled={!isReady || isSubmittingBooking}
                   >
-                    {isSubmittingBooking ? "Bron tasdiqlanmoqda..." : "Bronni tasdiqlash"}
+                    {isSubmittingBooking ? copy.confirming : copy.confirmBooking}
                     <ArrowRightIcon />
                   </button>
                   {bookingError && <p className="auth-error-text">{bookingError}</p>}
@@ -653,8 +733,8 @@ const User = () => {
               <div className="workspace-section">
                 <div className="panel-heading">
                   <div>
-                    <span className="section-chip">Qabullar</span>
-                    <h2>Faol qabullaringiz</h2>
+                    <span className="section-chip">{copy.appointmentsChip}</span>
+                    <h2>{copy.activeAppointments}</h2>
                   </div>
                 </div>
 
@@ -675,7 +755,7 @@ const User = () => {
                             <h3>{appointment.doctorName}</h3>
                             <p>{appointment.specialty}</p>
                           </div>
-                          <span className="badge">{appointment.status}</span>
+                          <span className="badge">{translateStatus(appointment.status)}</span>
                         </div>
 
                         <div className="appointment-meta-grid">
@@ -702,7 +782,7 @@ const User = () => {
                             rel="noreferrer"
                             className="inline-map-link"
                           >
-                            Xaritada ochish
+                            {mapActionLabel}
                             <ArrowRightIcon />
                           </a>
                         )}
@@ -710,7 +790,7 @@ const User = () => {
                         {alreadyReviewed && (
                           <div className="review-summary-card">
                             <div className="review-summary-head">
-                              <strong>Qoldirilgan baho</strong>
+                              <strong>{copy.reviewLeft}</strong>
                               <span>{appointment.reviewRating} / 5</span>
                             </div>
                             <div className="review-stars-row review-stars-row-readonly">
@@ -730,28 +810,29 @@ const User = () => {
                         )}
 
                         <div className="appointment-actions">
-                          <button
-                            type="button"
-                            className="button button-secondary"
-                            disabled={alreadyReviewed || isCancelled || !canCompleteAppointment}
-                            onClick={() => openReviewModal(appointment)}
-                          >
-                            {alreadyReviewed
-                              ? "Baho yuborildi"
-                              : isCompleted
-                                ? "Baho qoldirish"
-                                : canCompleteAppointment
-                                  ? "Yakunlash va baholash"
-                                  : "Qabul vaqti kutilmoqda"}
-                          </button>
-                          <button
-                            type="button"
-                            className="button button-ghost"
-                            disabled={isCompleted}
-                            onClick={() => void handleCancelAppointment(appointment)}
-                          >
-                            Bekor qilish
-                          </button>
+                          {canCompleteAppointment ? (
+                            <button
+                              type="button"
+                              className="button button-secondary"
+                              disabled={alreadyReviewed || isCancelled}
+                              onClick={() => openReviewModal(appointment)}
+                            >
+                              {alreadyReviewed
+                                ? copy.reviewSent
+                                : isCompleted
+                                  ? copy.leaveReview
+                                  : copy.completeReview}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="button button-ghost"
+                              disabled={isCompleted}
+                              onClick={() => void handleCancelAppointment(appointment)}
+                            >
+                              {copy.cancel}
+                            </button>
+                          )}
                         </div>
                       </article>
                     );
@@ -759,8 +840,8 @@ const User = () => {
 
                   {activeAppointments.length === 0 && (
                     <div className="empty-state">
-                      <h3>Aktiv qabul topilmadi</h3>
-                      <p>Yangi bron qilganingizdan keyin aktiv qabul shu yerda ko'rinadi.</p>
+                      <h3>{copy.noAppointments}</h3>
+                      <p>{copy.noAppointmentsText}</p>
                     </div>
                   )}
                 </div>
@@ -771,15 +852,15 @@ const User = () => {
               <div className="workspace-section">
                 <div className="panel-heading">
                   <div>
-                    <span className="section-chip">Profil</span>
-                    <h2>Profil ma'lumotlari</h2>
+                    <span className="section-chip">{copy.profileChip}</span>
+                    <h2>{copy.profileTitle}</h2>
                   </div>
                 </div>
 
                 <form className="booking-form" onSubmit={handleProfileSave}>
                   <div className="field-grid">
                     <label className="field">
-                      <span>To'liq ism</span>
+                      <span>{copy.fullname}</span>
                       <div className="field-box">
                         <UserGroupIcon />
                         <input
@@ -793,7 +874,7 @@ const User = () => {
                     </label>
 
                     <label className="field">
-                      <span>Email</span>
+                      <span>{copy.email}</span>
                       <div className="field-box">
                         <SparkIcon />
                         <input
@@ -807,7 +888,7 @@ const User = () => {
                     </label>
 
                     <label className="field">
-                      <span>Telefon</span>
+                      <span>{copy.phone}</span>
                       <div className="field-box">
                         <PhoneIcon />
                         <input
@@ -821,7 +902,7 @@ const User = () => {
                     </label>
 
                     <label className="field">
-                      <span>Shahar</span>
+                      <span>{copy.city}</span>
                       <div className="field-box">
                         <LocationIcon />
                         <input
@@ -835,7 +916,7 @@ const User = () => {
                     </label>
 
                     <label className="field">
-                      <span>Tug'ilgan sana</span>
+                      <span>{copy.birthDate}</span>
                       <div className="field-box">
                         <CalendarIcon />
                         <input
@@ -849,7 +930,7 @@ const User = () => {
                     </label>
 
                     <label className="field field-full">
-                      <span>Qisqacha ma'lumot</span>
+                      <span>{copy.about}</span>
                       <textarea
                         value={profileDraft.about}
                         onChange={(event) =>
@@ -861,7 +942,7 @@ const User = () => {
                   </div>
 
                   <button type="submit" className="button button-primary button-large">
-                    Profilni saqlash
+                    {copy.saveProfile}
                     <CheckIcon />
                   </button>
                 </form>
@@ -873,43 +954,43 @@ const User = () => {
             <article className="preview-card preview-highlight">
               <span className="badge badge-gold">
                 <SparkIcon />
-                Bron xulosasi
+                {copy.bookingSummary}
               </span>
-              <h2>{selectedDoctor?.name ?? "Shifokor tanlanmagan"}</h2>
-              <p>{selectedDoctor?.specialty ?? "Mutaxassislik tanlanmagan"}</p>
+              <h2>{selectedDoctor?.name ?? copy.noDoctor}</h2>
+              <p>{selectedDoctor ? translateSpecialty(selectedDoctor.specialty) : copy.noSpecialty}</p>
               {selectedDoctor?.bio && <p className="preview-subtext">{selectedDoctor.bio}</p>}
 
               <div className="preview-list">
                 <div>
                   <CalendarIcon />
-                  <span>{selectedDate || "Sana tanlanmagan"}</span>
+                  <span>{selectedDate || copy.noDate}</span>
                 </div>
                 <div>
                   <ClockIcon />
-                  <span>{selectedTime || "Bo'sh vaqt tanlanmagan"}</span>
+                  <span>{selectedTime || copy.noTime}</span>
                 </div>
                 <div>
                   <LocationIcon />
-                  <span>{selectedDoctor?.region ?? "Viloyat tanlanmagan"}</span>
+                  <span>{selectedDoctor ? translateRegion(selectedDoctor.region) : copy.noRegion}</span>
                 </div>
                 <div>
                   <LocationIcon />
-                  <span>{selectedDoctor?.clinic ?? "Klinika yo'q"}</span>
+                  <span>{selectedDoctor?.clinic ?? copy.noClinic}</span>
                 </div>
                 <div>
                   <LocationIcon />
-                  <span>{selectedDoctor?.address ?? "Manzil kiritilmagan"}</span>
+                  <span>{selectedDoctor?.address ?? copy.noAddress}</span>
                 </div>
               </div>
 
               <div className="price-line">
-                <span>Konsultatsiya narxi</span>
+                <span>{copy.consultation}</span>
                 <strong>{selectedDoctor?.price ?? "-"}</strong>
               </div>
 
               {selectedDoctorMapUrl && (
                 <a href={selectedDoctorMapUrl} target="_blank" rel="noreferrer" className="button button-secondary button-block">
-                  Xaritada ochish
+                  {mapActionLabel}
                   <ArrowRightIcon />
                 </a>
               )}
@@ -918,12 +999,12 @@ const User = () => {
             <article className="preview-card">
               <div className="panel-heading">
                 <div>
-                  <h3>Lokatsiya xaritasi</h3>
-                  <p>Tanlangan doktor uchun manzil va xarita preview shu yerda ko'rinadi.</p>
+                  <h3>{copy.mapTitle}</h3>
+                  <p>{copy.mapText}</p>
                 </div>
                 {selectedDoctorMapUrl && (
                   <a href={selectedDoctorMapUrl} target="_blank" rel="noreferrer" className="button button-secondary">
-                    Xaritada ochish
+                    {mapActionLabel}
                     <ArrowRightIcon />
                   </a>
                 )}
@@ -940,63 +1021,56 @@ const User = () => {
               ) : (
                 <div className="map-preview-empty">
                   <LocationIcon />
-                  <strong>Doktor tanlangach xarita shu yerda chiqadi</strong>
-                  <p>Admin lokatsiya kiritgach siz uni shu bo'limda ko'rasiz.</p>
+                  <strong>{copy.mapEmptyTitle}</strong>
+                  <p>{copy.mapEmptyText}</p>
                 </div>
               )}
 
-              <p className="map-preview-caption">{selectedDoctor?.address ?? "Manzil hali kiritilmagan."}</p>
+              <p className="map-preview-caption">{selectedDoctor?.address ?? copy.addressMissing}</p>
             </article>
 
             <article className="preview-card">
-              <h3>Doktor haqida</h3>
+              <h3>{copy.aboutDoctor}</h3>
               <div className="info-stack">
                 <div>
-                  <span>Reyting</span>
+                  <span>{copy.rating}</span>
                   <strong>{selectedDoctor ? selectedDoctor.rating.toFixed(1) : "-"}</strong>
                 </div>
                 <div>
-                  <span>Baholar soni</span>
-                  <strong>{selectedDoctor?.reviewCount ?? 0} ta</strong>
+                  <span>{copy.ratingCount}</span>
+                  <strong>{language === "uz" ? `${selectedDoctor?.reviewCount ?? 0} ta` : `${selectedDoctor?.reviewCount ?? 0}`}</strong>
                 </div>
                 <div>
-                  <span>Tajriba</span>
+                  <span>{copy.experience}</span>
                   <strong>{selectedDoctor?.experience ?? "-"}</strong>
                 </div>
                 <div>
-                  <span>Eng yaqin slot</span>
+                  <span>{copy.nearestSlot}</span>
                   <strong>{selectedDoctor?.availability ?? "-"}</strong>
                 </div>
               </div>
               <p className="preview-subtext">
-                Tanlangan mutaxassis bo'yicha asosiy ko'rsatkichlar shu yerda jamlanadi, shuning
-                uchun qaror qabul qilish osonlashadi.
+                {copy.aboutDoctorText}
               </p>
             </article>
 
             <article className="preview-card">
-              <h3>Bron afzalliklari</h3>
+              <h3>{copy.benefits}</h3>
               <div className="summary-checks">
-                <div>
-                  <CheckIcon />
-                  <span>SMS eslatma</span>
-                </div>
-                <div>
-                  <CheckIcon />
-                  <span>Qabul tafsilotlari kabinetda</span>
-                </div>
-                <div>
-                  <CheckIcon />
-                  <span>Qayta bronlash tavsiyasi</span>
-                </div>
+                {copy.benefitList.map((item: string) => (
+                  <div key={item}>
+                    <CheckIcon />
+                    <span>{item}</span>
+                  </div>
+                ))}
               </div>
             </article>
 
             <article className="preview-card">
-              <h3>Xizmat darajasi</h3>
+              <h3>{copy.serviceLevel}</h3>
               <div className="service-level-card">
-                <span>Premium parvarish oqimi</span>
-                <strong>Tezkor tasdiq va raqamli kuzatuv</strong>
+                <span>{copy.serviceFlow}</span>
+                <strong>{copy.serviceText}</strong>
               </div>
             </article>
           </aside>
@@ -1008,7 +1082,7 @@ const User = () => {
               <CheckIcon />
             </div>
             <div>
-              <h2>Yangilanish muvaffaqiyatli bajarildi</h2>
+              <h2>{successBannerTitle}</h2>
               <p>{confirmationText}</p>
             </div>
           </section>
@@ -1020,7 +1094,7 @@ const User = () => {
               <CloseIcon />
             </div>
             <div>
-              <h2>Amalda xatolik yuz berdi</h2>
+              <h2>{errorBannerTitle}</h2>
               <p>{workspaceError}</p>
             </div>
           </section>
@@ -1039,8 +1113,8 @@ const User = () => {
             <form className="review-form" onSubmit={handleReviewSubmit}>
               <div className="panel-heading">
                 <div>
-                  <span className="section-chip">Baho</span>
-                  <h2 id="review-modal-title">Qabul yakunlandimi?</h2>
+                  <span className="section-chip">{copy.reviewChip}</span>
+                  <h2 id="review-modal-title">{copy.reviewTitle}</h2>
                 </div>
                 <button type="button" className="icon-button" onClick={closeReviewModal}>
                   <CloseIcon />
@@ -1048,12 +1122,11 @@ const User = () => {
               </div>
 
               <p className="review-modal-copy">
-                {reviewTarget.doctorName} uchun tarif qoldiring va xizmat sifatini 1 dan 5 gacha
-                yulduzcha bilan baholang.
+                {format(copy.reviewText, { doctorName: reviewTarget.doctorName })}
               </p>
 
               <div className="review-stars-block">
-                <span>Bahongiz</span>
+                <span>{copy.yourRating}</span>
                 <div className="review-stars-row">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
@@ -1071,12 +1144,12 @@ const User = () => {
               </div>
 
               <label className="field">
-                <span>Tarif</span>
+                <span>{copy.reviewLabel}</span>
                 <textarea
                   value={reviewComment}
                   onChange={(event) => setReviewComment(event.target.value)}
                   rows={4}
-                  placeholder="Doktor qabul sifati haqida qisqa fikringizni yozing"
+                  placeholder={copy.reviewPlaceholder}
                 />
               </label>
 
@@ -1084,10 +1157,10 @@ const User = () => {
 
               <div className="modal-actions">
                 <button type="button" className="button button-ghost" onClick={closeReviewModal}>
-                  Bekor qilish
+                  {copy.cancel}
                 </button>
                 <button type="submit" className="button button-primary" disabled={isSubmittingReview}>
-                  Yuborish
+                  {copy.send}
                   <CheckIcon />
                 </button>
               </div>
@@ -1109,16 +1182,12 @@ const User = () => {
               <div className="confirmation-icon booking-success-icon">
                 <CheckIcon />
               </div>
-              <span className="section-chip">Bron tasdiqlandi</span>
+              <span className="section-chip">{copy.successChip}</span>
             </div>
 
             <div className="booking-success-copy">
-              <h2 id="booking-success-title">Broningiz muvaffaqiyatli yaratildi</h2>
-              <p>
-                Hurmatli foydalanuvchi, siz qabulni muvaffaqiyatli bron qildingiz. Endi
-                <strong> Qabullar</strong> bo'limiga o'tib bron tafsilotlarini shifokorga
-                ko'rsatishingiz mumkin va konsultatsiya jarayoni boshlanadi.
-              </p>
+              <h2 id="booking-success-title">{copy.successTitle}</h2>
+              <p>{copy.successText}</p>
             </div>
 
             <div className="preview-list booking-success-list">
@@ -1142,10 +1211,10 @@ const User = () => {
 
             <div className="modal-actions booking-success-actions">
               <button type="button" className="button button-ghost" onClick={closeBookingSuccessModal}>
-                Keyinroq
+                {copy.later}
               </button>
               <button type="button" className="button button-primary" onClick={openAppointmentsAfterSuccess}>
-                Qabullar bo'limiga o'tish
+                {copy.goAppointments}
                 <ArrowRightIcon />
               </button>
             </div>

@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 import ThemeToggle from "../components/ThemeToggle";
 import {
   ArrowRightIcon,
@@ -18,147 +19,99 @@ import {
   UserGroupIcon,
 } from "../components/PremiumIcons";
 import { useAppContext } from "../context/AppContext";
+import { useI18n } from "../context/I18nContext";
+import { homeCopy } from "../i18n/homeCopy";
 import { getDoctorMapQuery, getMapSearchUrl } from "../lib/maps";
 import { ALL_REGIONS_OPTION, UZBEKISTAN_REGIONS } from "../lib/regions";
 import { getBookingRulesMessage } from "../lib/schedule";
 
-const features = [
-  {
-    icon: <CalendarIcon />,
-    title: "Smart bronlash",
-    text: "30 soniyalik oqim bilan qabul vaqti tanlanadi, status esa real vaqtda yangilanadi.",
-  },
-  {
-    icon: <ShieldIcon />,
-    title: "Xavfsiz profil",
-    text: "Profil, tarix va review ma'lumotlari Firestore bilan barqaror saqlanadi.",
-  },
-  {
-    icon: <ChartIcon />,
-    title: "Premium tahlil",
-    text: "Doktorlar, rating va bo'sh slotlar foydalanuvchi uchun tez qaror beradigan formatda ko'rsatiladi.",
-  },
-];
-
-const serviceSuites = [
-  {
-    title: "Ekspress chek-ap",
-    text: "Band foydalanuvchilar uchun tezkor premium diagnostika va bitta oqimdagi koordinatsiya.",
-    meta: "90 daqiqalik to'liq chek-up",
-  },
-  {
-    title: "Oilaviy sog'liq rejasi",
-    text: "Oila a'zolari uchun yagona kabinet, qayta bronlash va monitoring tizimi.",
-    meta: "5 tagacha profil",
-  },
-  {
-    title: "Jarrohlik yo'nalishi",
-    text: "Konsultatsiya, operatsiya oldi tayyorgarlik va keyingi kuzatuv bitta panelda.",
-    meta: "Koordinator yordami",
-  },
-  {
-    title: "Uzluksiz parvarish",
-    text: "Qabuldan keyingi tavsiyalar, rating va reviewlar orqali xizmat sifati oshiriladi.",
-    meta: "30 kunlik kuzatuv",
-  },
-];
-
-const steps = [
-  {
-    index: "01",
-    title: "Mutaxassisni toping",
-    text: "Yo'nalish, klinika, tajriba va reyting bo'yicha mos shifokorni tanlang.",
-  },
-  {
-    index: "02",
-    title: "Qulay vaqtni belgilang",
-    text: "Faqat mavjud slotlar ko'rsatiladi, ikki kishi bir vaqtni olib qo'ya olmaydi.",
-  },
-  {
-    index: "03",
-    title: "Qabulni boshqaring",
-    text: "Status, tarix va yakuniy bahoni kabinet ichida bir joydan yuriting.",
-  },
-];
-
-const testimonials = [
-  {
-    name: "Dilnoza Rahimova",
-    role: "Bemor",
-    quote: "Interfeys juda premium ko'rinadi. Telefonimda ham, kompyuterda ham aniq va tez ishladi.",
-  },
-  {
-    name: "Azizbek Usmonov",
-    role: "Oilaviy foydalanuvchi",
-    quote: "Bir nechta bronlarni boshqarish osonlashdi, doktor baholari esa tanlashni tezlashtirdi.",
-  },
-];
-
-const experiencePoints = [
-  "Yopishqoq navbar, responsiv layout va premium glassmorphism ritmi",
-  "User, admin va login oqimlari yagona light va dark tema bilan birlashtirilgan",
-  "Desktop va mobil uchun toza spacing, kuchli kontrast va silliq navigatsiya",
-];
-
-const faqs = [
-  {
-    question: "Bronlash qachon ochiq bo'ladi?",
-    answer: "Bronlash har kuni 09:00 dan 18:00 gacha ishlaydi, yakshanba kuni esa yopiq.",
-  },
-  {
-    question: "Qaysi vaqtgacha slot tanlash mumkin?",
-    answer: "Qabul slotlari 09:00 dan 17:30 gacha ko'rsatiladi va faqat admin belgilagan vaqtlar chiqadi.",
-  },
-  {
-    question: "Reytingni kim beradi?",
-    answer: "Doktor reytingini faqat qabuldan keyin foydalanuvchilar beradi, admin uni qo'lda o'zgartirmaydi.",
-  },
-];
-
 const Home = () => {
+  const { language, format, translateRegion, translateSpecialty } = useI18n();
+  const copy = homeCopy[language];
   const { appointments, doctors } = useAppContext();
   const [searchTerm, setSearchTerm] = useState("");
   const [locationTerm, setLocationTerm] = useState("");
   const [regionFilter, setRegionFilter] = useState(ALL_REGIONS_OPTION);
   const [menuOpen, setMenuOpen] = useState(false);
+  const deferredSearchTerm = useDeferredValue(searchTerm);
+  const deferredLocationTerm = useDeferredValue(locationTerm);
 
   const filteredDoctors = useMemo(() => {
     return doctors.filter((doctor) => {
       const matchesSearch =
-        `${doctor.name} ${doctor.specialty} ${doctor.bio}`.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesLocation = `${doctor.clinic} ${doctor.address} ${doctor.availability}`
-        .toLowerCase()
-        .includes(locationTerm.toLowerCase());
-      const matchesRegion =
-        regionFilter === ALL_REGIONS_OPTION || doctor.region === regionFilter;
+        `${doctor.name} ${doctor.specialty} ${doctor.bio}`
+          .toLowerCase()
+          .includes(deferredSearchTerm.toLowerCase());
+      const matchesLocation =
+        `${doctor.clinic} ${doctor.address} ${doctor.availability}`
+          .toLowerCase()
+          .includes(deferredLocationTerm.toLowerCase());
+      const matchesRegion = regionFilter === ALL_REGIONS_OPTION || doctor.region === regionFilter;
 
       return matchesSearch && matchesLocation && matchesRegion;
     });
-  }, [doctors, locationTerm, regionFilter, searchTerm]);
+  }, [deferredLocationTerm, deferredSearchTerm, doctors, regionFilter]);
 
   const stats = useMemo(
     () => [
-      { value: `${doctors.length}+`, label: "Faol shifokor" },
-      { value: `${appointments.length}+`, label: "Yozilgan qabul" },
+      { value: `${doctors.length}+`, label: copy.stats[0] },
+      { value: `${appointments.length}+`, label: copy.stats[1] },
       {
         value: `${new Set(doctors.map((doctor) => doctor.clinic)).size}+`,
-        label: "Premium klinika",
+        label: copy.stats[2],
       },
       {
         value:
           doctors.length > 0
             ? `${(doctors.reduce((sum, doctor) => sum + doctor.rating, 0) / doctors.length).toFixed(1)}/5`
             : "0/5",
-        label: "O'rtacha baho",
+        label: copy.stats[3],
       },
     ],
-    [appointments.length, doctors],
+    [appointments.length, copy.stats, doctors],
   );
 
   const highlightedDoctor = filteredDoctors[0] ?? doctors[0];
-  const bookingRules = getBookingRulesMessage();
+  const bookingRules = getBookingRulesMessage(language);
+
+  const features = useMemo(
+    () =>
+      copy.features.map(([title, text]: [string, string], index: number) => ({
+        icon: [<CalendarIcon key="calendar" />, <ShieldIcon key="shield" />, <ChartIcon key="chart" />][index],
+        title,
+        text,
+      })),
+    [copy.features],
+  );
+
+  const serviceSuites = useMemo(
+    () => copy.suites.map(([meta, title, text]: [string, string, string]) => ({ meta, title, text })),
+    [copy.suites],
+  );
+
+  const steps = useMemo(
+    () => copy.steps.map(([index, title, text]: [string, string, string]) => ({ index, title, text })),
+    [copy.steps],
+  );
+
+  const testimonials = useMemo(
+    () => copy.testimonials.map(([name, role, quote]: [string, string, string]) => ({ name, role, quote })),
+    [copy.testimonials],
+  );
+
+  const faqs = useMemo(
+    () => copy.faqs.map(([question, answer]: [string, string]) => ({ question, answer })),
+    [copy.faqs],
+  );
 
   const closeMenu = () => setMenuOpen(false);
+  const menuLabel = menuOpen ? copy.closeMenu : copy.openMenu;
+  const highlightedDoctorAvailability = highlightedDoctor?.availableSlots[0]
+    ? format(copy.nextSlot, { time: highlightedDoctor.availableSlots[0] })
+    : copy.noOpenSlots;
+
+  const getDoctorAvailability = (doctor: (typeof doctors)[number]) =>
+    doctor.availableSlots[0] ? format(copy.nextSlot, { time: doctor.availableSlots[0] }) : copy.noOpenSlots;
 
   return (
     <div className="page-shell">
@@ -179,23 +132,24 @@ const Home = () => {
           <div className={`nav-cluster ${menuOpen ? "nav-cluster-open" : ""}`}>
             <nav className="nav-links">
               <a href="#advantages" onClick={closeMenu}>
-                Afzalliklar
+                {copy.nav[0]}
               </a>
               <a href="#specialists" onClick={closeMenu}>
-                Shifokorlar
+                {copy.nav[1]}
               </a>
               <a href="#journey" onClick={closeMenu}>
-                Jarayon
+                {copy.nav[2]}
               </a>
             </nav>
 
             <div className="nav-actions">
+              <LanguageSwitcher compact />
               <ThemeToggle compact />
               <Link to="/login" className="button button-ghost" onClick={closeMenu}>
-                Kirish
+                {copy.enterAccount}
               </Link>
               <Link to="/user" className="button button-primary" onClick={closeMenu}>
-                Qabul olish
+                {copy.bookNow}
               </Link>
             </div>
           </div>
@@ -204,7 +158,7 @@ const Home = () => {
             type="button"
             className="mobile-menu-button"
             onClick={() => setMenuOpen((current) => !current)}
-            aria-label={menuOpen ? "Menyuni yopish" : "Menyuni ochish"}
+            aria-label={menuLabel}
           >
             {menuOpen ? <CloseIcon /> : <MenuIcon />}
           </button>
@@ -217,26 +171,23 @@ const Home = () => {
             <div className="hero-copy">
               <div className="eyebrow-pill">
                 <ShieldIcon />
-                Premium digital klinika ekotizimi
+                {copy.heroChip}
               </div>
 
               <h1>
-                Sog'liq xizmatini
-                <span>premium tajribaga aylantiring</span>
+                {copy.heroTitle}
+                <span>{copy.heroAccent}</span>
               </h1>
 
-              <p className="hero-text">
-                MedElite real booking, aniq slotlar, xarita bilan tanlash va review tizimini
-                bitta silliq premium platformada birlashtiradi.
-              </p>
+              <p className="hero-text">{copy.heroText}</p>
 
               <div className="hero-actions">
                 <Link to="/user" className="button button-primary button-large">
-                  Hozir bron qiling
+                  {copy.bookNow}
                   <ArrowRightIcon />
                 </Link>
                 <Link to="/login" className="button button-secondary button-large">
-                  Kabinetga kirish
+                  {copy.enterAccount}
                 </Link>
               </div>
 
@@ -244,11 +195,11 @@ const Home = () => {
                 <div className="search-field">
                   <SearchIcon />
                   <div>
-                    <span>Mutaxassislik</span>
+                    <span>{copy.specialty}</span>
                     <input
                       value={searchTerm}
                       onChange={(event) => setSearchTerm(event.target.value)}
-                      placeholder="Kardiolog, terapevt, ortoped"
+                      placeholder={copy.specialtyPlaceholder}
                       className="hero-search-input"
                     />
                   </div>
@@ -256,32 +207,32 @@ const Home = () => {
                 <div className="search-field">
                   <LocationIcon />
                   <div>
-                    <span>Klinika yoki hudud</span>
+                    <span>{copy.location}</span>
                     <input
                       value={locationTerm}
                       onChange={(event) => setLocationTerm(event.target.value)}
-                      placeholder="Toshkent, Chilonzor"
+                      placeholder={copy.locationPlaceholder}
                       className="hero-search-input"
                     />
                   </div>
                 </div>
                 <a href="#specialists" className="button button-primary">
-                  Izlash
+                  {copy.search}
                 </a>
               </div>
 
               <div className="hero-inline-proof">
                 <div>
                   <strong>98%</strong>
-                  <span>shu kunning o'zida bron</span>
+                  <span>{copy.quick[0]}</span>
                 </div>
                 <div>
                   <strong>24/7</strong>
-                  <span>operator va qo'llab-quvvatlash</span>
+                  <span>{copy.quick[1]}</span>
                 </div>
                 <div>
                   <strong>4.9/5</strong>
-                  <span>real foydalanuvchi bahosi</span>
+                  <span>{copy.quick[2]}</span>
                 </div>
               </div>
             </div>
@@ -291,21 +242,21 @@ const Home = () => {
                 <div className="hero-panel-header">
                   <span className="badge badge-gold">
                     <SparkIcon />
-                    Premium parvarish
+                    {copy.care}
                   </span>
-                  <span className="status-dot">Faol</span>
+                  <span className="status-dot">{copy.statusActive}</span>
                 </div>
 
                 <div className="hero-panel-grid">
                   <article className="metric-card">
-                    <p>Bugungi ish vaqti</p>
+                    <p>{copy.workingHours}</p>
                     <strong>09:00 - 18:00</strong>
                     <span>{bookingRules}</span>
                   </article>
                   <article className="metric-card metric-card-accent">
-                    <p>Javob vaqti</p>
+                    <p>{copy.responseTime}</p>
                     <strong>2.4 min</strong>
-                    <span>Operator va AI yordam</span>
+                    <span>{copy.responseMeta}</span>
                   </article>
                 </div>
 
@@ -314,15 +265,15 @@ const Home = () => {
                     <StethoscopeIcon />
                   </div>
                   <div className="doctor-spotlight-copy">
-                    <h3>{highlightedDoctor?.name ?? "Mos shifokor"}</h3>
+                    <h3>{highlightedDoctor?.name ?? copy.fallbackDoctor}</h3>
                     <p>
                       {highlightedDoctor
-                        ? `${highlightedDoctor.specialty} | ${highlightedDoctor.clinic}`
-                        : "Holatingizga mos shifokor, vaqt va klinika avtomatik tavsiya qilinadi."}
+                        ? `${translateSpecialty(highlightedDoctor.specialty)} | ${highlightedDoctor.clinic}`
+                        : copy.fallbackDoctorText}
                     </p>
                     {highlightedDoctor && (
                       <div className="spotlight-tags">
-                        <span className="doctor-region-tag">{highlightedDoctor.region}</span>
+                        <span className="doctor-region-tag">{translateRegion(highlightedDoctor.region)}</span>
                         <span className="doctor-region-tag">{highlightedDoctor.price}</span>
                       </div>
                     )}
@@ -331,25 +282,25 @@ const Home = () => {
 
                 <div className="schedule-strip">
                   <div>
-                    <span>Bugungi slotlar</span>
-                    <strong>09:00 - 17:30</strong>
+                    <span>{copy.todaySlots}</span>
+                    <strong>{highlightedDoctorAvailability}</strong>
                   </div>
                   <div>
-                    <span>Reyting</span>
+                    <span>{copy.rating}</span>
                     <strong>{highlightedDoctor ? highlightedDoctor.rating.toFixed(1) : "5.0"}</strong>
                   </div>
                   <div>
-                    <span>Tezkor oqim</span>
-                    <strong>Baho va tarix</strong>
+                    <span>{copy.flow}</span>
+                    <strong>{copy.history}</strong>
                   </div>
                 </div>
 
                 <div className="care-ribbon">
                   <div>
-                    <span>Foydalanuvchi oqimi</span>
-                    <strong>Qidirish, bronlash, tasdiqlash va baholash</strong>
+                    <span>{copy.userFlow}</span>
+                    <strong>{copy.userFlowText}</strong>
                   </div>
-                  <span className="badge">Premium UX</span>
+                  <span className="badge">{copy.premiumUx}</span>
                 </div>
               </div>
             </div>
@@ -370,16 +321,13 @@ const Home = () => {
         <section id="advantages" className="section-block">
           <div className="container">
             <div className="section-heading">
-              <span className="section-chip">Afzalliklar</span>
-              <h2>Desktop va mobile uchun premium ritm bilan qurilgan platforma</h2>
-              <p>
-                Har bir blok tez qaror, kuchli ishonch va silliq booking tajribasini berish uchun
-                yangilandi.
-              </p>
+              <span className="section-chip">{copy.advantagesChip}</span>
+              <h2>{copy.advantagesTitle}</h2>
+              <p>{copy.advantagesText}</p>
             </div>
 
             <div className="feature-grid">
-              {features.map((feature) => (
+              {features.map((feature: { icon: ReactNode; title: string; text: string }) => (
                 <article key={feature.title} className="feature-card glass-card">
                   <div className="icon-shell">{feature.icon}</div>
                   <h3>{feature.title}</h3>
@@ -394,23 +342,23 @@ const Home = () => {
           <div className="container">
             <div className="section-heading section-heading-inline">
               <div>
-                <span className="section-chip">Xizmat paketlari</span>
-                <h2>Turli foydalanuvchi ehtiyojlari uchun premium xizmat paketlari</h2>
+                <span className="section-chip">{copy.suitesChip}</span>
+                <h2>{copy.suitesTitle}</h2>
               </div>
               <span className="badge badge-gold">
                 <SparkIcon />
-                Tanlangan oqimlar
+                {copy.suitesBadge}
               </span>
             </div>
 
             <div className="suite-grid">
-              {serviceSuites.map((suite) => (
+              {serviceSuites.map((suite: { meta: string; title: string; text: string }) => (
                 <article key={suite.title} className="suite-card">
                   <span className="suite-meta">{suite.meta}</span>
                   <h3>{suite.title}</h3>
                   <p>{suite.text}</p>
                   <Link to="/user" className="suite-link">
-                    Batafsil
+                    {copy.details}
                     <ArrowRightIcon />
                   </Link>
                 </article>
@@ -423,22 +371,19 @@ const Home = () => {
           <div className="container">
             <div className="section-heading section-heading-inline">
               <div>
-                <span className="section-chip">Top mutaxassislar</span>
-                <h2>Eng kuchli mutaxassislar, real reyting va premium klinik muhitda</h2>
+                <span className="section-chip">{copy.doctorsChip}</span>
+                <h2>{copy.doctorsTitle}</h2>
               </div>
               <div className="section-actions-row">
                 <label className="field section-filter">
-                  <span>Viloyat</span>
+                  <span>{copy.region}</span>
                   <div className="field-box field-box-select">
                     <LocationIcon />
-                    <select
-                      value={regionFilter}
-                      onChange={(event) => setRegionFilter(event.target.value)}
-                    >
-                      <option value={ALL_REGIONS_OPTION}>{ALL_REGIONS_OPTION}</option>
+                    <select value={regionFilter} onChange={(event) => setRegionFilter(event.target.value)}>
+                      <option value={ALL_REGIONS_OPTION}>{translateRegion(ALL_REGIONS_OPTION)}</option>
                       {UZBEKISTAN_REGIONS.map((region) => (
                         <option key={region} value={region}>
-                          {region}
+                          {translateRegion(region)}
                         </option>
                       ))}
                     </select>
@@ -446,7 +391,7 @@ const Home = () => {
                 </label>
 
                 <Link to="/user" className="button button-secondary">
-                  Barchasini ko'rish
+                  {copy.viewAll}
                 </Link>
               </div>
             </div>
@@ -465,18 +410,18 @@ const Home = () => {
                   </div>
 
                   <h3>{doctor.name}</h3>
-                  <p>{doctor.specialty}</p>
+                  <p>{translateSpecialty(doctor.specialty)}</p>
                   <p>{doctor.bio}</p>
-                  <span className="doctor-region-tag">{doctor.region}</span>
+                  <span className="doctor-region-tag">{translateRegion(doctor.region)}</span>
 
                   <div className="doctor-card-quickline">
                     <span>{doctor.price}</span>
-                    <span>{doctor.availability}</span>
+                    <span>{getDoctorAvailability(doctor)}</span>
                   </div>
 
                   <div className="doctor-meta">
                     <span>{doctor.clinic}</span>
-                    <span>{doctor.reviewCount} baho</span>
+                    <span>{format(copy.reviews, { count: doctor.reviewCount })}</span>
                   </div>
 
                   <div className="doctor-location-line">
@@ -491,11 +436,11 @@ const Home = () => {
                       rel="noreferrer"
                       className="button button-secondary button-block"
                     >
-                      Xaritada ko'rish
+                      {copy.viewMap}
                       <ArrowRightIcon />
                     </a>
                     <Link to="/user" className="button button-primary button-block">
-                      Qabulga yozilish
+                      {copy.bookVisit}
                     </Link>
                   </div>
                 </article>
@@ -504,8 +449,8 @@ const Home = () => {
 
             {filteredDoctors.length === 0 && (
               <div className="empty-state">
-                <h3>Mos shifokor topilmadi</h3>
-                <p>Boshqa mutaxassislik yoki klinika nomi bilan qayta qidirib ko'ring.</p>
+                <h3>{copy.noDoctorsTitle}</h3>
+                <p>{copy.noDoctorsText}</p>
               </div>
             )}
           </div>
@@ -514,16 +459,13 @@ const Home = () => {
         <section id="journey" className="section-block">
           <div className="container process-layout">
             <div className="section-heading">
-              <span className="section-chip">Jarayon</span>
-              <h2>Foydalanuvchi uchun soddalashtirilgan va ishonchli 3 bosqichli oqim</h2>
-              <p>
-                Booking, tarix va review bir xil tilda ishlaydi. Shu sabab foydalanuvchi tizimni
-                oson tushunadi.
-              </p>
+              <span className="section-chip">{copy.journeyChip}</span>
+              <h2>{copy.journeyTitle}</h2>
+              <p>{copy.journeyText}</p>
             </div>
 
             <div className="process-list">
-              {steps.map((step) => (
+              {steps.map((step: { index: string; title: string; text: string }) => (
                 <article key={step.index} className="process-card">
                   <span>{step.index}</span>
                   <h3>{step.title}</h3>
@@ -537,27 +479,24 @@ const Home = () => {
         <section className="section-block">
           <div className="container experience-grid">
             <article className="experience-hero">
-              <span className="section-chip">Premium parvarish</span>
-              <h2>Ko'rinish chiroyli, oqim esa haqiqatan ishlaydigan premium tajriba</h2>
-              <p>
-                Bu yerda maqsad shunchaki dizayn emas. Har bir ekran userni tezroq booking,
-                aniqroq tanlov va kuchliroq ishonchga olib keladi.
-              </p>
+              <span className="section-chip">{copy.expChip}</span>
+              <h2>{copy.expTitle}</h2>
+              <p>{copy.expText}</p>
 
               <div className="experience-metrics">
                 <div>
                   <strong>12+</strong>
-                  <span>Premium xizmat ssenariysi</span>
+                  <span>{copy.expMetric1}</span>
                 </div>
                 <div>
                   <strong>3x</strong>
-                  <span>Tezroq navigatsiya oqimi</span>
+                  <span>{copy.expMetric2}</span>
                 </div>
               </div>
             </article>
 
             <div className="experience-stack">
-              {experiencePoints.map((point) => (
+              {copy.expPoints.map((point: string) => (
                 <article key={point} className="experience-card">
                   <div className="icon-shell">
                     <CheckIcon />
@@ -577,29 +516,23 @@ const Home = () => {
                   <UserGroupIcon />
                 </div>
                 <div>
-                  <h3>Foydalanuvchi qoniqishi</h3>
-                  <p>Qoniqish darajasi real review tizimi orqali doimiy ravishda yangilanadi.</p>
+                  <h3>{copy.satisfaction}</h3>
+                  <p>{copy.satisfactionText}</p>
                 </div>
               </div>
 
               <div className="summary-checks">
-                <div>
-                  <CheckIcon />
-                  <span>Tezkor ro'yxatdan o'tish</span>
-                </div>
-                <div>
-                  <CheckIcon />
-                  <span>SMS va kabinet ichidagi eslatma</span>
-                </div>
-                <div>
-                  <CheckIcon />
-                  <span>Qabuldan keyin rating va tarif qoldirish</span>
-                </div>
+                {copy.satisfactionChecks.map((item: string) => (
+                  <div key={item}>
+                    <CheckIcon />
+                    <span>{item}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
             <div className="testimonial-grid">
-              {testimonials.map((item) => (
+              {testimonials.map((item: { name: string; role: string; quote: string }) => (
                 <article key={item.name} className="testimonial-card">
                   <div className="testimonial-stars">
                     <StarIcon />
@@ -620,12 +553,12 @@ const Home = () => {
         <section className="section-block">
           <div className="container">
             <div className="section-heading">
-              <span className="section-chip">FAQ</span>
-              <h2>Premium xizmat va booking qoidalari bo'yicha muhim savollar</h2>
+              <span className="section-chip">{copy.faqChip}</span>
+              <h2>{copy.faqTitle}</h2>
             </div>
 
             <div className="faq-grid">
-              {faqs.map((faq) => (
+              {faqs.map((faq: { question: string; answer: string }) => (
                 <article key={faq.question} className="faq-card">
                   <h3>{faq.question}</h3>
                   <p>{faq.answer}</p>
@@ -639,18 +572,16 @@ const Home = () => {
           <div className="container">
             <div className="cta-card">
               <div>
-                <span className="section-chip">Boshlash</span>
-                <h2>Yangi, kuchli va premium MedElite tajribasini ishga tushiring</h2>
-                <p className="cta-note">
-                  Dark va light mode, real booking va premium ko'rinish endi bir tizimda ishlaydi.
-                </p>
+                <span className="section-chip">{copy.startChip}</span>
+                <h2>{copy.startTitle}</h2>
+                <p className="cta-note">{copy.startText}</p>
               </div>
               <div className="cta-actions">
                 <Link to="/user" className="button button-primary button-large">
-                  Bronlash oynasi
+                  {copy.bookingWindow}
                 </Link>
                 <Link to="/login" className="button button-secondary button-large">
-                  Profilga kirish
+                  {copy.profileEntry}
                 </Link>
               </div>
             </div>
@@ -667,28 +598,25 @@ const Home = () => {
               </span>
               <span>MedElite</span>
             </Link>
-            <p>
-              Premium tibbiy servis, zamonaviy UX va yuqori ishonchni bitta platformada
-              birlashtiradi.
-            </p>
+            <p>{copy.footerText}</p>
           </div>
 
           <div>
-            <h4>Platforma</h4>
-            <a href="#advantages">Afzalliklar</a>
-            <a href="#specialists">Shifokorlar</a>
-            <a href="#journey">Jarayon</a>
+            <h4>{copy.platform}</h4>
+            <a href="#advantages">{copy.nav[0]}</a>
+            <a href="#specialists">{copy.nav[1]}</a>
+            <a href="#journey">{copy.nav[2]}</a>
           </div>
 
           <div>
-            <h4>Yo'nalishlar</h4>
-            <p>Kardiologiya</p>
-            <p>Terapiya</p>
-            <p>Ortopediya</p>
+            <h4>{copy.directions}</h4>
+            {copy.fields.map((field: string) => (
+              <p key={field}>{field}</p>
+            ))}
           </div>
 
           <div>
-            <h4>Bog'lanish</h4>
+            <h4>{copy.contact}</h4>
             <p>+998 71 200 00 00</p>
             <p>Toshkent sh., Navoiy ko'chasi</p>
             <p>support@medelite.uz</p>

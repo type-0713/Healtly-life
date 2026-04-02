@@ -138,5 +138,14 @@ export const getNextAvailableBookingDate = () => {
   return `${candidate.getFullYear()}-${pad(candidate.getMonth() + 1)}-${pad(candidate.getDate())}`;
 };
 
-export const getBookingRulesMessage = () =>
-  `Qabul slotlari ${BOOKING_OPEN_HOUR}:00 dan 17:30 gacha ko'rsatiladi. Yakshanba kuni bron yopiq.`;
+export const getBookingRulesMessage = (language: "uz" | "ru" | "en" = "uz") => {
+  if (language === "ru") {
+    return `Слоты приёма показываются с ${BOOKING_OPEN_HOUR}:00 до 17:30. В воскресенье запись закрыта.`;
+  }
+
+  if (language === "en") {
+    return `Appointment slots are shown from ${BOOKING_OPEN_HOUR}:00 to 17:30. Booking is closed on Sundays.`;
+  }
+
+  return `Qabul slotlari ${BOOKING_OPEN_HOUR}:00 dan 17:30 gacha ko'rsatiladi. Yakshanba kuni bron yopiq.`;
+};

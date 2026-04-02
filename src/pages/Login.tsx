@@ -14,8 +14,11 @@ import {
   SparkIcon,
   UserGroupIcon,
 } from "../components/PremiumIcons";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 import ThemeToggle from "../components/ThemeToggle";
 import { useAppContext } from "../context/AppContext";
+import { useI18n } from "../context/I18nContext";
+import { loginCopy } from "../i18n/loginCopy";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -34,6 +37,8 @@ const LoginPage = () => {
     signOutUser,
     updateProfile,
   } = useAppContext();
+  const { language, translateError } = useI18n();
+  const copy = loginCopy[language];
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState(profile.email);
   const [password, setPassword] = useState("");
@@ -48,6 +53,10 @@ const LoginPage = () => {
   const isAdminMode = mode === "admin";
   const nextPath = searchParams.get("next") ?? (mode === "admin" ? "/admin" : "/user");
   const isRegisterMode = !isAdminMode && authAction === "register";
+  const sessionLogoutLabel =
+    language === "ru" ? "Выйти" : language === "en" ? "Logout" : "Chiqish";
+  const userViewLabel =
+    language === "ru" ? "Режим пользователя" : language === "en" ? "User view" : "User ko'rinishi";
   const buildLoginLink = (
     targetMode: "user" | "admin",
     targetAction: "login" | "register" = authAction,
@@ -72,11 +81,11 @@ const LoginPage = () => {
   const cardTitle = useMemo(
     () =>
       isAdminMode
-        ? "Admin nazorat markaziga kirish"
+        ? copy.adminTitle
         : isRegisterMode
-          ? "Yangi kabinetni yaratish"
-          : "Kabinetga premium darajadagi kirish",
-    [isAdminMode, isRegisterMode],
+          ? copy.registerTitle
+          : copy.userTitle,
+    [copy.adminTitle, copy.registerTitle, copy.userTitle, isAdminMode, isRegisterMode],
   );
 
   useEffect(() => {
@@ -104,7 +113,7 @@ const LoginPage = () => {
       setIsSubmittingAuth(true);
 
       if (isRegisterMode && password !== confirmPassword) {
-        throw new Error("Parollar bir xil emas.");
+        throw new Error(translateError("Parollar bir xil emas."));
       }
 
       if (isAdminMode) {
@@ -121,7 +130,9 @@ const LoginPage = () => {
       await updateProfile({ email });
       navigate(nextPath);
     } catch (error) {
-      setAuthMessage(error instanceof Error ? error.message : "Kirishda xatolik yuz berdi.");
+      setAuthMessage(
+        error instanceof Error ? translateError(error.message) : translateError("Kirishda xatolik yuz berdi."),
+      );
     } finally {
       setIsSubmittingAuth(false);
     }
@@ -138,7 +149,7 @@ const LoginPage = () => {
       navigate("/user");
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : `${providerName} loginida xatolik yuz berdi.`;
+        error instanceof Error ? translateError(error.message) : `${providerName} login error.`;
       setAuthMessage(message);
     } finally {
       setIsSubmittingAuth(false);
@@ -161,17 +172,20 @@ const LoginPage = () => {
                 Med<span className="brand-accent">Elite</span>
               </span>
             </Link>
-            <ThemeToggle />
+            <div className="nav-actions">
+              <LanguageSwitcher />
+              <ThemeToggle />
+            </div>
           </div>
 
-          <span className="section-chip">{isAdminMode ? "Yopiq kirish" : "Himoyalangan kirish"}</span>
+          <span className="section-chip">{isAdminMode ? copy.restrictedAccess : copy.protectedAccess}</span>
           <h1>{cardTitle}</h1>
           <p>
             {isAdminMode
-              ? "Faqat ruxsat berilgan admin login va paroli bilan boshqaruv paneliga kirish mumkin."
+              ? copy.adminText
               : isRegisterMode
-                ? "Yangi foydalanuvchi hisobi ochib bronlash, tarix va profil oqimini birdaniga ishga tushiring."
-                : "Ro'yhatdan o'tmagan foydalanuvchi ichki sahifalarga kira olmaydi. Faqat bosh sahifa ochiq."}
+                ? copy.registerText
+                : copy.loginText}
           </p>
 
           <div className="auth-mode-switch">
@@ -179,13 +193,13 @@ const LoginPage = () => {
               to={userModeLink}
               className={`auth-mode-pill ${mode === "user" ? "auth-mode-pill-active" : ""}`}
             >
-              User kabineti
+              {copy.userCabinet}
             </Link>
             <Link
               to={adminModeLink}
               className={`auth-mode-pill ${mode === "admin" ? "auth-mode-pill-active" : ""}`}
             >
-              Admin kabineti
+              {copy.adminCabinet}
             </Link>
           </div>
 
@@ -196,14 +210,14 @@ const LoginPage = () => {
                 className={`auth-mode-pill ${!isRegisterMode ? "auth-mode-pill-active" : ""}`}
                 onClick={() => handleActionChange("login")}
               >
-                Kirish
+                {copy.signIn}
               </button>
               <button
                 type="button"
                 className={`auth-mode-pill ${isRegisterMode ? "auth-mode-pill-active" : ""}`}
                 onClick={() => handleActionChange("register")}
               >
-                Ro'yhatdan o'tish
+                {copy.signUp}
               </button>
             </div>
           )}
@@ -211,15 +225,15 @@ const LoginPage = () => {
           <div className="auth-stats">
             <div>
               <strong>62k+</strong>
-              <span>aktiv foydalanuvchi</span>
+              <span>{copy.activeUsers}</span>
             </div>
             <div>
               <strong>4.9</strong>
-              <span>xizmat reytingi</span>
+              <span>{copy.serviceRating}</span>
             </div>
             <div>
               <strong>24/7</strong>
-              <span>qo'llab-quvvatlash</span>
+              <span>{copy.support}</span>
             </div>
           </div>
 
@@ -229,8 +243,8 @@ const LoginPage = () => {
                 <ShieldIcon />
               </div>
               <div>
-                <h3>Himoyalangan kirish</h3>
-                <p>Ichki sahifalar endi guest foydalanuvchilar uchun yopiq.</p>
+                <h3>{copy.secureTitle}</h3>
+                <p>{copy.secureText}</p>
               </div>
             </article>
             <article className="glass-card">
@@ -238,8 +252,8 @@ const LoginPage = () => {
                 <CalendarIcon />
               </div>
               <div>
-                <h3>Real booking nazorati</h3>
-                <p>Bir vaqt bir kishi tomonidan band qilinadi va barcha qurilmalarda sinxron ishlaydi.</p>
+                <h3>{copy.realtimeTitle}</h3>
+                <p>{copy.realtimeText}</p>
               </div>
             </article>
             <article className="glass-card">
@@ -247,16 +261,16 @@ const LoginPage = () => {
                 <UserGroupIcon />
               </div>
               <div>
-                <h3>Rollar bo'yicha kirish</h3>
-                <p>User va admin sahifalari alohida himoyalangan oqimga ega.</p>
+                <h3>{copy.rolesTitle}</h3>
+                <p>{copy.rolesText}</p>
               </div>
             </article>
           </div>
 
           <div className="auth-luxury-note">
             {isAdminMode
-              ? "Admin uchun alohida ro'yhatdan o'tish yo'q. Faqat berilgan login va parol bilan kiriladi."
-              : "User login qilmasdan yoki ro'yhatdan o'tmasdan ichki bo'limlarga kira olmaydi."}
+              ? copy.adminNote
+              : copy.userNote}
           </div>
         </section>
 
@@ -265,34 +279,34 @@ const LoginPage = () => {
             <div className="auth-card-head">
               <span className="badge badge-gold">
                 <SparkIcon />
-                {isAdminMode ? "Admin kirish" : isRegisterMode ? "Yangi hisob" : "Premium kirish"}
+                {isAdminMode ? copy.adminEntry : isRegisterMode ? copy.newAccount : copy.premiumEntry}
               </span>
               <h2>
                 {isAdminMode
-                  ? "Admin tasdiqlash"
+                  ? copy.adminVerify
                   : isRegisterMode
-                    ? "Hisob yaratish"
-                    : "Xush kelibsiz"}
+                    ? copy.createAccount
+                    : copy.welcome}
               </h2>
               <p>
                 {isAdminMode
-                  ? "Admin bo'limi faqat login orqali ochiladi. Login va parol to'g'ri kiritilganda boshqaruv paneliga o'tasiz."
+                  ? copy.adminCardText
                   : isRegisterMode
-                    ? "Email va parol bilan yangi hisob ochib tizimga kiring."
-                    : "Tizimga kirib bronlash, tashrif tarixi va tibbiy fayllarni boshqaring."}
+                    ? copy.registerCardText
+                    : copy.loginCardText}
               </p>
             </div>
 
             <form className="auth-form" onSubmit={handleSubmit}>
               <label className="field">
-                <span>{isAdminMode ? "Admin login" : "Email manzil"}</span>
+                <span>{isAdminMode ? copy.adminLoginLabel : copy.emailLabel}</span>
                 <div className="field-box">
                   <MailIcon />
                   <input
                     type="text"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
-                    placeholder={isAdminMode ? "admin13579" : "sizning.email@medelite.uz"}
+                    placeholder={isAdminMode ? copy.adminLoginPlaceholder : copy.emailPlaceholder}
                     required
                     autoComplete={isAdminMode ? "username" : "email"}
                   />
@@ -300,14 +314,14 @@ const LoginPage = () => {
               </label>
 
               <label className="field">
-                <span>Parol</span>
+                <span>{copy.passwordLabel}</span>
                 <div className="field-box">
                   <LockIcon />
                   <input
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    placeholder={isAdminMode ? "2486" : "Kamida 4 ta belgi"}
+                    placeholder={isAdminMode ? copy.adminPasswordPlaceholder : copy.passwordPlaceholder}
                     required
                     autoComplete={isAdminMode ? "current-password" : isRegisterMode ? "new-password" : "current-password"}
                   />
@@ -324,21 +338,21 @@ const LoginPage = () => {
 
               {isAdminMode && (
                 <div className="auth-admin-note">
-                  <strong>Faqat kirish</strong>
-                  <span>Admin bo'limida ro'yhatdan o'tish yopiq. Login va parolni kiriting.</span>
+                  <strong>{copy.adminOnlyLogin}</strong>
+                  <span>{copy.adminOnlyText}</span>
                 </div>
               )}
 
               {isRegisterMode && (
                 <label className="field">
-                  <span>Parolni tasdiqlang</span>
+                  <span>{copy.confirmPassword}</span>
                   <div className="field-box">
                     <LockIcon />
                     <input
                       type={showPassword ? "text" : "password"}
                       value={confirmPassword}
                       onChange={(event) => setConfirmPassword(event.target.value)}
-                      placeholder="Parolni qayta kiriting"
+                      placeholder={copy.confirmPasswordPlaceholder}
                       required
                     />
                   </div>
@@ -348,9 +362,9 @@ const LoginPage = () => {
               <div className="auth-meta">
                 <label className="checkbox-line">
                   <input type="checkbox" defaultChecked />
-                  <span>Meni eslab qol</span>
+                  <span>{copy.remember}</span>
                 </label>
-                <a href="/">Bosh sahifaga qaytish</a>
+                <a href="/">{copy.backHome}</a>
               </div>
 
               <button
@@ -359,17 +373,17 @@ const LoginPage = () => {
                 disabled={isSubmittingAuth}
               >
                 {isAdminMode
-                  ? "Admin panelga kirish"
+                  ? copy.enterAdminPanel
                   : isRegisterMode
-                    ? "Kabinet yaratish"
-                    : "Kabinetga kirish"}
+                    ? copy.createCabinet
+                    : copy.enterCabinet}
                 <ArrowRightIcon />
               </button>
             </form>
 
             {mode === "user" && !isRegisterMode && (
               <div className="provider-login-block">
-                <p className="provider-login-title">Firebase orqali tezkor kirish</p>
+                <p className="provider-login-title">{copy.quickProviderLogin}</p>
                 <div className="provider-login-grid">
                   <button
                     type="button"
@@ -377,7 +391,7 @@ const LoginPage = () => {
                     disabled={isSubmittingAuth}
                     onClick={() => handleProviderLogin(signInWithGoogle, "Google")}
                   >
-                    Google bilan kirish
+                    {copy.google}
                   </button>
                   <button
                     type="button"
@@ -385,7 +399,7 @@ const LoginPage = () => {
                     disabled={isSubmittingAuth}
                     onClick={() => handleProviderLogin(signInWithApple, "Apple")}
                   >
-                    Apple bilan kirish
+                    {copy.apple}
                   </button>
                   <button
                     type="button"
@@ -393,7 +407,7 @@ const LoginPage = () => {
                     disabled={isSubmittingAuth}
                     onClick={() => handleProviderLogin(signInWithMicrosoft, "Microsoft")}
                   >
-                    Microsoft bilan kirish
+                    {copy.microsoft}
                   </button>
                 </div>
               </div>
@@ -406,7 +420,7 @@ const LoginPage = () => {
                     <CheckIcon />
                     <span>
                       {isAdminAuthenticated
-                        ? "Admin sessiyasi faol"
+                        ? copy.adminSessionActive
                         : `${currentUser?.email ?? currentUser?.displayName ?? email}${
                             accountRole ? ` | ${accountRole}` : ""
                           }`}
@@ -414,7 +428,7 @@ const LoginPage = () => {
                   </div>
                 </div>
                 <button type="button" className="button button-ghost" onClick={() => void signOutUser()}>
-                  Chiqish
+                  {sessionLogoutLabel}
                 </button>
               </div>
             )}
@@ -424,18 +438,18 @@ const LoginPage = () => {
             <div className="auth-footer">
               <p>
                 {isAdminMode
-                  ? "Admin bo'limi yopiq rejimda ishlaydi va faqat login orqali ochiladi."
+                  ? copy.adminFooter
                   : isRegisterMode
-                    ? "Ro'yhatdan o'tganingizdan keyin kabinet va bronlash bo'limlari darhol ochiladi."
-                    : "Bosh sahifa ochiq, qolgan ichki sahifalar login talab qiladi."}
+                    ? copy.registerFooter
+                    : copy.loginFooter}
               </p>
               <div className="auth-shortcuts">
                 <Link to="/" className="button button-secondary">
-                  Bosh sahifa
+                  {copy.backHome}
                 </Link>
                 {isAdminMode && (
                   <Link to={userModeLink} className="button button-ghost">
-                    User ko'rinishi
+                    {userViewLabel}
                   </Link>
                 )}
               </div>

@@ -1,6 +1,7 @@
 import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 import ThemeToggle from "../components/ThemeToggle";
 import {
   ArrowRightIcon,
@@ -16,6 +17,8 @@ import {
   UserGroupIcon,
 } from "../components/PremiumIcons";
 import { useAppContext } from "../context/AppContext";
+import { useI18n } from "../context/I18nContext";
+import { adminCopy } from "../i18n/adminCopy";
 import { getDoctorMapQuery, getMapEmbedUrl, getMapSearchUrl } from "../lib/maps";
 import { UZBEKISTAN_REGIONS } from "../lib/regions";
 import { DEFAULT_TIME_SLOTS } from "../lib/schedule";
@@ -34,6 +37,8 @@ const initialDoctorForm = {
 };
 
 const Admin = () => {
+  const { language, format, translateError, translateRegion, translateSpecialty } = useI18n();
+  const copy = adminCopy[language];
   const { addDoctor, appointments, doctors, removeDoctor, signOutUser } = useAppContext();
   const [doctorForm, setDoctorForm] = useState(initialDoctorForm);
   const [adminNotice, setAdminNotice] = useState("");
@@ -41,13 +46,68 @@ const Admin = () => {
   const [isSavingDoctor, setIsSavingDoctor] = useState(false);
   const [removingDoctorId, setRemovingDoctorId] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const adminNoticeAdded =
+    language === "ru"
+      ? "Новый врач успешно добавлен и сразу виден всем пользователям."
+      : language === "en"
+        ? "A new doctor was added successfully and is instantly visible to all users."
+        : "Yangi shifokor muvaffaqiyatli qo'shildi va barcha foydalanuvchilar uchun darhol ko'rinadi.";
+  const adminErrorAdd =
+    language === "ru"
+      ? "Ошибка при добавлении врача."
+      : language === "en"
+        ? "An error occurred while adding the doctor."
+        : "Shifokor qo'shishda xatolik yuz berdi.";
+  const adminErrorRemove =
+    language === "ru"
+      ? "Ошибка при удалении врача."
+      : language === "en"
+        ? "An error occurred while removing the doctor."
+        : "Shifokorni o'chirishda xatolik yuz berdi.";
+  const menuLabel = menuOpen
+    ? language === "ru"
+      ? "Закрыть меню"
+      : language === "en"
+        ? "Close menu"
+        : "Menyuni yopish"
+    : language === "ru"
+      ? "Открыть меню"
+      : language === "en"
+        ? "Open menu"
+        : "Menyuni ochish";
+  const experiencePlaceholder =
+    language === "ru" ? "Например, 12 лет" : language === "en" ? "For example, 12 years" : "Masalan, 12 yil";
+  const pricePlaceholder =
+    language === "ru"
+      ? "Например, 180 000 сум"
+      : language === "en"
+        ? "For example, 180,000 UZS"
+        : "Masalan, 180 000 so'm";
+  const addressPlaceholder = doctorForm.region
+    ? language === "ru"
+      ? `${translateRegion(doctorForm.region)}, район, улица и номер дома`
+      : language === "en"
+        ? `${translateRegion(doctorForm.region)}, district, street, and building number`
+        : `${doctorForm.region}, tuman, ko'cha va uy raqami`
+    : language === "ru"
+      ? "Сначала выберите регион, затем введите полный адрес"
+      : language === "en"
+        ? "Choose a region first, then enter the full address"
+        : "Viloyat tanlang, keyin to'liq manzil kiriting";
+  const mapQueryPlaceholder =
+    language === "ru"
+      ? "Например, 41.3111, 69.2797 или текст поиска Google Maps"
+      : language === "en"
+        ? "For example, 41.3111, 69.2797 or a Google Maps search query"
+        : "Masalan, 41.3111, 69.2797 yoki Google Maps qidiruv matni";
+  const noBusySpecialty = language === "ru" ? "Нет" : language === "en" ? "None" : "Yo'q";
 
   const kpis = useMemo(
     () => [
-      { label: "Bugungi bronlar", value: appointments.length.toString() },
-      { label: "Aktiv doktorlar", value: doctors.length.toString() },
+      { label: copy.kpis[0], value: appointments.length.toString() },
+      { label: copy.kpis[1], value: doctors.length.toString() },
       {
-        label: "Tasdiqlash darajasi",
+        label: copy.kpis[2],
         value: appointments.length
           ? `${Math.round(
               (appointments.filter((item) => item.status === "Tasdiqlandi").length / appointments.length) * 100,
@@ -55,11 +115,11 @@ const Admin = () => {
           : "0%",
       },
       {
-        label: "VIP mijozlar",
+        label: copy.kpis[3],
         value: `${appointments.filter((item) => item.notes.toLowerCase().includes("vip")).length}`,
       },
     ],
-    [appointments, doctors.length],
+    [appointments, copy.kpis, doctors.length],
   );
 
   const draftMapQuery = getDoctorMapQuery(doctorForm);
@@ -96,9 +156,9 @@ const Admin = () => {
       });
 
       setDoctorForm(initialDoctorForm);
-      setAdminNotice("Yangi shifokor muvaffaqiyatli qo'shildi va barcha foydalanuvchilar uchun darhol ko'rinadi.");
+      setAdminNotice(adminNoticeAdded);
     } catch (error) {
-      setAdminError(error instanceof Error ? error.message : "Shifokor qo'shishda xatolik yuz berdi.");
+      setAdminError(error instanceof Error ? translateError(error.message) : adminErrorAdd);
     } finally {
       setIsSavingDoctor(false);
     }
@@ -111,9 +171,15 @@ const Admin = () => {
 
     try {
       await removeDoctor(doctorId);
-      setAdminNotice(`${doctorName} ro'yxatdan muvaffaqiyatli olib tashlandi.`);
+      setAdminNotice(
+        language === "ru"
+          ? `${doctorName} успешно удалён из списка.`
+          : language === "en"
+            ? `${doctorName} was removed successfully from the list.`
+            : `${doctorName} ro'yxatdan muvaffaqiyatli olib tashlandi.`,
+      );
     } catch (error) {
-      setAdminError(error instanceof Error ? error.message : "Shifokorni o'chirishda xatolik yuz berdi.");
+      setAdminError(error instanceof Error ? translateError(error.message) : adminErrorRemove);
     } finally {
       setRemovingDoctorId("");
     }
@@ -134,13 +200,14 @@ const Admin = () => {
 
           <div className={`dashboard-menu ${menuOpen ? "dashboard-menu-open" : ""}`}>
             <div className="dashboard-actions">
+              <LanguageSwitcher compact />
               <ThemeToggle compact />
               <Link
                 to="/user"
                 className="button button-secondary"
                 onClick={closeMenu}
               >
-                Foydalanuvchi paneli
+                {copy.userPanel}
               </Link>
               <button
                 type="button"
@@ -150,7 +217,7 @@ const Admin = () => {
                   void signOutUser();
                 }}
               >
-                Chiqish
+                {copy.logout}
               </button>
             </div>
           </div>
@@ -159,7 +226,7 @@ const Admin = () => {
             type="button"
             className="mobile-menu-button"
             onClick={() => setMenuOpen((current) => !current)}
-            aria-label={menuOpen ? "Menyuni yopish" : "Menyuni ochish"}
+            aria-label={menuLabel}
           >
             {menuOpen ? <CloseIcon /> : <MenuIcon />}
           </button>
@@ -169,17 +236,14 @@ const Admin = () => {
       <main className="container dashboard-content">
         <section className="dashboard-hero">
           <div>
-            <span className="section-chip">Boshqaruv paneli</span>
-            <h1>Klinika oqimini premium nazorat panelida boshqaring</h1>
-            <p>
-              Real vaqt KPI, avtomatik tasdiqlash, shifokor boshqaruvi va lokatsiya nazorati bitta
-              ekranda jamlandi.
-            </p>
+            <span className="section-chip">{copy.panelChip}</span>
+            <h1>{copy.heroTitle}</h1>
+            <p>{copy.heroText}</p>
           </div>
 
           <div className="dashboard-tagline glass-card">
             <SparkIcon />
-            Operatsion ko'rinish kuchaytirildi: tezlik, aniqlik va premium his.
+            {copy.heroTag}
           </div>
         </section>
 
@@ -194,15 +258,15 @@ const Admin = () => {
 
         <section className="ops-strip">
           <article className="ops-strip-card">
-            <span>Bron oqimi</span>
-            <strong>{appointments.length > 8 ? "Yuqori" : "O'rtacha"}</strong>
+            <span>{copy.stream}</span>
+            <strong>{appointments.length > 8 ? copy.high : copy.medium}</strong>
           </article>
           <article className="ops-strip-card">
-            <span>Doktor bandligi</span>
+            <span>{copy.occupancy}</span>
             <strong>{Math.min(95, 45 + doctors.length * 8)}%</strong>
           </article>
           <article className="ops-strip-card">
-            <span>Bugungi VIP so'rovlar</span>
+            <span>{copy.vip}</span>
             <strong>{appointments.filter((item) => item.notes.toLowerCase().includes("vip")).length}</strong>
           </article>
         </section>
@@ -211,15 +275,15 @@ const Admin = () => {
           <article className="preview-card">
             <div className="panel-heading">
               <div>
-                <span className="section-chip">Shifokor boshqaruvi</span>
-                <h2>Yangi shifokor qo'shish</h2>
+                <span className="section-chip">{copy.doctorMgmt}</span>
+                <h2>{copy.addDoctor}</h2>
               </div>
             </div>
 
             <form className="booking-form" onSubmit={handleAddDoctor}>
               <div className="field-grid">
                 <label className="field">
-                  <span>F.I.O</span>
+                  <span>{copy.fullName}</span>
                   <div className="field-box">
                     <UserGroupIcon />
                     <input
@@ -234,7 +298,7 @@ const Admin = () => {
                 </label>
 
                 <label className="field">
-                  <span>Mutaxassislik</span>
+                  <span>{copy.specialty}</span>
                   <div className="field-box">
                     <ShieldIcon />
                     <input
@@ -249,7 +313,7 @@ const Admin = () => {
                 </label>
 
                 <label className="field">
-                  <span>Viloyat</span>
+                  <span>{copy.region}</span>
                   <div className="field-box field-box-select">
                     <LocationIcon />
                     <select
@@ -259,10 +323,10 @@ const Admin = () => {
                       }
                       required
                     >
-                      <option value="">Viloyatni tanlang</option>
+                      <option value="">{copy.selectRegion}</option>
                       {UZBEKISTAN_REGIONS.map((region) => (
                         <option key={region} value={region}>
-                          {region}
+                          {translateRegion(region)}
                         </option>
                       ))}
                     </select>
@@ -270,7 +334,7 @@ const Admin = () => {
                 </label>
 
                 <label className="field">
-                  <span>Tajriba</span>
+                  <span>{copy.experience}</span>
                   <div className="field-box">
                     <ClockIcon />
                     <input
@@ -279,14 +343,14 @@ const Admin = () => {
                       onChange={(event) =>
                         setDoctorForm((current) => ({ ...current, experience: event.target.value }))
                       }
-                      placeholder="12 yil"
+                      placeholder={experiencePlaceholder}
                       required
                     />
                   </div>
                 </label>
 
                 <label className="field">
-                  <span>Narx</span>
+                  <span>{copy.price}</span>
                   <div className="field-box">
                     <SparkIcon />
                     <input
@@ -295,14 +359,14 @@ const Admin = () => {
                       onChange={(event) =>
                         setDoctorForm((current) => ({ ...current, price: event.target.value }))
                       }
-                      placeholder="180 000 so'm"
+                      placeholder={pricePlaceholder}
                       required
                     />
                   </div>
                 </label>
 
                 <label className="field field-full">
-                  <span>Klinika</span>
+                  <span>{copy.clinic}</span>
                   <div className="field-box">
                     <ShieldIcon />
                     <input
@@ -317,7 +381,7 @@ const Admin = () => {
                 </label>
 
                 <label className="field field-full">
-                  <span>Manzil</span>
+                  <span>{copy.address}</span>
                   <div className="field-box">
                     <LocationIcon />
                     <input
@@ -326,18 +390,14 @@ const Admin = () => {
                       onChange={(event) =>
                         setDoctorForm((current) => ({ ...current, address: event.target.value }))
                       }
-                      placeholder={
-                        doctorForm.region
-                          ? `${doctorForm.region}, tuman, ko'cha va uy raqami`
-                          : "Viloyat tanlang, keyin to'liq manzil kiriting"
-                      }
+                      placeholder={addressPlaceholder}
                       required
                     />
                   </div>
                 </label>
 
                 <label className="field field-full">
-                  <span>Map query yoki koordinata</span>
+                  <span>{copy.mapQuery}</span>
                   <div className="field-box">
                     <LocationIcon />
                     <input
@@ -346,13 +406,13 @@ const Admin = () => {
                       onChange={(event) =>
                         setDoctorForm((current) => ({ ...current, mapQuery: event.target.value }))
                       }
-                      placeholder="41.3111, 69.2797 yoki Google Maps qidiruv matni"
+                      placeholder={mapQueryPlaceholder}
                     />
                   </div>
                 </label>
 
                 <div className="field field-full">
-                  <span>Bo'sh vaqt slotlari</span>
+                  <span>{copy.slots}</span>
                   <div className="slot-grid slot-grid-admin">
                     {DEFAULT_TIME_SLOTS.map((slot) => {
                       const active = doctorForm.availableSlots.includes(slot);
@@ -377,7 +437,7 @@ const Admin = () => {
                     })}
                   </div>
                   <small className="field-note">
-                    Tanlangan slotlar foydalanuvchilar uchun aynan shu tartibda chiqariladi.
+                    {copy.slotsNote}
                   </small>
                   {selectedSlotPreview.length > 0 && (
                     <div className="doctor-slot-list">
@@ -391,7 +451,7 @@ const Admin = () => {
                 </div>
 
                 <label className="field field-full">
-                  <span>Bio</span>
+                  <span>{copy.bio}</span>
                   <textarea
                     rows={4}
                     value={doctorForm.bio}
@@ -403,7 +463,7 @@ const Admin = () => {
                 </label>
 
                 <div className="field field-full">
-                  <span>Map preview</span>
+                  <span>{copy.mapPreview}</span>
                   <div className="map-preview-card">
                     {draftMapEmbedUrl ? (
                       <iframe
@@ -416,15 +476,15 @@ const Admin = () => {
                     ) : (
                       <div className="map-preview-empty">
                         <LocationIcon />
-                        <strong>Lokatsiya preview shu yerda chiqadi</strong>
-                        <p>Klinika, manzil yoki map query kiritsangiz xarita tayyor bo'ladi.</p>
+                        <strong>{copy.mapPreviewTitle}</strong>
+                        <p>{copy.mapPreviewText}</p>
                       </div>
                     )}
 
                     <div className="map-preview-copy">
-                      <strong>{doctorForm.clinic || "Klinika nomi kutilmoqda"}</strong>
-                      <span>{doctorForm.region || "Viloyat tanlanmagan"}</span>
-                      <p>{doctorForm.address || "Shifokorning to'liq manzilini kiriting."}</p>
+                      <strong>{doctorForm.clinic || copy.pendingClinic}</strong>
+                      <span>{doctorForm.region ? translateRegion(doctorForm.region) : copy.noRegion}</span>
+                      <p>{doctorForm.address || copy.addressHint}</p>
                       {draftMapSearchUrl ? (
                         <a
                           href={draftMapSearchUrl}
@@ -432,11 +492,11 @@ const Admin = () => {
                           rel="noreferrer"
                           className="button button-secondary"
                         >
-                          Xaritada ochish
+                          {copy.openMap}
                           <ArrowRightIcon />
                         </a>
                       ) : (
-                        <span className="map-preview-hint">Map query yoki manzil kiritilgach havola ochiladi.</span>
+                        <span className="map-preview-hint">{copy.mapHint}</span>
                       )}
                     </div>
                   </div>
@@ -448,7 +508,7 @@ const Admin = () => {
                 className="button button-primary button-large"
                 disabled={doctorForm.availableSlots.length === 0 || isSavingDoctor}
               >
-                {isSavingDoctor ? "Shifokor saqlanmoqda..." : "Shifokor qo'shish"}
+                {isSavingDoctor ? copy.saving : copy.addDoctorButton}
                 <CheckIcon />
               </button>
 
@@ -460,8 +520,8 @@ const Admin = () => {
           <article className="preview-card preview-highlight">
             <div className="panel-heading">
               <div>
-                <span className="section-chip">Shifokorlar</span>
-                <h2>Faol shifokorlar</h2>
+                <span className="section-chip">{copy.doctors}</span>
+                <h2>{copy.activeDoctors}</h2>
               </div>
             </div>
 
@@ -470,12 +530,12 @@ const Admin = () => {
                 <div key={doctor.id} className="doctor-admin-row">
                   <div className="doctor-admin-copy">
                     <strong>{doctor.name}</strong>
-                    <span>{doctor.specialty} - {doctor.region}</span>
+                    <span>{translateSpecialty(doctor.specialty)} - {translateRegion(doctor.region)}</span>
                     <span>{doctor.clinic}</span>
                     <span>{doctor.address}</span>
-                    <span>{doctor.rating.toFixed(1)} / 5 ({doctor.reviewCount} baho)</span>
+                    <span>{format(copy.reviews, { rating: doctor.rating.toFixed(1), count: doctor.reviewCount })}</span>
                     <div className="doctor-admin-meta">
-                      <span>{doctor.experience} tajriba</span>
+                      <span>{format(copy.experienceSummary, { value: doctor.experience })}</span>
                       <span>{doctor.price}</span>
                       <span>{doctor.availability}</span>
                     </div>
@@ -495,7 +555,7 @@ const Admin = () => {
                       rel="noreferrer"
                       className="button button-secondary"
                     >
-                      Xarita
+                      {copy.map}
                     </a>
                     <button
                       type="button"
@@ -503,7 +563,7 @@ const Admin = () => {
                       disabled={removingDoctorId === doctor.id}
                       onClick={() => void handleRemoveDoctor(doctor.id, doctor.name)}
                     >
-                      {removingDoctorId === doctor.id ? "O'chirilmoqda..." : "O'chirish"}
+                      {removingDoctorId === doctor.id ? copy.removing : copy.remove}
                     </button>
                   </div>
                 </div>
@@ -511,8 +571,8 @@ const Admin = () => {
 
               {doctors.length === 0 && (
                 <div className="empty-state">
-                  <h3>Shifokorlar topilmadi</h3>
-                  <p>Yangi shifokor qo'shganingizdan keyin ular shu yerda ko'rinadi.</p>
+                  <h3>{copy.noDoctors}</h3>
+                  <p>{copy.noDoctorsText}</p>
                 </div>
               )}
             </div>
@@ -523,89 +583,77 @@ const Admin = () => {
           <article className="preview-card preview-highlight">
             <div className="panel-heading">
               <div>
-                <span className="section-chip">Avto tasdiqlash</span>
-                <h2>Avtomatik tasdiqlash</h2>
+                <span className="section-chip">{copy.autoChip}</span>
+                <h2>{copy.autoTitle}</h2>
               </div>
               <span className="badge">
                 <ClockIcon />
-                Faol
+                {copy.active}
               </span>
             </div>
 
             <div className="info-stack">
               <div>
-                <span>Bron statusi</span>
-                <strong>Darhol tasdiqlanadi</strong>
+                <span>{copy.bookingStatus}</span>
+                <strong>{copy.instant}</strong>
               </div>
               <div>
-                <span>Bugungi oqim</span>
-                <strong>{appointments.length} ta bron</strong>
+                <span>{copy.todayFlow}</span>
+                <strong>{language === "uz" ? `${appointments.length} ta bron` : `${appointments.length}`}</strong>
               </div>
               <div>
-                <span>Navbat paneli</span>
-                <strong>O'chirildi</strong>
+                <span>{copy.queuePanel}</span>
+                <strong>{copy.removed}</strong>
               </div>
             </div>
 
             <div className="summary-checks">
-              <div>
-                <CheckIcon />
-                <span>Yangi bronlar Firebaseda darhol saqlanadi</span>
-              </div>
-              <div>
-                <CheckIcon />
-                <span>Status avtomatik ravishda tasdiqlangan holatda yaratiladi</span>
-              </div>
-              <div>
-                <CheckIcon />
-                <span>Admin panel faqat nazorat va doktor boshqaruviga qoldirildi</span>
-              </div>
+              {copy.autoChecks.map((item: string) => (
+                <div key={item}>
+                  <CheckIcon />
+                  <span>{item}</span>
+                </div>
+              ))}
             </div>
           </article>
 
           <article className="preview-card">
             <div className="panel-heading">
               <div>
-                <span className="section-chip">Xizmat sifati</span>
-                <h2>Xizmat sifati</h2>
+                <span className="section-chip">{copy.qualityChip}</span>
+                <h2>{copy.qualityTitle}</h2>
               </div>
             </div>
 
             <div className="summary-checks">
-              <div>
-                <ShieldIcon />
-                <span>Ma'lumotlar xavfsizligi tekshirildi</span>
-              </div>
-              <div>
-                <CheckIcon />
-                <span>SMS gateway holati faol</span>
-              </div>
-              <div>
-                <CalendarIcon />
-                <span>Bugungi jadval sinxron holatda</span>
-              </div>
+              {copy.qualityChecks.map((item: string, index: number) => (
+                <div key={item}>
+                  {index === 0 ? <ShieldIcon /> : index === 1 ? <CheckIcon /> : <CalendarIcon />}
+                  <span>{item}</span>
+                </div>
+              ))}
             </div>
           </article>
 
           <article className="preview-card">
             <div className="panel-heading">
               <div>
-                <span className="section-chip">Tahlil</span>
-                <h2>Tezkor insight</h2>
+                <span className="section-chip">{copy.insightChip}</span>
+                <h2>{copy.insightTitle}</h2>
               </div>
             </div>
 
             <div className="info-stack">
               <div>
-                <span>Eng band vaqt</span>
+                <span>{copy.busyTime}</span>
                 <strong>10:00 - 12:00</strong>
               </div>
               <div>
-                <span>Eng band yo'nalish</span>
-                <strong>{doctors[0]?.specialty ?? "Yo'q"}</strong>
+                <span>{copy.busyField}</span>
+                <strong>{doctors[0] ? translateSpecialty(doctors[0].specialty) : noBusySpecialty}</strong>
               </div>
               <div>
-                <span>Bekor qilish darajasi</span>
+                <span>{copy.cancelRate}</span>
                 <strong>
                   {appointments.length
                     ? `${Math.round(
@@ -622,24 +670,18 @@ const Admin = () => {
           <article className="preview-card">
             <div className="panel-heading">
               <div>
-                <span className="section-chip">Jamoa</span>
-                <h2>Operatsion guruh</h2>
+                <span className="section-chip">{copy.teamChip}</span>
+                <h2>{copy.teamTitle}</h2>
               </div>
             </div>
 
             <div className="summary-checks">
-              <div>
-                <UserGroupIcon />
-                <span>12 operator online</span>
-              </div>
-              <div>
-                <SparkIcon />
-                <span>O'rtacha javob vaqti 2.4 min</span>
-              </div>
-              <div>
-                <ClockIcon />
-                <span>VIP support 24/7</span>
-              </div>
+              {copy.teamChecks.map((item: string, index: number) => (
+                <div key={item}>
+                  {index === 0 ? <UserGroupIcon /> : index === 1 ? <SparkIcon /> : <ClockIcon />}
+                  <span>{item}</span>
+                </div>
+              ))}
             </div>
           </article>
         </section>

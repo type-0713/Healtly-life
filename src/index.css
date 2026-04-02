@@ -96,6 +96,7 @@ body {
   color: var(--text);
   background: var(--body-bg);
   transition: background 0.35s ease, color 0.25s ease;
+  overflow-x: hidden;
 }
 
 body,
@@ -345,6 +346,39 @@ textarea {
   gap: 10px;
 }
 
+.language-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.language-pill {
+  min-width: 48px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  transition: background 0.22s ease, color 0.22s ease, box-shadow 0.22s ease;
+}
+
+.language-pill-active {
+  background: var(--panel-bg);
+  color: var(--heading);
+  box-shadow: var(--shadow-soft);
+}
+
+.language-switch-compact .language-pill {
+  min-width: 42px;
+  min-height: 32px;
+  padding: 0 10px;
+}
+
 .theme-toggle:hover,
 .mobile-menu-button:hover,
 .icon-button:hover {
@@ -510,6 +544,8 @@ textarea {
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
   backdrop-filter: var(--backdrop);
+  content-visibility: auto;
+  contain-intrinsic-size: 280px;
 }
 
 .preview-highlight,
@@ -668,6 +704,7 @@ textarea {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(152px, auto);
   gap: 14px;
   margin-top: 28px;
+  align-items: stretch;
 }
 
 .hero-inline-proof,
@@ -738,10 +775,19 @@ textarea {
 
 .search-field > div {
   min-width: 0;
+  display: grid;
+  gap: 6px;
 }
 
 .search-field span {
   margin-bottom: 4px;
+}
+
+.hero-search-input,
+.field-box input,
+.field-box select,
+.booking-form textarea {
+  min-width: 0;
 }
 
 .hero-search .button {
@@ -1823,6 +1869,18 @@ textarea {
   box-shadow: 0 24px 52px rgba(16, 24, 40, 0.16);
 }
 
+.section-block,
+.stats-section,
+.cta-section,
+.site-footer,
+.dashboard-hero,
+.workspace-grid,
+.admin-grid,
+.admin-management-grid {
+  content-visibility: auto;
+  contain-intrinsic-size: 520px;
+}
+
 .field-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2319,6 +2377,9 @@ textarea {
     transform: translateY(-14px);
     opacity: 0;
     pointer-events: none;
+    max-height: calc(100vh - 104px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     transition: opacity 0.22s ease, transform 0.22s ease;
   }
 
@@ -2346,6 +2407,21 @@ textarea {
     width: 100%;
   }
 
+  .nav-links a,
+  .nav-actions > *,
+  .dashboard-actions > * {
+    justify-content: center;
+  }
+
+  .language-switch {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .language-pill {
+    flex: 1;
+  }
+
   .dashboard-topbar-inner {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -2366,6 +2442,9 @@ textarea {
     transform: translateY(-14px);
     opacity: 0;
     pointer-events: none;
+    max-height: calc(100vh - 104px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     transition: opacity 0.22s ease, transform 0.22s ease;
   }
 
@@ -2484,5 +2563,19 @@ textarea {
   .auth-showcase h1,
   .cta-card h2 {
     font-size: 2.7rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
