@@ -703,10 +703,10 @@ textarea {
 
 .hero-search {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(152px, auto);
-  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(180px, auto);
+  gap: 16px;
   margin-top: 28px;
-  align-items: stretch;
+  align-items: center;
 }
 
 .hero-inline-proof,
@@ -769,20 +769,27 @@ textarea {
 
 .search-field {
   min-height: 72px;
-  padding: 14px 18px;
-  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  border-radius: 26px;
   border: 1px solid var(--input-border);
   background: var(--input-bg);
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .search-field > div {
   min-width: 0;
   display: grid;
-  gap: 6px;
+  gap: 4px;
 }
 
 .search-field span {
-  margin-bottom: 4px;
+  display: block;
+  margin-bottom: 0;
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--muted);
 }
 
 .hero-search-input,
@@ -794,7 +801,9 @@ textarea {
 
 .hero-search .button {
   min-width: 152px;
+  min-height: 62px;
   justify-content: center;
+  align-items: center;
 }
 
 .field-box:focus-within,
@@ -1639,6 +1648,7 @@ textarea {
   width: 100%;
   max-width: 560px;
   min-height: 0;
+  margin: 0 auto;
 }
 
 .auth-mode-switch {
@@ -1739,6 +1749,7 @@ textarea {
 }
 
 .auth-card-head {
+  display: grid;
   gap: 10px;
 }
 
@@ -1823,11 +1834,20 @@ textarea {
 }
 
 .field-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   min-height: 58px;
   padding: 0 16px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--input-border);
   background: var(--input-bg);
+}
+
+.field-box input,
+.field-box select {
+  flex: 1;
+  width: 100%;
 }
 
 .field-box select {
@@ -2597,8 +2617,8 @@ textarea {
 
   .auth-page {
     padding: 24px 14px;
-    align-items: flex-start;
-    justify-content: flex-start;
+    align-items: center;
+    justify-content: center;
   }
 
   .auth-layout {

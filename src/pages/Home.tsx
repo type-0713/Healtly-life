@@ -1,5 +1,5 @@
-import { useDeferredValue, useMemo, useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { useDeferredValue, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import ThemeToggle from "../components/ThemeToggle";
 import {
@@ -28,7 +28,8 @@ import { getBookingRulesMessage } from "../lib/schedule";
 const Home = () => {
   const { language, format, translateRegion, translateSpecialty } = useI18n();
   const copy = homeCopy[language];
-  const { appointments, doctors } = useAppContext();
+  const navigate = useNavigate();
+  const { appointments, doctors, accountRole, currentUser, isAdminAuthenticated } = useAppContext();
   const [searchTerm, setSearchTerm] = useState("");
   const [locationTerm, setLocationTerm] = useState("");
   const [regionFilter, setRegionFilter] = useState(ALL_REGIONS_OPTION);
@@ -109,6 +110,22 @@ const Home = () => {
   const highlightedDoctorAvailability = highlightedDoctor?.availableSlots[0]
     ? format(copy.nextSlot, { time: highlightedDoctor.availableSlots[0] })
     : copy.noOpenSlots;
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (isAdminAuthenticated) {
+      navigate("/admin");
+      return;
+    }
+
+    const hasSavedUserSession = window.localStorage.getItem("medelite-user-session");
+    if ((currentUser || hasSavedUserSession) && accountRole === "user") {
+      navigate("/user");
+    }
+  }, [accountRole, currentUser, isAdminAuthenticated, navigate]);
 
   const getDoctorAvailability = (doctor: (typeof doctors)[number]) =>
     doctor.availableSlots[0] ? format(copy.nextSlot, { time: doctor.availableSlots[0] }) : copy.noOpenSlots;
