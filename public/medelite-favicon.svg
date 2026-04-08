@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="MedElite favicon">
+  <defs>
+    <linearGradient id="medeliteGradient" x1="8" x2="56" y1="8" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffd48e" />
+      <stop offset="0.5" stop-color="#78b1ff" />
+      <stop offset="1" stop-color="#456dff" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="18" fill="#f4f8ff" />
+  <path
+    fill="url(#medeliteGradient)"
+    d="M32 14c1.8 0 3.2 1.4 3.2 3.2v8.6h8.6c1.8 0 3.2 1.4 3.2 3.2s-1.4 3.2-3.2 3.2h-8.6v8.6c0 1.8-1.4 3.2-3.2 3.2s-3.2-1.4-3.2-3.2v-8.6h-8.6c-1.8 0-3.2-1.4-3.2-3.2s1.4-3.2 3.2-3.2h8.6v-8.6c0-1.8 1.4-3.2 3.2-3.2Z"
+  />
+  <circle cx="49" cy="15" r="5" fill="#ffe1a9" opacity="0.95" />
+</svg>

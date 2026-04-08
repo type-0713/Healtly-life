@@ -18,6 +18,3 @@ export const getDoctorMapQuery = ({ clinic, address, mapQuery }: LocationShape) 
 
 export const getMapSearchUrl = (query: string) =>
   query ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}` : "";
-
-export const getMapEmbedUrl = (query: string) =>
-  query ? `https://www.google.com/maps?q=${encodeURIComponent(query)}&z=15&output=embed` : "";

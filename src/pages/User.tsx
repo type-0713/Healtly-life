@@ -22,7 +22,7 @@ import {
 import { useAppContext, type Appointment } from "../context/AppContext";
 import { useI18n } from "../context/I18nContext";
 import { userCopy } from "../i18n/userCopy";
-import { getDoctorMapQuery, getMapEmbedUrl, getMapSearchUrl } from "../lib/maps";
+import { getDoctorMapQuery, getMapSearchUrl } from "../lib/maps";
 import { ALL_REGIONS_OPTION, UZBEKISTAN_REGIONS } from "../lib/regions";
 import {
   getBookingRulesMessage,
@@ -171,7 +171,6 @@ const User = () => {
     [filteredDoctors, selectedDoctorId],
   );
   const selectedDoctorMapQuery = getDoctorMapQuery(selectedDoctor ?? {});
-  const selectedDoctorMapEmbedUrl = getMapEmbedUrl(selectedDoctorMapQuery);
   const selectedDoctorMapUrl = getMapSearchUrl(selectedDoctorMapQuery);
 
   const activeUserEmail = (currentUser?.email ?? localUserEmail ?? profile.email).trim().toLowerCase();
@@ -278,6 +277,51 @@ const User = () => {
     ],
     [activeAppointments, copy.stats, language, userAppointments.length],
   );
+  const nextAppointment = activeAppointments[0] ?? appointmentHistory[0] ?? null;
+  const reviewedAppointmentsCount = userAppointments.filter((appointment) => Boolean(appointment.reviewRating)).length;
+  const doctorCoverageCount = new Set(userAppointments.map((appointment) => appointment.doctorId)).size;
+  const reviewMomentum =
+    userAppointments.length > 0
+      ? `${Math.round((reviewedAppointmentsCount / userAppointments.length) * 100)}%`
+      : "0%";
+  const careCommandChip =
+    language === "ru" ? "Центр контроля" : language === "en" ? "Control hub" : "Nazorat markazi";
+  const careCommandTitle =
+    language === "ru"
+      ? "Ваш поток лечения под полным контролем"
+      : language === "en"
+        ? "Your care flow is fully in control"
+        : "Davolanish oqimingiz to'liq nazoratda";
+  const careCommandText =
+    language === "ru"
+      ? "Ниже видно ближайший приём, активность отзывов и сколько специалистов уже участвовало в вашем маршруте."
+      : language === "en"
+        ? "See your next visit, review activity, and how many specialists are already part of your journey."
+        : "Quyida sizning eng yaqin qabulingiz, sharh faolligi va yo'lingizda nechta mutaxassis ishtirok etgani ko'rinadi.";
+  const nextVisitLabel =
+    language === "ru" ? "Ближайший контакт" : language === "en" ? "Next touchpoint" : "Keyingi nuqta";
+  const noVisitLabel =
+    language === "ru" ? "Новый приём пока не выбран" : language === "en" ? "No visit selected yet" : "Hali qabul tanlanmagan";
+  const noVisitText =
+    language === "ru"
+      ? "Выберите врача и слот, и здесь сразу появится план следующего визита."
+      : language === "en"
+        ? "Choose a doctor and slot, and your next visit plan will appear here."
+        : "Doktor va slot tanlang, keyingi tashrif rejasi shu yerda paydo bo'ladi.";
+  const commandMetrics = [
+    {
+      label: language === "ru" ? "Отзывы" : language === "en" ? "Review pace" : "Sharh tempi",
+      value: reviewMomentum,
+    },
+    {
+      label: language === "ru" ? "Врачи в пути" : language === "en" ? "Doctors involved" : "Jalb qilingan doktorlar",
+      value: doctorCoverageCount.toString(),
+    },
+    {
+      label: language === "ru" ? "Готовые записи" : language === "en" ? "Live bookings" : "Faol qabullar",
+      value: activeAppointments.length.toString(),
+    },
+  ];
 
   const handleBooking = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -550,6 +594,39 @@ const User = () => {
               </article>
             ))}
           </div>
+        </section>
+
+        <section className="care-command-grid">
+          <article className="care-command-card care-command-card-primary">
+            <div className="care-command-copy">
+              <span className="section-chip">{careCommandChip}</span>
+              <h2>{careCommandTitle}</h2>
+              <p>{careCommandText}</p>
+            </div>
+
+            <div className="care-command-highlight">
+              <span>{nextVisitLabel}</span>
+              <strong>
+                {nextAppointment ? `${nextAppointment.date} • ${nextAppointment.time}` : noVisitLabel}
+              </strong>
+              <p>
+                {nextAppointment
+                  ? `${nextAppointment.doctorName} • ${nextAppointment.clinic}`
+                  : noVisitText}
+              </p>
+            </div>
+          </article>
+
+          <article className="care-command-card">
+            <div className="care-command-metrics">
+              {commandMetrics.map((item) => (
+                <div key={item.label} className="care-command-metric">
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                </div>
+              ))}
+            </div>
+          </article>
         </section>
 
         <section className="dashboard-tabbar">
@@ -1143,21 +1220,17 @@ const User = () => {
                 )}
               </div>
 
-              {selectedDoctorMapEmbedUrl ? (
-                <iframe
-                  className="map-preview-frame map-preview-frame-user"
-                  title="Tanlangan doktor lokatsiyasi"
-                  src={selectedDoctorMapEmbedUrl}
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
-              ) : (
-                <div className="map-preview-empty">
-                  <LocationIcon />
-                  <strong>{copy.mapEmptyTitle}</strong>
-                  <p>{copy.mapEmptyText}</p>
-                </div>
-              )}
+              <div className="map-preview-empty map-preview-empty-static">
+                <LocationIcon />
+                <strong>{selectedDoctor ? selectedDoctor.clinic : copy.mapEmptyTitle}</strong>
+                <p>{selectedDoctor ? selectedDoctor.address : copy.mapEmptyText}</p>
+                {selectedDoctorMapUrl && (
+                  <a href={selectedDoctorMapUrl} target="_blank" rel="noreferrer" className="button button-secondary">
+                    {mapActionLabel}
+                    <ArrowRightIcon />
+                  </a>
+                )}
+              </div>
 
               <p className="map-preview-caption">{selectedDoctor?.address ?? copy.addressMissing}</p>
             </article>

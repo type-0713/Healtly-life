@@ -19,7 +19,7 @@ import {
 import { useAppContext } from "../context/AppContext";
 import { useI18n } from "../context/I18nContext";
 import { adminCopy } from "../i18n/adminCopy";
-import { getDoctorMapQuery, getMapEmbedUrl, getMapSearchUrl } from "../lib/maps";
+import { getDoctorMapQuery, getMapSearchUrl } from "../lib/maps";
 import { UZBEKISTAN_REGIONS } from "../lib/regions";
 import { DEFAULT_TIME_SLOTS } from "../lib/schedule";
 
@@ -119,6 +119,65 @@ const Admin = () => {
         ? "All doctors are shown in one list. When the number grows, the panel keeps scrolling."
         : "Barcha shifokorlar bitta ro'yxatda ko'rinadi. Soni ko'payganda panel skroll bilan davom etadi.";
   const noBusySpecialty = language === "ru" ? "Нет" : language === "en" ? "None" : "Yo'q";
+  const vipRequests = appointments.filter((item) => item.notes.toLowerCase().includes("vip")).length;
+  const approvalRate = appointments.length
+    ? `${Math.round(
+        (appointments.filter((item) => item.status === "Tasdiqlandi").length / appointments.length) * 100,
+      )}%`
+    : "0%";
+  const averageDoctorRating =
+    doctors.length > 0
+      ? (doctors.reduce((sum, doctor) => sum + doctor.rating, 0) / doctors.length).toFixed(1)
+      : "0.0";
+  const adminCommandTitle =
+    language === "ru"
+      ? "Пульт управления MedElite"
+      : language === "en"
+        ? "Mission control for MedElite"
+        : "MedElite uchun mission control";
+  const adminCommandText =
+    language === "ru"
+      ? "Здесь команда мгновенно видит поток заявок, качество пула врачей и готовность к пиковым часам."
+      : language === "en"
+        ? "This board lets the team see booking flow, doctor quality, and peak-hour readiness at a glance."
+        : "Bu panel jamoaga bron oqimi, doktorlar sifati va pik soatlarga tayyorgarlikni bir qarashda ko'rsatadi.";
+  const adminCommandMetrics = [
+    {
+      label: language === "ru" ? "Доля подтверждений" : language === "en" ? "Approve rate" : "Tasdiqlash ulushi",
+      value: approvalRate,
+    },
+    {
+      label: language === "ru" ? "VIP поток" : language === "en" ? "VIP flow" : "VIP oqimi",
+      value: vipRequests.toString(),
+    },
+    {
+      label: language === "ru" ? "Среднее доверие" : language === "en" ? "Average trust" : "O'rtacha ishonch",
+      value: `${averageDoctorRating}/5`,
+    },
+  ];
+  const adminReadinessTitle =
+    language === "ru"
+      ? "Операционная готовность"
+      : language === "en"
+        ? "Operational readiness"
+        : "Operatsion tayyorgarlik";
+  const adminReadinessItems = [
+    language === "ru"
+      ? "Слоты и локации подготовлены для пользовательского кабинета"
+      : language === "en"
+        ? "Slots and locations are staged for the user workspace"
+        : "Slotlar va lokatsiyalar user workspace uchun tayyor",
+    language === "ru"
+      ? "Каждый новый врач сразу попадает в реальный витринный список"
+      : language === "en"
+        ? "Each new doctor appears in the live showcase instantly"
+        : "Har bir yangi doktor darhol jonli vitrinaga tushadi",
+    language === "ru"
+      ? "Отзывы усиливают рейтинг без создания лишних врачей"
+      : language === "en"
+        ? "Reviews strengthen ratings without creating duplicate doctors"
+        : "Sharhlar yangi doktor yaratmasdan reytingni kuchaytiradi",
+  ];
 
   const kpis = useMemo(
     () => [
@@ -126,18 +185,14 @@ const Admin = () => {
       { label: copy.kpis[1], value: doctors.length.toString() },
       {
         label: copy.kpis[2],
-        value: appointments.length
-          ? `${Math.round(
-              (appointments.filter((item) => item.status === "Tasdiqlandi").length / appointments.length) * 100,
-            )}%`
-          : "0%",
+        value: approvalRate,
       },
       {
         label: copy.kpis[3],
-        value: `${appointments.filter((item) => item.notes.toLowerCase().includes("vip")).length}`,
+        value: `${vipRequests}`,
       },
     ],
-    [appointments, copy.kpis, doctors.length],
+    [appointments.length, approvalRate, copy.kpis, doctors.length, vipRequests],
   );
 
   const sortedDoctors = useMemo(
@@ -146,7 +201,6 @@ const Admin = () => {
   );
 
   const draftMapQuery = getDoctorMapQuery(doctorForm);
-  const draftMapEmbedUrl = getMapEmbedUrl(draftMapQuery);
   const draftMapSearchUrl = getMapSearchUrl(draftMapQuery);
   const closeMenu = () => setMenuOpen(false);
 
@@ -291,6 +345,47 @@ const Admin = () => {
           <article className="ops-strip-card">
             <span>{copy.vip}</span>
             <strong>{appointments.filter((item) => item.notes.toLowerCase().includes("vip")).length}</strong>
+          </article>
+        </section>
+
+        <section className="admin-command-grid">
+          <article className="admin-command-card admin-command-card-primary">
+            <div className="admin-command-copy">
+              <span className="section-chip">{copy.panelChip}</span>
+              <h2>{adminCommandTitle}</h2>
+              <p>{adminCommandText}</p>
+            </div>
+
+            <div className="admin-command-metrics">
+              {adminCommandMetrics.map((item) => (
+                <div key={item.label} className="admin-command-metric">
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="admin-command-card">
+            <div className="panel-heading">
+              <div>
+                <span className="section-chip">{copy.qualityChip}</span>
+                <h2>{adminReadinessTitle}</h2>
+              </div>
+              <span className="badge badge-gold">
+                <SparkIcon />
+                {copy.active}
+              </span>
+            </div>
+
+            <div className="summary-checks">
+              {adminReadinessItems.map((item) => (
+                <div key={item}>
+                  <CheckIcon />
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
           </article>
         </section>
 
@@ -490,21 +585,11 @@ const Admin = () => {
                 <div className="field field-full">
                   <span>{copy.mapPreview}</span>
                   <div className="map-preview-card">
-                    {draftMapEmbedUrl ? (
-                      <iframe
-                        className="map-preview-frame"
-                        title="Shifokor lokatsiyasi preview"
-                        src={draftMapEmbedUrl}
-                        loading="lazy"
-                        referrerPolicy="no-referrer-when-downgrade"
-                      />
-                    ) : (
-                      <div className="map-preview-empty">
-                        <LocationIcon />
-                        <strong>{copy.mapPreviewTitle}</strong>
-                        <p>{copy.mapPreviewText}</p>
-                      </div>
-                    )}
+                    <div className="map-preview-empty map-preview-empty-static">
+                      <LocationIcon />
+                      <strong>{doctorForm.clinic || copy.mapPreviewTitle}</strong>
+                      <p>{doctorForm.address || copy.mapPreviewText}</p>
+                    </div>
 
                     <div className="map-preview-copy">
                       <strong>{doctorForm.clinic || copy.pendingClinic}</strong>

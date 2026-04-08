@@ -54,15 +54,27 @@ const LoginPage = () => {
   const nextPath = searchParams.get("next") ?? (mode === "admin" ? "/admin" : "/user");
   const isRegisterMode = !isAdminMode && authAction === "register";
   const sessionLogoutLabel =
-    language === "ru" ? "�����" : language === "en" ? "Logout" : "Chiqish";
+    language === "ru" ? "Выйти" : language === "en" ? "Logout" : "Chiqish";
   const userViewLabel =
-    language === "ru" ? "����� ������������" : language === "en" ? "User view" : "User ko'rinishi";
+    language === "ru" ? "Пользовательский вид" : language === "en" ? "User view" : "User ko'rinishi";
   const passwordToggleLabel =
-    language === "ru" ? "\u041F\u043E\u043A\u0430\u0437\u0430\u0442\u044C \u0438\u043B\u0438 \u0441\u043A\u0440\u044B\u0442\u044C \u043F\u0430\u0440\u043E\u043B\u044C" : language === "en" ? "Show or hide password" : "Parolni ko'rsatish yoki yashirish";
+    language === "ru"
+      ? "Показать или скрыть пароль"
+      : language === "en"
+        ? "Show or hide password"
+        : "Parolni ko'rsatish yoki yashirish";
   const providerFallbackError =
-    language === "ru" ? "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0432\u043E\u0439\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u043E\u0433\u043E \u043F\u0440\u043E\u0432\u0430\u0439\u0434\u0435\u0440\u0430." : language === "en" ? "Could not sign in with the selected provider." : "Tanlangan provider orqali kirib bo'lmadi.";
+    language === "ru"
+      ? "Не удалось войти через выбранного провайдера."
+      : language === "en"
+        ? "Could not sign in with the selected provider."
+        : "Tanlangan provider orqali kirib bo'lmadi.";
   const adminLoginHint =
-    language === "ru" ? "\u0410\u0434\u043C\u0438\u043D email \u0435\u043C\u0430\u0441, \u0430\u0439\u043D\u0430\u043D \u043B\u043E\u0433\u0438\u043D\u043D\u0438 \u043A\u0438\u0440\u0438\u0442\u0435." : language === "en" ? "Enter the admin login itself, not an email address." : "Email emas, aynan admin loginni kiriting.";
+    language === "ru"
+      ? "Введите именно логин администратора, а не email."
+      : language === "en"
+        ? "Enter the admin login itself, not an email address."
+        : "Email emas, aynan admin loginni kiriting.";
   const buildLoginLink = (
     targetMode: "user" | "admin",
     targetAction: "login" | "register" = authAction,
@@ -115,6 +127,7 @@ const LoginPage = () => {
     setAuthAction(nextAction);
     navigate(buildLoginLink(mode, nextAction), { replace: true });
   };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const normalizedLogin = email.trim();
@@ -138,20 +151,21 @@ const LoginPage = () => {
       } else {
         await signInWithCredentials(normalizedLogin, password);
       }
+
       await updateProfile({ email: normalizedLogin });
       navigate(nextPath);
     } catch (error) {
       setAuthMessage(
-        error instanceof Error ? translateError(error.message) : translateError("Kirishda xatolik yuz berdi."),
+        error instanceof Error
+          ? translateError(error.message)
+          : translateError("Kirishda xatolik yuz berdi."),
       );
     } finally {
       setIsSubmittingAuth(false);
     }
   };
 
-  const handleProviderLogin = async (
-    action: () => Promise<void>,
-  ) => {
+  const handleProviderLogin = async (action: () => Promise<void>) => {
     try {
       setAuthMessage("");
       setIsSubmittingAuth(true);
@@ -227,7 +241,9 @@ const LoginPage = () => {
                     onChange={(event) => setPassword(event.target.value)}
                     placeholder={isAdminMode ? copy.adminPasswordPlaceholder : copy.passwordPlaceholder}
                     required
-                    autoComplete={isAdminMode ? "current-password" : isRegisterMode ? "new-password" : "current-password"}
+                    autoComplete={
+                      isAdminMode ? "current-password" : isRegisterMode ? "new-password" : "current-password"
+                    }
                     autoCapitalize="none"
                     spellCheck={false}
                   />
@@ -470,11 +486,7 @@ const LoginPage = () => {
             </article>
           </div>
 
-          <div className="auth-luxury-note">
-            {isAdminMode
-              ? copy.adminNote
-              : copy.userNote}
-          </div>
+          <div className="auth-luxury-note">{isAdminMode ? copy.adminNote : copy.userNote}</div>
         </section>
       </div>
     </div>

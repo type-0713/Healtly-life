@@ -29,7 +29,7 @@ const Home = () => {
   const { language, format, translateRegion, translateSpecialty } = useI18n();
   const copy = homeCopy[language];
   const navigate = useNavigate();
-  const { appointments, doctors, accountRole, currentUser, isAdminAuthenticated } = useAppContext();
+  const { appointments, doctors, isAdminAuthenticated, isUserAuthenticated } = useAppContext();
   const [searchTerm, setSearchTerm] = useState("");
   const [locationTerm, setLocationTerm] = useState("");
   const [regionFilter, setRegionFilter] = useState(ALL_REGIONS_OPTION);
@@ -110,6 +110,67 @@ const Home = () => {
   const highlightedDoctorAvailability = highlightedDoctor?.availableSlots[0]
     ? format(copy.nextSlot, { time: highlightedDoctor.availableSlots[0] })
     : copy.noOpenSlots;
+  const averageRating =
+    doctors.length > 0
+      ? (doctors.reduce((sum, doctor) => sum + doctor.rating, 0) / doctors.length).toFixed(1)
+      : "0.0";
+  const heroCommandTitle =
+    language === "ru"
+      ? "Цифровой ритм клиники"
+      : language === "en"
+        ? "Digital clinic rhythm"
+        : "Raqamli klinika ritmi";
+  const heroCommandText =
+    language === "ru"
+      ? "Живая витрина слотов, рейтинга и скорости ответа для пациентов премиального уровня."
+      : language === "en"
+        ? "A live showcase of slot readiness, doctor trust, and premium response speed."
+        : "Premium bemorlar uchun slot tayyorligi, doktor ishonchi va tezkor javobni bir joyda ko'rsatadigan jonli vitrina.";
+  const heroCommandMetrics = [
+    {
+      label: language === "ru" ? "Готовые врачи" : language === "en" ? "Ready doctors" : "Tayyor doktorlar",
+      value: doctors.length.toString(),
+    },
+    {
+      label: language === "ru" ? "Живые записи" : language === "en" ? "Live bookings" : "Jonli bronlar",
+      value: appointments.length.toString(),
+    },
+    {
+      label: language === "ru" ? "Средний рейтинг" : language === "en" ? "Avg rating" : "O'rtacha reyting",
+      value: `${averageRating}/5`,
+    },
+  ];
+  const heroOverlayTitle =
+    language === "ru" ? "Premium care sync" : language === "en" ? "Premium care sync" : "Premium care sync";
+  const heroOverlayText =
+    language === "ru"
+      ? "Маршрут пациента, подтверждение и карта врача синхронизированы."
+      : language === "en"
+        ? "Patient path, approval, and doctor location are synchronized."
+        : "Bemor yo'li, tasdiq va doktor lokatsiyasi sinxron ishlaydi.";
+  const heroOverlayFoot =
+    language === "ru"
+      ? "Обновление в реальном времени"
+      : language === "en"
+        ? "Realtime refreshed"
+        : "Realtime yangilanadi";
+  const signatureTitle =
+    language === "ru"
+      ? "Поток сервиса, который ощущается как продукт класса люкс"
+      : language === "en"
+        ? "A care flow that feels like a luxury product"
+        : "Premium mahsulotdek his qilinadigan tibbiy oqim";
+  const signatureText =
+    language === "ru"
+      ? "Каждый экран показывает уверенность, скорость и контроль: от поиска врача до подтверждённого визита."
+      : language === "en"
+        ? "Every screen projects confidence, speed, and control from doctor discovery to confirmed visit."
+        : "Har bir ekran doktordan qabulgacha bo'lgan yo'lda ishonch, tezlik va nazorat hissini beradi.";
+  const signaturePillars = [
+    language === "ru" ? "Премиальная навигация" : language === "en" ? "Premium navigation" : "Premium navigatsiya",
+    language === "ru" ? "Читаемый статус визита" : language === "en" ? "Readable visit status" : "Tushunarli qabul statusi",
+    language === "ru" ? "Единый стиль доверия" : language === "en" ? "Unified trust language" : "Yagona ishonch uslubi",
+  ];
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -121,11 +182,10 @@ const Home = () => {
       return;
     }
 
-    const hasSavedUserSession = window.localStorage.getItem("medelite-user-session");
-    if ((currentUser || hasSavedUserSession) && accountRole === "user") {
+    if (isUserAuthenticated) {
       navigate("/user");
     }
-  }, [accountRole, currentUser, isAdminAuthenticated, navigate]);
+  }, [isAdminAuthenticated, isUserAuthenticated, navigate]);
 
   const getDoctorAvailability = (doctor: (typeof doctors)[number]) =>
     doctor.availableSlots[0] ? format(copy.nextSlot, { time: doctor.availableSlots[0] }) : copy.noOpenSlots;
@@ -252,9 +312,31 @@ const Home = () => {
                   <span>{copy.quick[2]}</span>
                 </div>
               </div>
+
+              <div className="hero-command-strip">
+                <div className="hero-command-copy">
+                  <span className="section-chip">{heroCommandTitle}</span>
+                  <strong>{heroCommandText}</strong>
+                </div>
+
+                <div className="hero-command-metrics">
+                  {heroCommandMetrics.map((item) => (
+                    <div key={item.label} className="hero-command-metric">
+                      <span>{item.label}</span>
+                      <strong>{item.value}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div className="hero-visual">
+              <div className="hero-floating-card hero-floating-top">
+                <span>{heroOverlayTitle}</span>
+                <strong>{highlightedDoctorAvailability}</strong>
+                <p>{heroOverlayText}</p>
+              </div>
+
               <div className="hero-panel glass-card">
                 <div className="hero-panel-header">
                   <span className="badge badge-gold">
@@ -320,6 +402,12 @@ const Home = () => {
                   <span className="badge">{copy.premiumUx}</span>
                 </div>
               </div>
+
+              <div className="hero-floating-card hero-floating-bottom">
+                <span>{heroOverlayFoot}</span>
+                <strong>{averageRating}/5</strong>
+                <p>{highlightedDoctor?.name ?? copy.fallbackDoctor}</p>
+              </div>
             </div>
           </div>
         </section>
@@ -332,6 +420,25 @@ const Home = () => {
                 <span>{stat.label}</span>
               </article>
             ))}
+          </div>
+        </section>
+
+        <section className="section-block signature-section">
+          <div className="container signature-panel">
+            <div className="signature-copy">
+              <span className="section-chip">{copy.care}</span>
+              <h2>{signatureTitle}</h2>
+              <p>{signatureText}</p>
+            </div>
+
+            <div className="signature-pillars">
+              {signaturePillars.map((pillar) => (
+                <div key={pillar} className="signature-pillar">
+                  <CheckIcon />
+                  <span>{pillar}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -440,6 +547,16 @@ const Home = () => {
                   <div className="doctor-card-quickline">
                     <span>{doctor.price}</span>
                     <span>{getDoctorAvailability(doctor)}</span>
+                  </div>
+
+                  <div className="doctor-confidence">
+                    <div className="doctor-confidence-head">
+                      <span>{language === "ru" ? "Индекс доверия" : language === "en" ? "Trust index" : "Ishonch indeksi"}</span>
+                      <strong>{Math.round((doctor.rating / 5) * 100)}%</strong>
+                    </div>
+                    <div className="doctor-confidence-bar">
+                      <span style={{ width: `${Math.max(22, Math.round((doctor.rating / 5) * 100))}%` }} />
+                    </div>
                   </div>
 
                   <div className="doctor-meta">

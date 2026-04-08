@@ -30,6 +30,7 @@ import {
   query,
   runTransaction,
   setDoc,
+  writeBatch,
 } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import { inferUzbekRegion, isUzbekRegion } from "../lib/regions";
@@ -96,6 +97,7 @@ export type ThemeMode = "dark" | "light";
 export type AccountRole = "user" | "admin" | null;
 
 type NewDoctorInput = Omit<Doctor, "id" | "rating" | "reviewCount">;
+type SeedDoctor = Omit<Doctor, "rating" | "reviewCount">;
 
 type BookingInput = {
   doctorId: string;
@@ -144,13 +146,12 @@ type AppContextValue = {
   setTheme: (theme: ThemeMode) => void;
 };
 
-const defaultDoctors: Omit<Doctor, "id">[] = [
+const defaultDoctors: SeedDoctor[] = [
   {
+    id: "default-alisher-karimov",
     name: "Dr. Alisher Karimov",
     specialty: "Kardiolog",
     region: "Toshkent shahri",
-    rating: 5,
-    reviewCount: 0,
     experience: "16 yil",
     price: "180 000 so'm",
     availability: "Bugun, 14:30",
@@ -161,11 +162,10 @@ const defaultDoctors: Omit<Doctor, "id">[] = [
     availableSlots: ["09:00", "10:00", "14:30", "16:00", "17:00"],
   },
   {
+    id: "default-gulsara-niyazova",
     name: "Dr. Gulsara Niyazova",
     specialty: "Terapevt",
     region: "Toshkent shahri",
-    rating: 5,
-    reviewCount: 0,
     experience: "12 yil",
     price: "140 000 so'm",
     availability: "Bugun, 16:00",
@@ -176,11 +176,10 @@ const defaultDoctors: Omit<Doctor, "id">[] = [
     availableSlots: ["09:30", "11:00", "13:30", "16:00", "17:30"],
   },
   {
+    id: "default-rustam-abdullayev",
     name: "Dr. Rustam Abdullayev",
     specialty: "Ortoped",
     region: "Toshkent shahri",
-    rating: 5,
-    reviewCount: 0,
     experience: "18 yil",
     price: "210 000 so'm",
     availability: "Ertaga, 09:30",
@@ -216,36 +215,89 @@ const roleCollection = collection(db, "accountRoles");
 const createLocalUserId = () =>
   `local-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
 
+const normalizeDoctorText = (value: unknown) =>
+  String(value ?? "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+
+const normalizeDoctorIdentity = (doctor: Partial<Pick<Doctor, "name" | "specialty" | "clinic" | "address">>) =>
+  [
+    normalizeDoctorText(doctor.name),
+    normalizeDoctorText(doctor.specialty),
+    normalizeDoctorText(doctor.clinic),
+    normalizeDoctorText(doctor.address),
+  ].join("::");
+
+const sanitizeDoctorSlots = (slots: unknown, fallbackSlots: string[] = DEFAULT_TIME_SLOTS) => {
+  const slotSet = new Set(
+    (Array.isArray(slots) ? slots : fallbackSlots)
+      .map((slot) => String(slot))
+      .filter((slot) => isTimeSlotAllowed(slot)),
+  );
+  const orderedSlots = DEFAULT_TIME_SLOTS.filter((slot) => slotSet.has(slot));
+
+  return orderedSlots.length ? orderedSlots : fallbackSlots;
+};
+
+const areSlotsEqual = (left: string[], right: string[]) =>
+  left.length === right.length && left.every((slot, index) => slot === right[index]);
+
+const buildAvailabilityLabel = (slots: string[], fallback?: string) => {
+  const normalizedFallback = fallback?.trim();
+
+  if (normalizedFallback) {
+    return normalizedFallback;
+  }
+
+  return slots.length
+    ? `Bo'sh slotlar: ${slots.slice(0, 2).join(", ")}`
+    : "Bo'sh slotlar mavjud";
+};
+
+const normalizeDoctorRegion = (
+  region: unknown,
+  address: unknown,
+  clinic: unknown,
+  mapQuery: unknown,
+) => {
+  const directRegion = String(region ?? "").trim();
+
+  if (isUzbekRegion(directRegion)) {
+    return directRegion;
+  }
+
+  return (
+    inferUzbekRegion(String(address ?? ""), String(clinic ?? ""), String(mapQuery ?? "")) ||
+    "Toshkent shahri"
+  );
+};
+
 const toDoctor = (id: string, data: Record<string, unknown>): Doctor => {
   const reviewCount = Number(data.reviewCount ?? 0);
   const rawRating = Number(data.rating ?? 5);
+  const availableSlots = sanitizeDoctorSlots(data.availableSlots);
 
   return {
     id,
     name: String(data.name ?? ""),
     specialty: String(data.specialty ?? ""),
-    region:
-      String(data.region ?? "").trim() ||
-      inferUzbekRegion(
-        String(data.address ?? ""),
-        String(data.clinic ?? ""),
-        String(data.mapQuery ?? ""),
-      ) ||
-      "Toshkent shahri",
+    region: normalizeDoctorRegion(
+      data.region,
+      data.address,
+      data.clinic,
+      data.mapQuery,
+    ),
     rating: reviewCount > 0 ? rawRating : 5,
     reviewCount,
     experience: String(data.experience ?? ""),
     price: String(data.price ?? ""),
-    availability: String(data.availability ?? "") || "Bo'sh slotlar mavjud",
+    availability: buildAvailabilityLabel(availableSlots, String(data.availability ?? "")),
     clinic: String(data.clinic ?? ""),
     address: String(data.address ?? data.clinic ?? ""),
     mapQuery: String(data.mapQuery ?? data.address ?? data.clinic ?? ""),
     bio: String(data.bio ?? ""),
-    availableSlots: Array.isArray(data.availableSlots)
-      ? data.availableSlots
-          .map((slot) => String(slot))
-          .filter((slot) => isTimeSlotAllowed(slot))
-      : DEFAULT_TIME_SLOTS,
+    availableSlots,
   };
 };
 
@@ -305,6 +357,118 @@ const ensureRole = async (uid: string, fallbackRole: Exclude<AccountRole, null>)
   return fallbackRole;
 };
 
+const syncDefaultDoctors = async () => {
+  const [doctorSnapshot, appointmentSnapshot] = await Promise.all([
+    getDocs(doctorCollection),
+    getDocs(appointmentCollection),
+  ]);
+  const doctorEntries = doctorSnapshot.docs.map((item) => ({
+    id: item.id,
+    ref: item.ref,
+    data: item.data() as Record<string, unknown>,
+  }));
+  const appointmentEntries = appointmentSnapshot.docs.map((item) => ({
+    ref: item.ref,
+    data: item.data() as Record<string, unknown>,
+  }));
+  const batch = writeBatch(db);
+  let hasWrites = false;
+
+  for (const defaultDoctor of defaultDoctors) {
+    const doctorIdentity = normalizeDoctorIdentity(defaultDoctor);
+    const matchingDoctors = doctorEntries.filter(
+      (entry) => normalizeDoctorIdentity(entry.data as Partial<Doctor>) === doctorIdentity,
+    );
+    const reviewCount = matchingDoctors.reduce(
+      (sum, entry) => sum + Number(entry.data.reviewCount ?? 0),
+      0,
+    );
+    const ratingPoints = matchingDoctors.reduce((sum, entry) => {
+      const entryReviewCount = Number(entry.data.reviewCount ?? 0);
+      const entryRating = Number(entry.data.rating ?? 5);
+
+      return sum + entryRating * entryReviewCount;
+    }, 0);
+    const slotSet = new Set(defaultDoctor.availableSlots);
+
+    matchingDoctors.forEach((entry) => {
+      sanitizeDoctorSlots(entry.data.availableSlots, []).forEach((slot) => slotSet.add(slot));
+    });
+
+    const mergedSlots = DEFAULT_TIME_SLOTS.filter((slot) => slotSet.has(slot));
+    const canonicalDoctor = {
+      ...defaultDoctor,
+      availability: buildAvailabilityLabel(mergedSlots, defaultDoctor.availability),
+      availableSlots: mergedSlots,
+      rating: reviewCount > 0 ? Number((ratingPoints / reviewCount).toFixed(1)) : 5,
+      reviewCount,
+    };
+    const existingDefaultDoctor = matchingDoctors.find((entry) => entry.id === defaultDoctor.id);
+    const currentDefaultSlots = existingDefaultDoctor
+      ? sanitizeDoctorSlots(existingDefaultDoctor.data.availableSlots)
+      : [];
+    const currentDefaultAvailability = existingDefaultDoctor
+      ? String(existingDefaultDoctor.data.availability ?? "").trim()
+      : "";
+    const currentDefaultReviewCount = existingDefaultDoctor
+      ? Number(existingDefaultDoctor.data.reviewCount ?? 0)
+      : -1;
+    const currentDefaultRating = existingDefaultDoctor
+      ? Number(existingDefaultDoctor.data.rating ?? 5)
+      : -1;
+    const hasBaseFieldMismatch =
+      !existingDefaultDoctor ||
+      normalizeDoctorIdentity(existingDefaultDoctor.data as Partial<Doctor>) !== doctorIdentity ||
+      String(existingDefaultDoctor.data.region ?? "").trim() !== defaultDoctor.region ||
+      String(existingDefaultDoctor.data.experience ?? "").trim() !== defaultDoctor.experience ||
+      String(existingDefaultDoctor.data.price ?? "").trim() !== defaultDoctor.price ||
+      String(existingDefaultDoctor.data.mapQuery ?? "").trim() !== defaultDoctor.mapQuery ||
+      String(existingDefaultDoctor.data.bio ?? "").trim() !== defaultDoctor.bio;
+    const needsDefaultSync =
+      hasBaseFieldMismatch ||
+      matchingDoctors.some((entry) => entry.id !== defaultDoctor.id) ||
+      !areSlotsEqual(currentDefaultSlots, mergedSlots) ||
+      currentDefaultAvailability !== canonicalDoctor.availability ||
+      currentDefaultReviewCount !== canonicalDoctor.reviewCount ||
+      Number(currentDefaultRating.toFixed(1)) !== canonicalDoctor.rating;
+
+    if (needsDefaultSync) {
+      batch.set(doc(db, "doctors", defaultDoctor.id), canonicalDoctor, { merge: true });
+      hasWrites = true;
+    }
+
+    matchingDoctors.forEach((entry) => {
+      if (entry.id === defaultDoctor.id) {
+        return;
+      }
+
+      appointmentEntries.forEach((appointment) => {
+        if (String(appointment.data.doctorId ?? "") !== entry.id) {
+          return;
+        }
+
+        batch.update(appointment.ref, {
+          doctorId: defaultDoctor.id,
+          doctorName: defaultDoctor.name,
+          specialty: defaultDoctor.specialty,
+          region: defaultDoctor.region,
+          clinic: defaultDoctor.clinic,
+          address: defaultDoctor.address,
+          mapQuery: defaultDoctor.mapQuery,
+        });
+        hasWrites = true;
+      });
+
+      batch.delete(entry.ref);
+      hasWrites = true;
+    });
+  }
+
+  if (hasWrites) {
+    await batch.commit();
+  }
+};
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const initialLocalEmail =
     typeof window === "undefined" ? "" : window.localStorage.getItem(USER_SESSION_KEY) ?? "";
@@ -336,7 +500,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [authLoading, setAuthLoading] = useState(true);
 
   const isAdminAuthenticated = adminSessionActive;
-  const isUserAuthenticated = Boolean(currentUser);
+  const isUserAuthenticated = Boolean(currentUser || (localUserEmail && localUserId));
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -377,17 +541,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [adminSessionActive]);
 
   useEffect(() => {
-    const seedDoctorsIfNeeded = async () => {
-      const snapshot = await getDocs(doctorCollection);
-
-      if (!snapshot.empty) {
-        return;
-      }
-
-      await Promise.all(defaultDoctors.map((doctor) => addDoc(doctorCollection, doctor)));
-    };
-
-    void seedDoctorsIfNeeded();
+    void syncDefaultDoctors().catch(() => undefined);
 
     const unsubscribe = onSnapshot(
       query(doctorCollection, orderBy("name", "asc")),
@@ -451,7 +605,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       about: defaultProfile.about,
     };
 
-    void setDoc(profileRef, baseProfile, { merge: true });
+    void setDoc(profileRef, baseProfile, { merge: true }).catch(() => undefined);
 
     const unsubscribe = onSnapshot(profileRef, (snapshot) => {
       const data = snapshot.data() as Partial<UserProfile> | undefined;
@@ -462,12 +616,38 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [currentUser, localUserEmail, localUserId]);
 
   const addDoctorHandler = useCallback(async (doctor: NewDoctorInput) => {
-    const sortedSlots = DEFAULT_TIME_SLOTS.filter((slot) => doctor.availableSlots.includes(slot));
+    const normalizedDoctor = {
+      name: doctor.name.trim(),
+      specialty: doctor.specialty.trim(),
+      region: normalizeDoctorRegion(
+        doctor.region,
+        doctor.address,
+        doctor.clinic,
+        doctor.mapQuery,
+      ),
+      experience: doctor.experience.trim(),
+      price: doctor.price.trim(),
+      clinic: doctor.clinic.trim(),
+      address: doctor.address.trim(),
+      mapQuery: doctor.mapQuery.trim() || doctor.address.trim() || doctor.clinic.trim(),
+      bio: doctor.bio.trim(),
+    };
+    const sortedSlots = sanitizeDoctorSlots(doctor.availableSlots);
+    const doctorIdentity = normalizeDoctorIdentity(normalizedDoctor);
+    const snapshot = await getDocs(doctorCollection);
+    const duplicateDoctor = snapshot.docs.find(
+      (item) =>
+        normalizeDoctorIdentity(item.data() as Partial<Doctor>) === doctorIdentity,
+    );
+
+    if (duplicateDoctor) {
+      throw new Error("Bu shifokor allaqachon ro'yxatda mavjud.");
+    }
 
     await addDoc(doctorCollection, {
-      ...doctor,
-      region: isUzbekRegion(doctor.region) ? doctor.region : "Toshkent shahri",
-      availableSlots: sortedSlots.filter((slot) => isTimeSlotAllowed(slot)),
+      ...normalizedDoctor,
+      availability: buildAvailabilityLabel(sortedSlots, doctor.availability),
+      availableSlots: sortedSlots,
       rating: 5,
       reviewCount: 0,
     });
