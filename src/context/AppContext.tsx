@@ -203,6 +203,9 @@ const defaultProfile: UserProfile = {
 const USER_SESSION_KEY = "medelite-user-session";
 const USER_ID_KEY = "medelite-user-id";
 const THEME_KEY = "medelite-theme";
+const DEFAULT_THEME: ThemeMode = "light";
+const normalizeTheme = (value: string | null): ThemeMode =>
+  value === "dark" || value === "light" ? value : DEFAULT_THEME;
 const ADMIN_SESSION_KEY = "medelite-admin-session";
 const ADMIN_LOGIN = "admin13579";
 const ADMIN_PASSWORD = "2486";
@@ -479,8 +482,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         (initialLocalEmail ? createLocalUserId() : "");
   const initialTheme: ThemeMode =
     typeof window === "undefined"
-      ? "dark"
-      : ((window.localStorage.getItem(THEME_KEY) as ThemeMode | null) ?? "dark");
+      ? DEFAULT_THEME
+      : normalizeTheme(window.localStorage.getItem(THEME_KEY));
   const initialAdminSession =
     typeof window === "undefined"
       ? false

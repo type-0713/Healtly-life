@@ -25,6 +25,10 @@ type I18nValue = {
 };
 
 const LANGUAGE_KEY = "medelite-language";
+const DEFAULT_LANGUAGE: Language = "uz";
+
+const normalizeLanguage = (value: string | null): Language =>
+  value === "ru" || value === "en" || value === "uz" ? value : DEFAULT_LANGUAGE;
 
 const statusLabels: Record<Language, Record<Appointment["status"], string>> = {
   uz: {
@@ -157,8 +161,8 @@ const formatTemplate = (template: string, params: TranslationParams = {}) =>
 export const I18nProvider = ({ children }: { children: ReactNode }) => {
   const initialLanguage =
     typeof window === "undefined"
-      ? "uz"
-      : ((window.localStorage.getItem(LANGUAGE_KEY) as Language | null) ?? "uz");
+      ? DEFAULT_LANGUAGE
+      : normalizeLanguage(window.localStorage.getItem(LANGUAGE_KEY));
   const [language, setLanguageState] = useState<Language>(initialLanguage);
 
   const setLanguage = useCallback((nextLanguage: Language) => {
