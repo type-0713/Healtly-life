@@ -926,6 +926,35 @@ textarea {
   inset: auto;
 }
 
+[data-theme="dark"] .eyebrow-pill {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04)),
+    rgba(8, 18, 34, 0.88);
+  border-color: rgba(173, 190, 255, 0.16);
+  box-shadow: 0 20px 46px rgba(4, 10, 24, 0.28);
+  color: var(--heading);
+}
+
+[data-theme="dark"] .hero-floating-card {
+  border: 1px solid color-mix(in srgb, var(--border) 94%, transparent);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)),
+    rgba(7, 18, 34, 0.82);
+  box-shadow: 0 20px 46px rgba(6, 13, 28, 0.26);
+}
+
+[data-theme="dark"] .hero-floating-card span {
+  color: #8fa6d3;
+}
+
+[data-theme="dark"] .hero-floating-card strong {
+  color: #ffffff;
+}
+
+[data-theme="dark"] .hero-floating-card p {
+  color: #aab8d3;
+}
+
 .search-field,
 .field-box,
 .preview-list div,
@@ -3312,6 +3341,58 @@ textarea {
     align-items: stretch;
   }
 
+  .dashboard-content,
+  .dashboard-hero,
+  .care-command-grid,
+  .workspace-grid,
+  .preview-column,
+  .workspace-section,
+  .booking-panel,
+  .preview-card,
+  .appointment-card,
+  .doctor-select-card,
+  .care-command-card,
+  .dashboard-mini-card {
+    min-width: 0;
+  }
+
+  .dashboard-hero > *,
+  .care-command-grid > *,
+  .workspace-grid > *,
+  .preview-column > *,
+  .workspace-section > * {
+    width: 100%;
+    min-width: 0;
+    margin-inline: auto;
+  }
+
+  .preview-column {
+    justify-items: center;
+  }
+
+  .panel-heading,
+  .summary-panel-header,
+  .appointment-card-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .panel-heading .badge,
+  .summary-panel-header .badge,
+  .appointment-card-head .badge,
+  .doctor-card-top .badge {
+    align-self: flex-start;
+  }
+
+  .appointment-meta-grid div,
+  .preview-list div,
+  .doctor-location-line,
+  .field-box,
+  .button-block,
+  .card-actions-stack .button {
+    min-width: 0;
+  }
+
   .section-contrast .container,
   .booking-panel,
   .hero-panel,
@@ -3475,4 +3556,40 @@ textarea {
 
 .doctor-card .card-actions-stack {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+[data-theme="dark"] .doctor-card {
+  background:
+    radial-gradient(circle at top right, rgba(118, 169, 255, 0.14), transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04)),
+    rgba(8, 18, 34, 0.88);
+  border-color: rgba(173, 190, 255, 0.16);
+  box-shadow:
+    0 24px 52px rgba(4, 10, 24, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .doctor-card .badge {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05)),
+    rgba(255, 255, 255, 0.05);
+  border-color: rgba(173, 190, 255, 0.16);
+  color: var(--heading);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .doctor-card .doctor-clinic-text {
+  color: #9dbaff !important;
+}
+
+[data-theme="dark"] .doctor-card .doctor-card-quickline span,
+[data-theme="dark"] .doctor-card .doctor-confidence,
+[data-theme="dark"] .doctor-card .doctor-location-line,
+[data-theme="dark"] .doctor-card .doctor-meta span {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(173, 190, 255, 0.12);
+}
+
+[data-theme="dark"] .doctor-card .doctor-location-line {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
