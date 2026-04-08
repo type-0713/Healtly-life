@@ -2514,6 +2514,13 @@ textarea {
   flex-wrap: wrap;
 }
 
+.review-stars-row-readonly {
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 12px;
+  flex-wrap: nowrap;
+}
+
 .review-star-button,
 .review-star-icon {
   display: inline-flex;
@@ -2555,6 +2562,29 @@ textarea {
 .review-stars-row-readonly .review-star-icon {
   width: 46px;
   height: 46px;
+}
+
+.review-form textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 16px 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--text);
+  caret-color: var(--accent);
+  resize: vertical;
+  outline: 0;
+}
+
+.review-form textarea::placeholder {
+  color: color-mix(in srgb, var(--muted) 88%, transparent);
+}
+
+.review-form textarea:focus-visible {
+  border-color: color-mix(in srgb, var(--accent) 46%, transparent);
+  background: color-mix(in srgb, var(--input-bg) 76%, var(--surface-hover));
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent-soft) 72%, transparent);
 }
 
 .modal-backdrop {
