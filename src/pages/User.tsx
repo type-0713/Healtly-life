@@ -617,7 +617,7 @@ const User = () => {
             </div>
           </article>
 
-          <article className="care-command-card">
+          <article className="care-command-card care-command-card-metrics-shell">
             <div className="care-command-metrics">
               {commandMetrics.map((item) => (
                 <div key={item.label} className="care-command-metric">

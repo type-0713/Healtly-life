@@ -853,21 +853,23 @@ textarea {
 .hero-floating-card {
   position: relative;
   z-index: 1;
-  width: 100%;
+  width: min(100%, 520px);
+  justify-self: center;
   display: grid;
-  gap: 8px;
-  padding: 16px 18px;
-  border-radius: 24px;
-  border: 1px solid color-mix(in srgb, var(--border) 94%, transparent);
+  gap: 10px;
+  padding: 20px 22px;
+  border-radius: 28px;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, rgba(127, 182, 255, 0.35));
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)),
-    rgba(7, 18, 34, 0.82);
-  backdrop-filter: blur(20px);
-  box-shadow: 0 20px 46px rgba(6, 13, 28, 0.26);
+    radial-gradient(circle at top right, rgba(255, 209, 138, 0.24), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(241, 247, 255, 0.9)),
+    var(--panel-bg);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 20px 46px rgba(118, 169, 255, 0.18);
 }
 
 .hero-floating-card span {
-  color: var(--muted);
+  color: color-mix(in srgb, var(--accent) 38%, var(--muted));
   font-size: 0.76rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -875,13 +877,14 @@ textarea {
 
 .hero-floating-card strong {
   color: var(--heading);
-  font-size: 1.3rem;
+  font-size: clamp(1.3rem, 2.2vw, 1.8rem);
 }
 
 .hero-floating-card p {
   margin: 0;
   color: var(--muted);
   line-height: 1.55;
+  max-width: 34ch;
 }
 
 .hero-floating-top {
@@ -2154,6 +2157,10 @@ textarea {
   box-shadow: var(--shadow);
 }
 
+.care-command-card-metrics-shell {
+  align-content: center;
+}
+
 .care-command-card-primary {
   grid-template-columns: minmax(0, 1fr) minmax(240px, 0.82fr);
   align-items: center;
@@ -2206,21 +2213,29 @@ textarea {
 .care-command-metrics {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   height: 100%;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
 }
 
 .care-command-metric {
   display: grid;
-  align-content: start;
+  place-items: center;
   gap: 12px;
   min-height: 100%;
   padding: 18px;
   border-radius: 24px;
   background: color-mix(in srgb, var(--surface) 92%, transparent);
   border: 1px solid var(--border);
+  text-align: center;
 }
 
 .care-command-metric strong {
   font-size: 1.9rem;
+}
+
+.care-command-metric span {
+  max-width: 10ch;
 }
 
 .dashboard-tagline {
