@@ -207,8 +207,8 @@ const DEFAULT_THEME: ThemeMode = "light";
 const normalizeTheme = (value: string | null): ThemeMode =>
   value === "dark" || value === "light" ? value : DEFAULT_THEME;
 const ADMIN_SESSION_KEY = "medelite-admin-session";
-const ADMIN_LOGIN = "admin13579";
-const ADMIN_PASSWORD = "2486";
+const ADMIN_LOGIN = "admin1234";
+const ADMIN_PASSWORD = "12345";
 
 const AppContext = createContext<AppContextValue | null>(null);
 
