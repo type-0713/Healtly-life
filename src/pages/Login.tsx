@@ -1,8 +1,9 @@
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import LanguageSwitcher from "../components/LanguageSwitcher";
+import ThemeToggle from "../components/ThemeToggle";
 import {
-  CheckIcon,
   ArrowRightIcon,
   CalendarIcon,
   EyeIcon,
@@ -12,13 +13,185 @@ import {
   MailIcon,
   ShieldIcon,
   SparkIcon,
+  StethoscopeIcon,
   UserGroupIcon,
 } from "../components/PremiumIcons";
-import LanguageSwitcher from "../components/LanguageSwitcher";
-import ThemeToggle from "../components/ThemeToggle";
 import { useAppContext } from "../context/AppContext";
 import { useI18n } from "../context/I18nContext";
-import { loginCopy } from "../i18n/loginCopy";
+
+type Mode = "user" | "doctor" | "admin";
+type Action = "login" | "register";
+
+const copy = {
+  uz: {
+    title: "Realtime tibbiy platformaga kirish",
+    text: "User, doktor va admin oqimlari bitta joyda boshqariladi. Doktor ro'yxatdan o'tgach, admin tasdig'idan keyin kabineti ochiladi.",
+    modes: {
+      user: "User",
+      doctor: "Doktor",
+      admin: "Admin",
+    },
+    actions: {
+      login: "Kirish",
+      register: "Ro'yxatdan o'tish",
+    },
+    email: "Email",
+    adminLogin: "Admin login",
+    password: "Parol",
+    confirmPassword: "Parolni tasdiqlang",
+    userTitle: "Bemor kabineti",
+    doctorTitle: "Doktor onboarding",
+    adminTitle: "Admin nazorati",
+    userText: "Shifokor toping, 24/7 buyurtma bering va qabullar tarixini boshqaring.",
+    doctorText: "Yangi doktor sifatida ro'yxatdan o'ting, admin tasdig'ini kuting va keyin shaxsiy kabinetni to'ldiring.",
+    adminText: "Doktorlarni tasdiqlang, oqimni nazorat qiling va realtime holatni ko'ring.",
+    submitUserLogin: "Kabinetga kirish",
+    submitUserRegister: "Kabinet yaratish",
+    submitDoctorLogin: "Doktor sifatida kirish",
+    submitDoctorRegister: "Doktor sifatida ro'yxatdan o'tish",
+    submitAdmin: "Admin panelga kirish",
+    waiting: "Tasdiqlangandan keyin doktor modal orqali o'zi haqidagi ma'lumotlarni to'ldiradi.",
+    providerTitle: "Tez kirish",
+    activeSession: "Faol sessiya",
+    logout: "Chiqish",
+    remember: "Qurilmada sessiyani ushlab turish",
+    backHome: "Bosh sahifa",
+    metrics: [
+      ["24/7", "Cheklovsiz booking"],
+      ["30 min", "Doktorga kechikib tushadigan request"],
+      ["Realtime", "Admin va doktor oqimi"],
+    ],
+    highlights: [
+      {
+        icon: ShieldIcon,
+        title: "Tasdiqlash oqimi",
+        text: "Har bir yangi doktor avval admin ko'rigidan o'tadi.",
+      },
+      {
+        icon: CalendarIcon,
+        title: "24/7 navbat",
+        text: "Booking istalgan vaqtda yaratiladi, request esa 30 daqiqadan keyin doktorga boradi.",
+      },
+      {
+        icon: StethoscopeIcon,
+        title: "Shaxsiy kabinet",
+        text: "Doktor approved bo'lgach profilini o'zi to'ldiradi va bo'sh vaqtlarini belgilaydi.",
+      },
+    ],
+  },
+  ru: {
+    title: "Вход в медицинскую realtime платформу",
+    text: "Потоки user, doctor и admin управляются из одной точки. После регистрации врача кабинет откроется только после одобрения администратора.",
+    modes: {
+      user: "User",
+      doctor: "Doctor",
+      admin: "Admin",
+    },
+    actions: {
+      login: "Вход",
+      register: "Регистрация",
+    },
+    email: "Email",
+    adminLogin: "Логин администратора",
+    password: "Пароль",
+    confirmPassword: "Подтвердите пароль",
+    userTitle: "Кабинет пациента",
+    doctorTitle: "Поток врача",
+    adminTitle: "Панель администратора",
+    userText: "Находите врачей, создавайте заявки 24/7 и управляйте историей приёмов.",
+    doctorText: "Регистрируйтесь как новый врач, ждите одобрения администратора и затем заполните личный кабинет.",
+    adminText: "Одобряйте врачей, контролируйте поток и следите за realtime статусом.",
+    submitUserLogin: "Войти в кабинет",
+    submitUserRegister: "Создать кабинет",
+    submitDoctorLogin: "Войти как врач",
+    submitDoctorRegister: "Зарегистрироваться как врач",
+    submitAdmin: "Войти в админ-панель",
+    waiting: "После одобрения врач сам заполнит данные в модальном окне.",
+    providerTitle: "Быстрый вход",
+    activeSession: "Активная сессия",
+    logout: "Выйти",
+    remember: "Сохранить сессию на устройстве",
+    backHome: "Главная",
+    metrics: [
+      ["24/7", "Записи без ограничений"],
+      ["30 min", "Задержка перед отправкой врачу"],
+      ["Realtime", "Поток admin и doctor"],
+    ],
+    highlights: [
+      {
+        icon: ShieldIcon,
+        title: "Поток одобрения",
+        text: "Каждый новый врач сначала проходит проверку администратора.",
+      },
+      {
+        icon: CalendarIcon,
+        title: "Очередь 24/7",
+        text: "Бронирование создаётся в любое время, а запрос уходит врачу через 30 минут.",
+      },
+      {
+        icon: StethoscopeIcon,
+        title: "Личный кабинет",
+        text: "После одобрения врач сам заполняет профиль и выбирает свободные часы.",
+      },
+    ],
+  },
+  en: {
+    title: "Access the realtime medical platform",
+    text: "User, doctor, and admin flows are managed in one place. A doctor account opens fully only after admin approval.",
+    modes: {
+      user: "User",
+      doctor: "Doctor",
+      admin: "Admin",
+    },
+    actions: {
+      login: "Sign in",
+      register: "Register",
+    },
+    email: "Email",
+    adminLogin: "Admin login",
+    password: "Password",
+    confirmPassword: "Confirm password",
+    userTitle: "Patient workspace",
+    doctorTitle: "Doctor onboarding",
+    adminTitle: "Admin control",
+    userText: "Find doctors, place 24/7 requests, and manage appointment history.",
+    doctorText: "Register as a new doctor, wait for admin approval, then complete your personal workspace.",
+    adminText: "Approve doctors, control the flow, and monitor the realtime status.",
+    submitUserLogin: "Enter workspace",
+    submitUserRegister: "Create workspace",
+    submitDoctorLogin: "Sign in as doctor",
+    submitDoctorRegister: "Register as doctor",
+    submitAdmin: "Open admin panel",
+    waiting: "After approval, the doctor completes the profile in a modal inside the cabinet.",
+    providerTitle: "Quick access",
+    activeSession: "Active session",
+    logout: "Logout",
+    remember: "Keep this session on the device",
+    backHome: "Home",
+    metrics: [
+      ["24/7", "Unlimited booking"],
+      ["30 min", "Delayed doctor request"],
+      ["Realtime", "Admin and doctor flow"],
+    ],
+    highlights: [
+      {
+        icon: ShieldIcon,
+        title: "Approval flow",
+        text: "Every new doctor passes admin review first.",
+      },
+      {
+        icon: CalendarIcon,
+        title: "24/7 queue",
+        text: "Booking can be created anytime, and the doctor receives it 30 minutes later.",
+      },
+      {
+        icon: StethoscopeIcon,
+        title: "Personal cabinet",
+        text: "Once approved, the doctor completes the profile and manages free time slots.",
+      },
+    ],
+  },
+} as const;
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -26,8 +199,13 @@ const LoginPage = () => {
   const {
     accountRole,
     currentUser,
+    doctorApprovalStatus,
     isAdminAuthenticated,
+    isDoctorAuthenticated,
+    isUserAuthenticated,
+    localUserEmail,
     profile,
+    registerDoctorWithCredentials,
     registerWithCredentials,
     signInAsAdmin,
     signInWithApple,
@@ -35,124 +213,137 @@ const LoginPage = () => {
     signInWithGoogle,
     signInWithMicrosoft,
     signOutUser,
-    updateProfile,
   } = useAppContext();
   const { language, translateError } = useI18n();
-  const copy = loginCopy[language];
+  const text = copy[language];
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState(profile.email);
+  const [email, setEmail] = useState(profile.email || localUserEmail);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [authMessage, setAuthMessage] = useState("");
-  const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
-  const [authAction, setAuthAction] = useState<"login" | "register">(
-    searchParams.get("action") === "register" ? "register" : "login",
-  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const mode = searchParams.get("mode") === "admin" ? "admin" : "user";
-  const isAdminMode = mode === "admin";
-  const nextPath = searchParams.get("next") ?? (mode === "admin" ? "/admin" : "/user");
-  const isRegisterMode = !isAdminMode && authAction === "register";
-  const sessionLogoutLabel =
-    language === "ru" ? "Выйти" : language === "en" ? "Logout" : "Chiqish";
-  const userViewLabel =
-    language === "ru" ? "Пользовательский вид" : language === "en" ? "User view" : "User ko'rinishi";
-  const passwordToggleLabel =
-    language === "ru"
-      ? "Показать или скрыть пароль"
-      : language === "en"
-        ? "Show or hide password"
-        : "Parolni ko'rsatish yoki yashirish";
-  const providerFallbackError =
-    language === "ru"
-      ? "Не удалось войти через выбранного провайдера."
-      : language === "en"
-        ? "Could not sign in with the selected provider."
-        : "Tanlangan provider orqali kirib bo'lmadi.";
-  const adminLoginHint =
-    language === "ru"
-      ? "Введите именно логин администратора, а не email."
-      : language === "en"
-        ? "Enter the admin login itself, not an email address."
-        : "Email emas, aynan admin loginni kiriting.";
-  const buildLoginLink = (
-    targetMode: "user" | "admin",
-    targetAction: "login" | "register" = authAction,
-  ) => {
+  const mode = (searchParams.get("mode") === "doctor"
+    ? "doctor"
+    : searchParams.get("mode") === "admin"
+      ? "admin"
+      : "user") as Mode;
+  const action = (mode === "admin"
+    ? "login"
+    : searchParams.get("action") === "register"
+      ? "register"
+      : "login") as Action;
+  const nextPath = searchParams.get("next") ?? "/user";
+
+  useEffect(() => {
+    if (isAdminAuthenticated) {
+      navigate("/admin", { replace: true });
+      return;
+    }
+
+    if (isDoctorAuthenticated || accountRole === "doctor") {
+      navigate("/doctor", { replace: true });
+      return;
+    }
+
+    if (isUserAuthenticated) {
+      navigate(nextPath, { replace: true });
+    }
+  }, [
+    accountRole,
+    isAdminAuthenticated,
+    isDoctorAuthenticated,
+    isUserAuthenticated,
+    navigate,
+    nextPath,
+  ]);
+
+  useEffect(() => {
+    setPassword("");
+    setConfirmPassword("");
+    setAuthMessage("");
+  }, [mode, action]);
+
+  const buildLink = (nextMode: Mode, nextAction: Action = action) => {
     const params = new URLSearchParams();
-    params.set("mode", targetMode);
+    params.set("mode", nextMode);
 
-    if (targetMode === "user" && targetAction === "register") {
+    if (nextMode !== "admin" && nextAction === "register") {
       params.set("action", "register");
     }
 
-    if (searchParams.get("next") && targetMode === "user") {
+    if (nextMode === "user" && searchParams.get("next")) {
       params.set("next", searchParams.get("next") ?? "");
     }
 
     return `/login?${params.toString()}`;
   };
 
-  const userModeLink = buildLoginLink("user");
-  const adminModeLink = buildLoginLink("admin");
+  const headerContent = useMemo(() => {
+    if (mode === "doctor") {
+      return {
+        title: text.doctorTitle,
+        body: text.doctorText,
+      };
+    }
 
-  const cardTitle = useMemo(
-    () =>
-      isAdminMode
-        ? copy.adminTitle
-        : isRegisterMode
-          ? copy.registerTitle
-          : copy.userTitle,
-    [copy.adminTitle, copy.registerTitle, copy.userTitle, isAdminMode, isRegisterMode],
-  );
+    if (mode === "admin") {
+      return {
+        title: text.adminTitle,
+        body: text.adminText,
+      };
+    }
 
-  useEffect(() => {
-    const nextMode = searchParams.get("mode") === "admin" ? "admin" : "user";
+    return {
+      title: text.userTitle,
+      body: text.userText,
+    };
+  }, [mode, text.adminText, text.adminTitle, text.doctorText, text.doctorTitle, text.userText, text.userTitle]);
 
-    setAuthAction(
-      nextMode === "admin"
-        ? "login"
-        : searchParams.get("action") === "register"
-          ? "register"
-          : "login",
-    );
-    setEmail(nextMode === "admin" ? "" : profile.email);
-    setAuthMessage("");
-    setPassword("");
-    setConfirmPassword("");
-    setShowPassword(false);
-  }, [profile.email, searchParams]);
-
-  const handleActionChange = (nextAction: "login" | "register") => {
-    setAuthAction(nextAction);
-    navigate(buildLoginLink(mode, nextAction), { replace: true });
-  };
+  const submitLabel =
+    mode === "admin"
+      ? text.submitAdmin
+      : mode === "doctor"
+        ? action === "register"
+          ? text.submitDoctorRegister
+          : text.submitDoctorLogin
+        : action === "register"
+          ? text.submitUserRegister
+          : text.submitUserLogin;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const normalizedLogin = email.trim();
 
     try {
+      setIsSubmitting(true);
       setAuthMessage("");
-      setIsSubmittingAuth(true);
 
-      if (isRegisterMode && password !== confirmPassword) {
+      if (action === "register" && password !== confirmPassword) {
         throw new Error(translateError("Parollar bir xil emas."));
       }
 
-      if (isAdminMode) {
-        await signInAsAdmin(normalizedLogin, password);
+      if (mode === "admin") {
+        await signInAsAdmin(email, password);
         navigate("/admin");
         return;
       }
 
-      if (isRegisterMode) {
-        await registerWithCredentials(normalizedLogin, password);
-      } else {
-        await signInWithCredentials(normalizedLogin, password);
+      if (mode === "doctor") {
+        if (action === "register") {
+          await registerDoctorWithCredentials(email, password);
+        } else {
+          await signInWithCredentials(email, password);
+        }
+        navigate("/doctor");
+        return;
       }
 
-      await updateProfile({ email: normalizedLogin });
+      if (action === "register") {
+        await registerWithCredentials(email, password);
+      } else {
+        await signInWithCredentials(email, password);
+      }
+
       navigate(nextPath);
     } catch (error) {
       setAuthMessage(
@@ -161,228 +352,35 @@ const LoginPage = () => {
           : translateError("Kirishda xatolik yuz berdi."),
       );
     } finally {
-      setIsSubmittingAuth(false);
+      setIsSubmitting(false);
     }
   };
 
-  const handleProviderLogin = async (action: () => Promise<void>) => {
+  const handleProviderLogin = async (providerAction: () => Promise<void>) => {
     try {
+      setIsSubmitting(true);
       setAuthMessage("");
-      setIsSubmittingAuth(true);
-      await action();
+      await providerAction();
       navigate("/user");
     } catch (error) {
-      const message =
-        error instanceof Error ? translateError(error.message) : providerFallbackError;
-      setAuthMessage(message);
+      setAuthMessage(
+        error instanceof Error
+          ? translateError(error.message)
+          : translateError("Kirishda xatolik yuz berdi."),
+      );
     } finally {
-      setIsSubmittingAuth(false);
+      setIsSubmitting(false);
     }
   };
-
-  const showActiveSession = Boolean(currentUser || isAdminAuthenticated);
 
   return (
     <div className="auth-page">
-      <div className="site-orb site-orb-three" />
-      <div className="auth-layout">
-        <div className="auth-card-wrapper">
-          <div className={`auth-card ${isAdminMode ? "auth-card-compact" : ""}`}>
-            <div className="auth-card-head">
-              <span className="badge badge-gold">
-                <SparkIcon />
-                {isAdminMode ? copy.adminEntry : isRegisterMode ? copy.newAccount : copy.premiumEntry}
-              </span>
-              <h2>
-                {isAdminMode
-                  ? copy.adminVerify
-                  : isRegisterMode
-                    ? copy.createAccount
-                    : copy.welcome}
-              </h2>
-              <p>
-                {isAdminMode
-                  ? copy.adminCardText
-                  : isRegisterMode
-                    ? copy.registerCardText
-                    : copy.loginCardText}
-              </p>
-            </div>
+      <span className="site-orb site-orb-one" />
+      <span className="site-orb site-orb-two" />
+      <span className="site-orb site-orb-three" />
 
-            <form className="auth-form" onSubmit={handleSubmit}>
-              <label className="field">
-                <span>{isAdminMode ? copy.adminLoginLabel : copy.emailLabel}</span>
-                <div className="field-box">
-                  <MailIcon />
-                  <input
-                    type="text"
-                    name={isAdminMode ? "admin-login" : "email"}
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    placeholder={isAdminMode ? copy.adminLoginPlaceholder : copy.emailPlaceholder}
-                    required
-                    autoComplete={isAdminMode ? "username" : "email"}
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    inputMode={isAdminMode ? "text" : "email"}
-                  />
-                </div>
-                {isAdminMode && <small className="field-note">{adminLoginHint}</small>}
-              </label>
-
-              <label className="field">
-                <span>{copy.passwordLabel}</span>
-                <div className="field-box">
-                  <LockIcon />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    placeholder={isAdminMode ? copy.adminPasswordPlaceholder : copy.passwordPlaceholder}
-                    required
-                    autoComplete={
-                      isAdminMode ? "current-password" : isRegisterMode ? "new-password" : "current-password"
-                    }
-                    autoCapitalize="none"
-                    spellCheck={false}
-                  />
-                  <button
-                    type="button"
-                    className="icon-button"
-                    onClick={() => setShowPassword((value) => !value)}
-                    aria-label={passwordToggleLabel}
-                  >
-                    {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-                  </button>
-                </div>
-              </label>
-
-              {isAdminMode && (
-                <div className="auth-admin-note">
-                  <strong>{copy.adminOnlyLogin}</strong>
-                  <span>{copy.adminOnlyText}</span>
-                </div>
-              )}
-
-              {isRegisterMode && (
-                <label className="field">
-                  <span>{copy.confirmPassword}</span>
-                  <div className="field-box">
-                    <LockIcon />
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      name="confirm-password"
-                      value={confirmPassword}
-                      onChange={(event) => setConfirmPassword(event.target.value)}
-                      placeholder={copy.confirmPasswordPlaceholder}
-                      required
-                      autoCapitalize="none"
-                      spellCheck={false}
-                    />
-                  </div>
-                </label>
-              )}
-
-              <div className="auth-meta">
-                <label className="checkbox-line">
-                  <input type="checkbox" defaultChecked />
-                  <span>{copy.remember}</span>
-                </label>
-                <Link to="/">{copy.backHome}</Link>
-              </div>
-
-              <button
-                type="submit"
-                className="button button-primary button-block button-large"
-                disabled={isSubmittingAuth}
-              >
-                {isAdminMode
-                  ? copy.enterAdminPanel
-                  : isRegisterMode
-                    ? copy.createCabinet
-                    : copy.enterCabinet}
-                <ArrowRightIcon />
-              </button>
-            </form>
-
-            {mode === "user" && !isRegisterMode && (
-              <div className="provider-login-block">
-                <p className="provider-login-title">{copy.quickProviderLogin}</p>
-                <div className="provider-login-grid">
-                  <button
-                    type="button"
-                    className="button button-secondary button-block"
-                    disabled={isSubmittingAuth}
-                    onClick={() => handleProviderLogin(signInWithGoogle)}
-                  >
-                    {copy.google}
-                  </button>
-                  <button
-                    type="button"
-                    className="button button-secondary button-block"
-                    disabled={isSubmittingAuth}
-                    onClick={() => handleProviderLogin(signInWithApple)}
-                  >
-                    {copy.apple}
-                  </button>
-                  <button
-                    type="button"
-                    className="button button-secondary button-block"
-                    disabled={isSubmittingAuth}
-                    onClick={() => handleProviderLogin(signInWithMicrosoft)}
-                  >
-                    {copy.microsoft}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {showActiveSession && (
-              <div className="auth-success-card">
-                <div className="summary-checks">
-                  <div>
-                    <CheckIcon />
-                    <span>
-                      {isAdminAuthenticated
-                        ? copy.adminSessionActive
-                        : `${currentUser?.email ?? currentUser?.displayName ?? email}${
-                            accountRole ? ` | ${accountRole}` : ""
-                          }`}
-                    </span>
-                  </div>
-                </div>
-                <button type="button" className="button button-ghost" onClick={() => void signOutUser()}>
-                  {sessionLogoutLabel}
-                </button>
-              </div>
-            )}
-
-            {authMessage && <p className="auth-error-text">{authMessage}</p>}
-
-            <div className="auth-footer">
-              <p>
-                {isAdminMode
-                  ? copy.adminFooter
-                  : isRegisterMode
-                    ? copy.registerFooter
-                    : copy.loginFooter}
-              </p>
-              <div className="auth-shortcuts">
-                <Link to="/" className="button button-secondary">
-                  {copy.backHome}
-                </Link>
-                {isAdminMode && (
-                  <Link to={userModeLink} className="button button-ghost">
-                    {userViewLabel}
-                  </Link>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <section className="auth-showcase">
+      <div className="auth-layout auth-layout-extended">
+        <section className="auth-showcase auth-showcase-revamp">
           <div className="auth-showcase-top">
             <Link to="/" className="brand">
               <span className="brand-mark">
@@ -393,101 +391,214 @@ const LoginPage = () => {
               </span>
             </Link>
             <div className="nav-actions">
-              <LanguageSwitcher />
-              <ThemeToggle />
+              <LanguageSwitcher compact />
+              <ThemeToggle compact />
             </div>
           </div>
 
-          <h1>{cardTitle}</h1>
-          <p>
-            {isAdminMode
-              ? copy.adminText
-              : isRegisterMode
-                ? copy.registerText
-                : copy.loginText}
-          </p>
+          <span className="badge badge-gold">
+            <SparkIcon />
+            Realtime access
+          </span>
+          <h1>{text.title}</h1>
+          <p>{text.text}</p>
 
-          <div className="auth-mode-switch">
-            <Link
-              to={userModeLink}
-              className={`auth-mode-pill ${mode === "user" ? "auth-mode-pill-active" : ""}`}
-            >
-              {copy.userCabinet}
-            </Link>
-            <Link
-              to={adminModeLink}
-              className={`auth-mode-pill ${mode === "admin" ? "auth-mode-pill-active" : ""}`}
-            >
-              {copy.adminCabinet}
-            </Link>
+          <div className="auth-stats auth-stats-rich">
+            {text.metrics.map(([value, label]) => (
+              <div key={label}>
+                <strong>{value}</strong>
+                <span>{label}</span>
+              </div>
+            ))}
           </div>
 
-          {!isAdminMode && (
-            <div className="auth-mode-switch auth-action-switch">
-              <button
-                type="button"
-                className={`auth-mode-pill ${!isRegisterMode ? "auth-mode-pill-active" : ""}`}
-                onClick={() => handleActionChange("login")}
-              >
-                {copy.signIn}
-              </button>
-              <button
-                type="button"
-                className={`auth-mode-pill ${isRegisterMode ? "auth-mode-pill-active" : ""}`}
-                onClick={() => handleActionChange("register")}
-              >
-                {copy.signUp}
-              </button>
-            </div>
-          )}
+          <div className="auth-benefits auth-benefits-rich">
+            {text.highlights.map((item) => {
+              const Icon = item.icon;
 
-          <div className="auth-stats">
-            <div>
-              <strong>62k+</strong>
-              <span>{copy.activeUsers}</span>
-            </div>
-            <div>
-              <strong>4.9</strong>
-              <span>{copy.serviceRating}</span>
-            </div>
-            <div>
-              <strong>24/7</strong>
-              <span>{copy.support}</span>
-            </div>
+              return (
+                <article key={item.title} className="glass-card auth-benefit-card">
+                  <div className="icon-shell">
+                    <Icon />
+                  </div>
+                  <div>
+                    <h3>{item.title}</h3>
+                    <p>{item.text}</p>
+                  </div>
+                </article>
+              );
+            })}
           </div>
-
-          <div className="auth-benefits">
-            <article className="glass-card">
-              <div className="icon-shell">
-                <ShieldIcon />
-              </div>
-              <div>
-                <h3>{copy.secureTitle}</h3>
-                <p>{copy.secureText}</p>
-              </div>
-            </article>
-            <article className="glass-card">
-              <div className="icon-shell">
-                <CalendarIcon />
-              </div>
-              <div>
-                <h3>{copy.realtimeTitle}</h3>
-                <p>{copy.realtimeText}</p>
-              </div>
-            </article>
-            <article className="glass-card">
-              <div className="icon-shell">
-                <UserGroupIcon />
-              </div>
-              <div>
-                <h3>{copy.rolesTitle}</h3>
-                <p>{copy.rolesText}</p>
-              </div>
-            </article>
-          </div>
-
-          <div className="auth-luxury-note">{isAdminMode ? copy.adminNote : copy.userNote}</div>
         </section>
+
+        <div className="auth-card-wrapper">
+          <div className="auth-card auth-card-premium">
+            <div className="auth-card-head">
+              <span className="badge">
+                {mode === "doctor" ? <StethoscopeIcon /> : mode === "admin" ? <ShieldIcon /> : <UserGroupIcon />}
+                {headerContent.title}
+              </span>
+              <h2>{headerContent.title}</h2>
+              <p>{headerContent.body}</p>
+            </div>
+
+            <div className="auth-mode-switch auth-mode-switch-three">
+              {(["user", "doctor", "admin"] as Mode[]).map((item) => (
+                <Link
+                  key={item}
+                  to={buildLink(item, item === "admin" ? "login" : action)}
+                  className={`auth-mode-pill ${mode === item ? "auth-mode-pill-active" : ""}`}
+                >
+                  {text.modes[item]}
+                </Link>
+              ))}
+            </div>
+
+            {mode !== "admin" && (
+              <div className="auth-mode-switch auth-action-switch">
+                {(["login", "register"] as Action[]).map((item) => (
+                  <Link
+                    key={item}
+                    to={buildLink(mode, item)}
+                    className={`auth-mode-pill ${action === item ? "auth-mode-pill-active" : ""}`}
+                  >
+                    {text.actions[item]}
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            <form className="auth-form" onSubmit={handleSubmit}>
+              <label className="field">
+                <span>{mode === "admin" ? text.adminLogin : text.email}</span>
+                <div className="field-box">
+                  <MailIcon />
+                  <input
+                    type={mode === "admin" ? "text" : "email"}
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    placeholder={mode === "admin" ? "admin1234" : "doctor@medelite.uz"}
+                    required
+                    autoCapitalize="none"
+                    spellCheck={false}
+                  />
+                </div>
+              </label>
+
+              <label className="field">
+                <span>{text.password}</span>
+                <div className="field-box">
+                  <LockIcon />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    placeholder="••••••••"
+                    required
+                    autoCapitalize="none"
+                    spellCheck={false}
+                  />
+                  <button
+                    type="button"
+                    className="icon-button"
+                    onClick={() => setShowPassword((current) => !current)}
+                    aria-label="toggle password"
+                  >
+                    {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                  </button>
+                </div>
+              </label>
+
+              {mode !== "admin" && action === "register" && (
+                <label className="field">
+                  <span>{text.confirmPassword}</span>
+                  <div className="field-box">
+                    <LockIcon />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(event) => setConfirmPassword(event.target.value)}
+                      placeholder="••••••••"
+                      required
+                    />
+                  </div>
+                </label>
+              )}
+
+              {mode === "doctor" && <p className="field-note">{text.waiting}</p>}
+
+              <div className="auth-meta">
+                <label className="checkbox-line">
+                  <input type="checkbox" defaultChecked />
+                  <span>{text.remember}</span>
+                </label>
+                <Link to="/">{text.backHome}</Link>
+              </div>
+
+              <button type="submit" className="button button-primary button-block button-large" disabled={isSubmitting}>
+                {submitLabel}
+                <ArrowRightIcon />
+              </button>
+            </form>
+
+            {mode === "user" && action === "login" && (
+              <div className="provider-login-block">
+                <p className="provider-login-title">{text.providerTitle}</p>
+                <div className="provider-login-grid">
+                  <button
+                    type="button"
+                    className="button button-secondary button-block"
+                    onClick={() => void handleProviderLogin(signInWithGoogle)}
+                    disabled={isSubmitting}
+                  >
+                    Google
+                  </button>
+                  <button
+                    type="button"
+                    className="button button-secondary button-block"
+                    onClick={() => void handleProviderLogin(signInWithApple)}
+                    disabled={isSubmitting}
+                  >
+                    Apple
+                  </button>
+                  <button
+                    type="button"
+                    className="button button-secondary button-block"
+                    onClick={() => void handleProviderLogin(signInWithMicrosoft)}
+                    disabled={isSubmitting}
+                  >
+                    Microsoft
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {(currentUser || isAdminAuthenticated) && (
+              <div className="auth-success-card">
+                <div className="summary-checks">
+                  <div>
+                    <SparkIcon />
+                    <span>
+                      {text.activeSession}:{" "}
+                      {isAdminAuthenticated
+                        ? "admin"
+                        : `${currentUser?.email ?? email}${accountRole ? ` | ${accountRole}` : ""}${
+                            accountRole === "doctor" && doctorApprovalStatus
+                              ? ` | ${doctorApprovalStatus}`
+                              : ""
+                          }`}
+                    </span>
+                  </div>
+                </div>
+                <button type="button" className="button button-ghost" onClick={() => void signOutUser()}>
+                  {text.logout}
+                </button>
+              </div>
+            )}
+
+            {authMessage && <p className="auth-error-text">{authMessage}</p>}
+          </div>
+        </div>
       </div>
     </div>
   );

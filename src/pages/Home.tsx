@@ -29,7 +29,8 @@ const Home = () => {
   const { language, format, translateRegion, translateSpecialty } = useI18n();
   const copy = homeCopy[language];
   const navigate = useNavigate();
-  const { appointments, doctors, isAdminAuthenticated, isUserAuthenticated } = useAppContext();
+  const { appointments, doctors, isAdminAuthenticated, isDoctorAuthenticated, isUserAuthenticated } =
+    useAppContext();
   const [searchTerm, setSearchTerm] = useState("");
   const [locationTerm, setLocationTerm] = useState("");
   const [regionFilter, setRegionFilter] = useState(ALL_REGIONS_OPTION);
@@ -182,10 +183,15 @@ const Home = () => {
       return;
     }
 
+    if (isDoctorAuthenticated) {
+      navigate("/doctor");
+      return;
+    }
+
     if (isUserAuthenticated) {
       navigate("/user");
     }
-  }, [isAdminAuthenticated, isUserAuthenticated, navigate]);
+  }, [isAdminAuthenticated, isDoctorAuthenticated, isUserAuthenticated, navigate]);
 
   const getDoctorAvailability = (doctor: (typeof doctors)[number]) =>
     doctor.availableSlots[0] ? format(copy.nextSlot, { time: doctor.availableSlots[0] }) : copy.noOpenSlots;
@@ -349,13 +355,13 @@ const Home = () => {
                 <div className="hero-panel-grid">
                   <article className="metric-card">
                     <p>{copy.workingHours}</p>
-                    <strong>09:00 - 18:00</strong>
+                    <strong>24/7</strong>
                     <span>{bookingRules}</span>
                   </article>
                   <article className="metric-card metric-card-accent">
                     <p>{copy.responseTime}</p>
-                    <strong>2.4 min</strong>
-                    <span>{copy.responseMeta}</span>
+                    <strong>30 min</strong>
+                    <span>Doktorga request kechikib tushadi</span>
                   </article>
                 </div>
 

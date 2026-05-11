@@ -1,10 +1,12 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getDatabase } from "firebase/database";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDCln37sHcVHF9-EjmYSst-Q_Sg52P3lnM",
   authDomain: "healthly-56d51.firebaseapp.com",
+  databaseURL: "https://healthly-56d51-default-rtdb.firebaseio.com",
   projectId: "healthly-56d51",
   storageBucket: "healthly-56d51.firebasestorage.app",
   messagingSenderId: "1052827018330",
@@ -15,3 +17,4 @@ const firebaseConfig = {
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const realtimeDb = getDatabase(app);

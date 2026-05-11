@@ -1,4 +1,4 @@
-﻿import type { FormEvent } from "react";
+import type { FormEvent } from "react";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import LanguageSwitcher from "../components/LanguageSwitcher";
@@ -13,41 +13,25 @@ import {
   LocationIcon,
   MenuIcon,
   PhoneIcon,
-  ShieldIcon,
   SparkIcon,
   StarIcon,
   StethoscopeIcon,
   UserGroupIcon,
 } from "../components/PremiumIcons";
-import { useAppContext, type Appointment } from "../context/AppContext";
+import {
+  getDoctorBookingRecommendation,
+  useAppContext,
+  type Appointment,
+} from "../context/AppContext";
 import { useI18n } from "../context/I18nContext";
-import { userCopy } from "../i18n/userCopy";
 import { getDoctorMapQuery, getMapSearchUrl } from "../lib/maps";
 import { ALL_REGIONS_OPTION, UZBEKISTAN_REGIONS } from "../lib/regions";
-import {
-  getBookingRulesMessage,
-  getTodayInTashkent,
-  hasAppointmentStarted,
-  isPastTimeSlotForDate,
-  isSundayDate,
-} from "../lib/schedule";
+import { getBookingRulesMessage, getTodayInTashkent, hasAppointmentStarted, isPastTimeSlotForDate } from "../lib/schedule";
 
 type TabId = "booking" | "appointments" | "profile";
 
-const compareAppointmentsAsc = (left: Appointment, right: Appointment) =>
-  left.date.localeCompare(right.date) ||
-  left.time.localeCompare(right.time) ||
-  left.createdAt.localeCompare(right.createdAt);
-
-const compareAppointmentsDesc = (left: Appointment, right: Appointment) =>
-  right.date.localeCompare(left.date) ||
-  right.time.localeCompare(left.time) ||
-  right.createdAt.localeCompare(left.createdAt);
-
 const User = () => {
-  const { language, format, translateError, translateRegion, translateSpecialty, translateStatus } =
-    useI18n();
-  const copy = userCopy[language];
+  const { language, translateError, translateRegion, translateSpecialty, translateStatus } = useI18n();
   const {
     appointments,
     bookAppointment,
@@ -62,89 +46,27 @@ const User = () => {
     updateProfile,
   } = useAppContext();
 
-  const minimumBookingDate = getTodayInTashkent();
-  const bookingRulesMessage = getBookingRulesMessage(language);
-
+  const [menuOpen, setMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("booking");
-  const [selectedDoctorId, setSelectedDoctorId] = useState<string>(doctors[0]?.id ?? "");
-  const [doctorSearchTerm, setDoctorSearchTerm] = useState("");
-  const [doctorRegionFilter, setDoctorRegionFilter] = useState(ALL_REGIONS_OPTION);
-  const [selectedDate, setSelectedDate] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [regionFilter, setRegionFilter] = useState(ALL_REGIONS_OPTION);
+  const [selectedDoctorId, setSelectedDoctorId] = useState("");
+  const [selectedDate, setSelectedDate] = useState(getTodayInTashkent());
   const [selectedTime, setSelectedTime] = useState("");
   const [patientName, setPatientName] = useState(profile.name);
   const [patientPhone, setPatientPhone] = useState(profile.phone);
   const [notes, setNotes] = useState("");
-  const [confirmationText, setConfirmationText] = useState("");
-  const [bookingError, setBookingError] = useState("");
-  const [workspaceError, setWorkspaceError] = useState("");
-  const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
   const [profileDraft, setProfileDraft] = useState(profile);
-  const [bookingSuccessModal, setBookingSuccessModal] = useState<Appointment | null>(null);
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [reviewTarget, setReviewTarget] = useState<Appointment | null>(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
-  const [reviewError, setReviewError] = useState("");
-  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const deferredDoctorSearchTerm = useDeferredValue(doctorSearchTerm);
-  const mapActionLabel =
-    language === "ru" ? "Открыть на карте" : language === "en" ? "Open map" : "Xaritada ochish";
-  const menuLabel = menuOpen
-    ? language === "ru"
-      ? "Закрыть меню"
-      : language === "en"
-        ? "Close menu"
-        : "Menyuni yopish"
-    : language === "ru"
-      ? "Открыть меню"
-      : language === "en"
-        ? "Open menu"
-        : "Menyuni ochish";
-  const successBannerTitle =
-    language === "ru"
-      ? "Обновление выполнено успешно"
-      : language === "en"
-        ? "Update completed successfully"
-        : "Yangilanish muvaffaqiyatli bajarildi";
-  const errorBannerTitle =
-    language === "ru" ? "Произошла ошибка" : language === "en" ? "Something went wrong" : "Amalda xatolik yuz berdi";
-  const historyChip = language === "ru" ? "История" : language === "en" ? "History" : "Tarix";
-  const historyTitle =
-    language === "ru" ? "История приёмов" : language === "en" ? "Appointment history" : "Qabullar tarixi";
-  const historyText =
-    language === "ru"
-      ? "Здесь хранятся завершённые и отменённые приёмы из Firebase."
-      : language === "en"
-        ? "Completed and cancelled visits saved in Firebase appear here."
-        : "Firebase'da saqlangan yakunlangan va bekor qilingan qabullar shu yerda ko'rinadi.";
-  const noHistoryTitle =
-    language === "ru" ? "История пока пуста" : language === "en" ? "No history yet" : "Tarix hozircha bo'sh";
-  const noHistoryText =
-    language === "ru"
-      ? "Завершённые или отменённые записи появятся здесь отдельно от активных приёмов."
-      : language === "en"
-        ? "Completed or cancelled bookings appear here separately from active visits."
-        : "Yakunlangan yoki bekor qilingan bronlar aktiv qabullardan alohida shu yerda ko'rinadi.";
+  const deferredSearchTerm = useDeferredValue(searchTerm);
 
-  const filteredDoctors = useMemo(() => {
-    return doctors.filter((doctor) => {
-      const matchesSearch =
-        !deferredDoctorSearchTerm.trim() ||
-        `${doctor.name} ${doctor.specialty} ${doctor.clinic} ${doctor.address} ${doctor.bio}`
-          .toLowerCase()
-          .includes(deferredDoctorSearchTerm.trim().toLowerCase());
-      const matchesRegion =
-        doctorRegionFilter === ALL_REGIONS_OPTION || doctor.region === doctorRegionFilter;
-
-      return matchesSearch && matchesRegion;
-    });
-  }, [deferredDoctorSearchTerm, doctorRegionFilter, doctors]);
-
-  useEffect(() => {
-    if (!filteredDoctors.some((doctor) => doctor.id === selectedDoctorId) && filteredDoctors[0]) {
-      setSelectedDoctorId(filteredDoctors[0].id);
-    }
-  }, [filteredDoctors, selectedDoctorId]);
+  const activeUserEmail = (currentUser?.email ?? localUserEmail ?? profile.email).trim().toLowerCase();
+  const activeUserKey = (currentUser?.uid ?? localUserId ?? activeUserEmail).trim().toLowerCase();
 
   useEffect(() => {
     setPatientName(profile.name);
@@ -152,86 +74,56 @@ const User = () => {
     setProfileDraft(profile);
   }, [profile]);
 
+  const filteredDoctors = useMemo(
+    () =>
+      doctors.filter((doctor) => {
+        const matchesSearch =
+          !deferredSearchTerm.trim() ||
+          `${doctor.name} ${doctor.specialty} ${doctor.clinic} ${doctor.bio}`
+            .toLowerCase()
+            .includes(deferredSearchTerm.trim().toLowerCase());
+        const matchesRegion =
+          regionFilter === ALL_REGIONS_OPTION || doctor.region === regionFilter;
+
+        return matchesSearch && matchesRegion;
+      }),
+    [deferredSearchTerm, doctors, regionFilter],
+  );
+
   useEffect(() => {
-    if (!confirmationText && !bookingError && !workspaceError) {
+    if (!selectedDoctorId && filteredDoctors[0]) {
+      setSelectedDoctorId(filteredDoctors[0].id);
       return;
     }
 
-    const timeout = window.setTimeout(() => {
-      setConfirmationText("");
-      setBookingError("");
-      setWorkspaceError("");
-    }, 4500);
-
-    return () => window.clearTimeout(timeout);
-  }, [bookingError, confirmationText, workspaceError]);
+    if (!filteredDoctors.find((doctor) => doctor.id === selectedDoctorId) && filteredDoctors[0]) {
+      setSelectedDoctorId(filteredDoctors[0].id);
+    }
+  }, [filteredDoctors, selectedDoctorId]);
 
   const selectedDoctor = useMemo(
-    () => filteredDoctors.find((doctor) => doctor.id === selectedDoctorId) ?? filteredDoctors[0],
+    () => filteredDoctors.find((doctor) => doctor.id === selectedDoctorId) ?? filteredDoctors[0] ?? null,
     [filteredDoctors, selectedDoctorId],
   );
-  const selectedDoctorMapQuery = getDoctorMapQuery(selectedDoctor ?? {});
-  const selectedDoctorMapUrl = getMapSearchUrl(selectedDoctorMapQuery);
 
-  const activeUserEmail = (currentUser?.email ?? localUserEmail ?? profile.email).trim().toLowerCase();
-  const activeUserKey = (currentUser?.uid ?? localUserId ?? activeUserEmail).trim().toLowerCase();
-
-  const userAppointments = useMemo(() => {
-    if (!activeUserKey && !activeUserEmail) {
-      return [];
-    }
-
-    return appointments.filter((appointment) => {
-      const ownerKey = appointment.patientKey.trim().toLowerCase();
-      const ownerEmail = appointment.patientEmail.trim().toLowerCase();
-
-      if (ownerKey) {
-        return ownerKey === activeUserKey;
-      }
-
-      return Boolean(ownerEmail) && ownerEmail === activeUserEmail;
-    });
-  }, [activeUserEmail, activeUserKey, appointments]);
-
-  const activeAppointments = useMemo(
+  const bookedSlotSet = useMemo(
     () =>
-      userAppointments
-        .filter(
-          (appointment) =>
-            appointment.status !== "Yakunlandi" && appointment.status !== "Bekor qilindi",
-        )
-        .sort(compareAppointmentsAsc),
-    [userAppointments],
+      new Set(
+        appointments
+          .filter(
+            (appointment) =>
+              appointment.doctorId === selectedDoctor?.id &&
+              appointment.date === selectedDate &&
+              appointment.status !== "Bekor qilindi" &&
+              appointment.status !== "Rad etildi",
+          )
+          .map((appointment) => appointment.time),
+      ),
+    [appointments, selectedDate, selectedDoctor?.id],
   );
-
-  const appointmentHistory = useMemo(
-    () =>
-      userAppointments
-        .filter(
-          (appointment) =>
-            appointment.status === "Yakunlandi" || appointment.status === "Bekor qilindi",
-        )
-        .sort(compareAppointmentsDesc),
-    [userAppointments],
-  );
-
-  const isReady = Boolean(selectedDoctor && selectedDate && selectedTime && patientName && patientPhone);
-
-  const bookedSlotSet = useMemo(() => {
-    return new Set(
-      appointments
-        .filter(
-          (appointment) =>
-            appointment.doctorId === selectedDoctor?.id &&
-            appointment.date === selectedDate &&
-            appointment.status !== "Bekor qilindi",
-        )
-        .map((appointment) => appointment.time),
-    );
-  }, [appointments, selectedDate, selectedDoctor?.id]);
 
   const availableSlots = useMemo(() => {
-    if (!selectedDoctor || !selectedDate) {
+    if (!selectedDoctor) {
       return [];
     }
 
@@ -239,250 +131,123 @@ const User = () => {
   }, [selectedDate, selectedDoctor]);
 
   useEffect(() => {
-    if (!selectedDate) {
-      setSelectedTime("");
+    if (!selectedTime && availableSlots[0]) {
+      setSelectedTime(availableSlots[0]);
       return;
     }
 
-    const firstOpenSlot = availableSlots.find((slot) => !bookedSlotSet.has(slot)) ?? "";
-
-    if (!selectedTime || !availableSlots.includes(selectedTime) || bookedSlotSet.has(selectedTime)) {
-      setSelectedTime(firstOpenSlot);
+    if (selectedTime && !availableSlots.includes(selectedTime)) {
+      setSelectedTime(availableSlots[0] ?? "");
     }
-  }, [availableSlots, bookedSlotSet, selectedDate, selectedTime]);
+  }, [availableSlots, selectedTime]);
 
-  const localizedTabs = useMemo<Array<{ id: TabId; label: string }>>(
-    () => [
-      { id: "booking", label: copy.tabs[0] },
-      { id: "appointments", label: copy.tabs[1] },
-      { id: "profile", label: copy.tabs[2] },
-    ],
-    [copy.tabs],
+  const userAppointments = useMemo(
+    () =>
+      appointments.filter((appointment) => {
+        const ownerKey = appointment.patientKey.trim().toLowerCase();
+        const ownerEmail = appointment.patientEmail.trim().toLowerCase();
+
+        if (ownerKey) {
+          return ownerKey === activeUserKey;
+        }
+
+        return Boolean(ownerEmail) && ownerEmail === activeUserEmail;
+      }),
+    [activeUserEmail, activeUserKey, appointments],
   );
 
-  const dashboardStats = useMemo(
-    () => [
-      { label: copy.stats[0], value: activeAppointments.length.toString() },
-      {
-        label: copy.stats[1],
-        value:
-          language === "uz"
-            ? `${activeAppointments.filter((item) => item.status === "Tasdiqlandi").length} ta`
-            : activeAppointments.filter((item) => item.status === "Tasdiqlandi").length.toString(),
-      },
-      {
-        label: copy.stats[2],
-        value: language === "uz" ? `${Math.max(userAppointments.length * 3, 6)} ta` : `${Math.max(userAppointments.length * 3, 6)}`,
-      },
-    ],
-    [activeAppointments, copy.stats, language, userAppointments.length],
+  const activeAppointments = useMemo(
+    () =>
+      userAppointments.filter(
+        (appointment) => appointment.status !== "Yakunlandi" && appointment.status !== "Bekor qilindi",
+      ),
+    [userAppointments],
   );
-  const nextAppointment = activeAppointments[0] ?? appointmentHistory[0] ?? null;
-  const reviewedAppointmentsCount = userAppointments.filter((appointment) => Boolean(appointment.reviewRating)).length;
-  const doctorCoverageCount = new Set(userAppointments.map((appointment) => appointment.doctorId)).size;
-  const reviewMomentum =
-    userAppointments.length > 0
-      ? `${Math.round((reviewedAppointmentsCount / userAppointments.length) * 100)}%`
-      : "0%";
-  const careCommandChip =
-    language === "ru" ? "Центр контроля" : language === "en" ? "Control hub" : "Nazorat markazi";
-  const careCommandTitle =
-    language === "ru"
-      ? "Ваш поток лечения под полным контролем"
-      : language === "en"
-        ? "Your care flow is fully in control"
-        : "Davolanish oqimingiz to'liq nazoratda";
-  const careCommandText =
-    language === "ru"
-      ? "Ниже видно ближайший приём, активность отзывов и сколько специалистов уже участвовало в вашем маршруте."
-      : language === "en"
-        ? "See your next visit, review activity, and how many specialists are already part of your journey."
-        : "Quyida sizning eng yaqin qabulingiz, sharh faolligi va yo'lingizda nechta mutaxassis ishtirok etgani ko'rinadi.";
-  const nextVisitLabel =
-    language === "ru" ? "Ближайший контакт" : language === "en" ? "Next touchpoint" : "Keyingi nuqta";
-  const noVisitLabel =
-    language === "ru" ? "Новый приём пока не выбран" : language === "en" ? "No visit selected yet" : "Hali qabul tanlanmagan";
-  const noVisitText =
-    language === "ru"
-      ? "Выберите врача и слот, и здесь сразу появится план следующего визита."
-      : language === "en"
-        ? "Choose a doctor and slot, and your next visit plan will appear here."
-        : "Doktor va slot tanlang, keyingi tashrif rejasi shu yerda paydo bo'ladi.";
-  const commandMetrics = [
-    {
-      label: language === "ru" ? "Отзывы" : language === "en" ? "Review pace" : "Sharh tempi",
-      value: reviewMomentum,
-    },
-    {
-      label: language === "ru" ? "Врачи в пути" : language === "en" ? "Doctors involved" : "Jalb qilingan doktorlar",
-      value: doctorCoverageCount.toString(),
-    },
-    {
-      label: language === "ru" ? "Готовые записи" : language === "en" ? "Live bookings" : "Faol qabullar",
-      value: activeAppointments.length.toString(),
-    },
-  ];
+
+  const historyAppointments = useMemo(
+    () =>
+      userAppointments.filter(
+        (appointment) => appointment.status === "Yakunlandi" || appointment.status === "Bekor qilindi",
+      ),
+    [userAppointments],
+  );
 
   const handleBooking = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setConfirmationText("");
-    setBookingError("");
-    setWorkspaceError("");
 
-    if (!selectedDoctor || !isReady) {
+    if (!selectedDoctor || !selectedDate || !selectedTime || !patientName || !patientPhone) {
       return;
     }
 
-    setIsSubmittingBooking(true);
-
     try {
+      setIsSubmitting(true);
+      setNotice("");
+      setError("");
       const appointment = await bookAppointment({
         doctorId: selectedDoctor.id,
         date: selectedDate,
         time: selectedTime,
         patientName,
         patientKey: activeUserKey,
-        patientEmail: (profile.email || currentUser?.email || localUserEmail).trim(),
+        patientEmail: activeUserEmail,
         patientPhone,
         notes,
       });
 
-      if (!appointment) {
-        setBookingError(copy.bookFailed);
-        return;
-      }
-
       await updateProfile({
         name: patientName,
         phone: patientPhone,
-        email: profile.email || currentUser?.email || localUserEmail,
+        email: activeUserEmail,
       });
 
-      setConfirmationText(
-        language === "ru"
-          ? `Приём у ${appointment.doctorName} подтверждён на ${appointment.date} в ${appointment.time}.`
-          : language === "en"
-            ? `Your appointment with ${appointment.doctorName} on ${appointment.date} at ${appointment.time} was confirmed.`
-            : `${appointment.doctorName} bilan ${appointment.date} kuni ${appointment.time} da qabul tasdiqlandi.`,
+      setNotice(
+        appointment
+          ? `Buyurtma yaratildi. Doktor bu requestni ${appointment.requestVisibleAt.slice(11, 16)} atrofida ko'radi.`
+          : "Buyurtma yaratilmadi.",
       );
-      setBookingSuccessModal(appointment);
-      setSelectedDate("");
-      setSelectedTime("");
       setNotes("");
-    } catch (error) {
-      setBookingError(error instanceof Error ? translateError(error.message) : copy.bookingError);
+      setActiveTab("appointments");
+    } catch (bookingError) {
+      setError(
+        bookingError instanceof Error
+          ? translateError(bookingError.message)
+          : translateError("Kirishda xatolik yuz berdi."),
+      );
     } finally {
-      setIsSubmittingBooking(false);
+      setIsSubmitting(false);
     }
   };
 
-  const handleDateChange = (value: string) => {
-    if (!value) {
-      setSelectedDate("");
-      setSelectedTime("");
-      setBookingError("");
-      return;
-    }
-
-    if (isSundayDate(value)) {
-      setSelectedDate("");
-      setSelectedTime("");
-      setBookingError(
-        translateError("Yakshanba kuni bron qilib bo'lmaydi. Iltimos, boshqa sanani tanlang."),
+  const handleCancel = async (appointmentId: string) => {
+    try {
+      setError("");
+      setNotice("");
+      await updateAppointmentStatus(appointmentId, "Bekor qilindi");
+      setNotice("Buyurtma bekor qilindi.");
+    } catch (cancelError) {
+      setError(
+        cancelError instanceof Error
+          ? translateError(cancelError.message)
+          : translateError("Kirishda xatolik yuz berdi."),
       );
-      return;
     }
-
-    if (value < minimumBookingDate) {
-      setSelectedDate("");
-      setSelectedTime("");
-      setBookingError(translateError("O'tib ketgan sana uchun bron qilib bo'lmaydi."));
-      return;
-    }
-
-    setBookingError("");
-    setSelectedDate(value);
   };
 
   const handleProfileSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setConfirmationText("");
-    setWorkspaceError("");
 
     try {
+      setError("");
+      setNotice("");
       await updateProfile(profileDraft);
-      setConfirmationText(
-        language === "ru"
-          ? "Данные профиля успешно обновлены."
-          : language === "en"
-            ? "Profile details were updated successfully."
-            : "Profil ma'lumotlari muvaffaqiyatli yangilandi.",
-      );
-      setActiveTab("profile");
-    } catch (error) {
-      setWorkspaceError(
-        error instanceof Error
-          ? translateError(error.message)
-          : language === "ru"
-            ? "Ошибка при сохранении профиля."
-            : language === "en"
-              ? "There was an error while saving the profile."
-              : "Profilni saqlashda xatolik yuz berdi.",
+      setNotice("Profil ma'lumotlari saqlandi.");
+    } catch (profileError) {
+      setError(
+        profileError instanceof Error
+          ? translateError(profileError.message)
+          : translateError("Kirishda xatolik yuz berdi."),
       );
     }
-  };
-
-  const handleCancelAppointment = async (appointment: Appointment) => {
-    setConfirmationText("");
-    setWorkspaceError("");
-
-    try {
-      await updateAppointmentStatus(appointment.id, "Bekor qilindi");
-      setConfirmationText(
-        language === "ru"
-          ? `Запись к ${appointment.doctorName} на ${appointment.date} в ${appointment.time} была отменена. Этот слот снова доступен.`
-          : language === "en"
-            ? `Your booking with ${appointment.doctorName} on ${appointment.date} at ${appointment.time} was cancelled. This slot is available again.`
-            : `${appointment.doctorName} bilan ${appointment.date} kuni ${appointment.time} dagi bron bekor qilindi. Ushbu slot yana bo'sh holatga qaytdi.`,
-      );
-    } catch (error) {
-      setWorkspaceError(
-        error instanceof Error
-          ? translateError(error.message)
-          : language === "ru"
-            ? "Ошибка при отмене записи."
-            : language === "en"
-              ? "There was an error while cancelling the booking."
-              : "Bronni bekor qilishda xatolik yuz berdi.",
-      );
-    }
-  };
-
-  const openReviewModal = (appointment: Appointment) => {
-    setReviewTarget(appointment);
-    setReviewRating(5);
-    setReviewComment("");
-    setReviewError("");
-  };
-
-  const closeReviewModal = () => {
-    if (isSubmittingReview) {
-      return;
-    }
-
-    setReviewTarget(null);
-    setReviewRating(5);
-    setReviewComment("");
-    setReviewError("");
-  };
-
-  const closeBookingSuccessModal = () => {
-    setBookingSuccessModal(null);
-  };
-
-  const openAppointmentsAfterSuccess = () => {
-    setBookingSuccessModal(null);
-    setActiveTab("appointments");
   };
 
   const handleReviewSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -492,46 +257,31 @@ const User = () => {
       return;
     }
 
-    setIsSubmittingReview(true);
-    setConfirmationText("");
-    setReviewError("");
-    setWorkspaceError("");
-
     try {
+      setError("");
+      setNotice("");
       await submitDoctorReview(reviewTarget.id, reviewRating, reviewComment);
-      setConfirmationText(
-        language === "ru"
-          ? `Оценка ${reviewRating} звёзд для ${reviewTarget.doctorName} успешно отправлена.`
-          : language === "en"
-            ? `A ${reviewRating}-star rating for ${reviewTarget.doctorName} was submitted successfully.`
-            : `${reviewTarget.doctorName} uchun ${reviewRating} yulduzli baho muvaffaqiyatli yuborildi.`,
-      );
+      setNotice("Baholash muvaffaqiyatli yuborildi.");
       setReviewTarget(null);
-      setReviewRating(5);
       setReviewComment("");
-      setReviewError("");
-    } catch (error) {
-      setReviewError(
-        error instanceof Error
-          ? translateError(error.message)
-          : language === "ru"
-            ? "Ошибка при отправке оценки."
-            : language === "en"
-              ? "There was an error while submitting the review."
-              : "Bahoni yuborishda xatolik yuz berdi.",
+      setReviewRating(5);
+    } catch (reviewErrorValue) {
+      setError(
+        reviewErrorValue instanceof Error
+          ? translateError(reviewErrorValue.message)
+          : translateError("Kirishda xatolik yuz berdi."),
       );
-    } finally {
-      setIsSubmittingReview(false);
     }
   };
 
-  const closeMenu = () => setMenuOpen(false);
+  const bookingRules = getBookingRulesMessage(language);
+  const selectedDoctorMapUrl = getMapSearchUrl(getDoctorMapQuery(selectedDoctor ?? {}));
 
   return (
     <div className="dashboard-page">
       <header className="dashboard-topbar">
         <div className="container dashboard-topbar-inner">
-          <Link to="/" className="brand" onClick={closeMenu}>
+          <Link to="/" className="brand" onClick={() => setMenuOpen(false)}>
             <span className="brand-mark">
               <HeartPulseIcon />
             </span>
@@ -544,25 +294,11 @@ const User = () => {
             <div className="dashboard-actions">
               <LanguageSwitcher compact />
               <ThemeToggle compact />
-              <button
-                type="button"
-                className="button button-secondary"
-                onClick={() => {
-                  setActiveTab("profile");
-                  closeMenu();
-                }}
-              >
-                {copy.profileButton}
-              </button>
-              <button
-                type="button"
-                className="button button-ghost"
-                onClick={() => {
-                  closeMenu();
-                  void signOutUser();
-                }}
-              >
-                {copy.logout}
+              <Link to="/doctor" className="button button-secondary" onClick={() => setMenuOpen(false)}>
+                Doctor panel
+              </Link>
+              <button type="button" className="button button-ghost" onClick={() => void signOutUser()}>
+                Chiqish
               </button>
             </div>
           </div>
@@ -571,7 +307,7 @@ const User = () => {
             type="button"
             className="mobile-menu-button"
             onClick={() => setMenuOpen((current) => !current)}
-            aria-label={menuLabel}
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
           >
             {menuOpen ? <CloseIcon /> : <MenuIcon />}
           </button>
@@ -581,849 +317,522 @@ const User = () => {
       <main className="container dashboard-content">
         <section className="dashboard-hero">
           <div>
-            <span className="section-chip">{copy.patientCabinet}</span>
-            <h1>{copy.heroTitle}</h1>
-            <p>{copy.heroText}</p>
+            <span className="section-chip">24/7 user workspace</span>
+            <h1>Doktor tanlang va request yuboring</h1>
+            <p>
+              Platforma 24/7 ishlaydi. Siz tanlagan buyurtma darhol saqlanadi, ammo doktor uni 30
+              daqiqa kechikish bilan oladi va qabul qilish yoki rad etishni o'zi hal qiladi.
+            </p>
           </div>
-
-          <div className="dashboard-summary-grid">
-            {dashboardStats.map((item) => (
-              <article key={item.label} className="dashboard-mini-card">
-                <span>{item.label}</span>
-                <strong>{item.value}</strong>
-              </article>
-            ))}
+          <div className="dashboard-tagline glass-card">
+            <SparkIcon />
+            {bookingRules}
           </div>
         </section>
 
-        <section className="care-command-grid">
-          <article className="care-command-card care-command-card-primary">
-            <div className="care-command-copy">
-              <span className="section-chip">{careCommandChip}</span>
-              <h2>{careCommandTitle}</h2>
-              <p>{careCommandText}</p>
-            </div>
-
-            <div className="care-command-highlight">
-              <span>{nextVisitLabel}</span>
-              <strong>
-                {nextAppointment ? `${nextAppointment.date} • ${nextAppointment.time}` : noVisitLabel}
-              </strong>
-              <p>
-                {nextAppointment
-                  ? `${nextAppointment.doctorName} • ${nextAppointment.clinic}`
-                  : noVisitText}
-              </p>
-            </div>
+        <section className="admin-kpi-grid">
+          <article className="dashboard-mini-card">
+            <span>Topilgan doktorlar</span>
+            <strong>{filteredDoctors.length}</strong>
           </article>
-
-          <article className="care-command-card care-command-card-metrics-shell">
-            <div className="care-command-metrics">
-              {commandMetrics.map((item) => (
-                <div key={item.label} className="care-command-metric">
-                  <span>{item.label}</span>
-                  <strong>{item.value}</strong>
-                </div>
-              ))}
-            </div>
+          <article className="dashboard-mini-card">
+            <span>Faol buyurtmalar</span>
+            <strong>{activeAppointments.length}</strong>
+          </article>
+          <article className="dashboard-mini-card">
+            <span>Tarix</span>
+            <strong>{historyAppointments.length}</strong>
+          </article>
+          <article className="dashboard-mini-card">
+            <span>Reytingli doktor</span>
+            <strong>{selectedDoctor ? selectedDoctor.rating.toFixed(1) : "0.0"}</strong>
           </article>
         </section>
 
-        <section className="dashboard-tabbar">
-          {localizedTabs.map((tab) => (
+        <div className="workspace-tabs">
+          {([
+            ["booking", "Bron qilish"],
+            ["appointments", "Buyurtmalarim"],
+            ["profile", "Profil"],
+          ] as Array<[TabId, string]>).map(([tabId, label]) => (
             <button
-              key={tab.id}
+              key={tabId}
               type="button"
-              className={`dashboard-tab ${activeTab === tab.id ? "dashboard-tab-active" : ""}`}
-              onClick={() => setActiveTab(tab.id)}
+              className={`auth-mode-pill ${activeTab === tabId ? "auth-mode-pill-active" : ""}`}
+              onClick={() => setActiveTab(tabId)}
             >
-              {tab.label}
+              {label}
             </button>
           ))}
-        </section>
+        </div>
 
-        <section className="workspace-grid">
-          <div className="booking-panel glass-card">
-            {activeTab === "booking" && (
-              <>
-                <div className="flow-progress">
-                  <div className="flow-progress-item flow-progress-item-active">
-                    <span>01</span>
-                    <strong>{copy.progress[0]}</strong>
-                  </div>
-                  <div className="flow-progress-item flow-progress-item-active">
-                    <span>02</span>
-                    <strong>{copy.progress[1]}</strong>
-                  </div>
-                  <div className="flow-progress-item">
-                    <span>03</span>
-                    <strong>{copy.progress[2]}</strong>
-                  </div>
-                </div>
-
-                <div className="panel-heading">
-                  <div>
-                    <span className="section-chip">{copy.step1}</span>
-                    <h2>{copy.chooseDoctor}</h2>
-                  </div>
-                  <span className="badge">
-                    <ShieldIcon />
-                    {copy.approvedDoctors}
-                  </span>
-                </div>
-
-                <div className="doctor-filter-bar">
-                  <label className="field">
-                    <span>{copy.search}</span>
-                    <div className="field-box">
-                      <SparkIcon />
-                      <input
-                        type="text"
-                        value={doctorSearchTerm}
-                        onChange={(event) => setDoctorSearchTerm(event.target.value)}
-                        placeholder={copy.searchPlaceholder}
-                      />
-                    </div>
-                  </label>
-
-                  <label className="field">
-                    <span>{copy.region}</span>
-                    <div className="field-box field-box-select">
-                      <LocationIcon />
-                      <select
-                        value={doctorRegionFilter}
-                        onChange={(event) => setDoctorRegionFilter(event.target.value)}
-                      >
-                        <option value={ALL_REGIONS_OPTION}>{translateRegion(ALL_REGIONS_OPTION)}</option>
-                        {UZBEKISTAN_REGIONS.map((region) => (
-                          <option key={region} value={region}>
-                            {translateRegion(region)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </label>
-                </div>
-
-                <div className="doctor-selector-grid">
-                  {filteredDoctors.length > 0 ? (
-                    filteredDoctors.map((doctor) => (
-                      <button
-                        key={doctor.id}
-                        type="button"
-                        className={`doctor-select-card ${
-                          doctor.id === selectedDoctorId ? "doctor-select-card-active" : ""
-                        }`}
-                        onClick={() => setSelectedDoctorId(doctor.id)}
-                      >
-                        <div className="doctor-card-top">
-                          <div className="doctor-card-avatar">
-                            <StethoscopeIcon />
-                          </div>
-                          <span className="badge">
-                            <StarIcon />
-                            {doctor.rating.toFixed(1)}
-                          </span>
-                        </div>
-                        <strong>{doctor.name}</strong>
-                        <span className="doctor-specialty-text">{translateSpecialty(doctor.specialty)}</span>
-                        <p className="doctor-clinic-text">{doctor.clinic}</p>
-                        <div className="doctor-card-tags">
-                          <span className="doctor-region-tag">{translateRegion(doctor.region)}</span>
-                        </div>
-                        <span className="doctor-location-line">
-                          <LocationIcon />
-                          <span>{doctor.address}</span>
-                        </span>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="empty-state">
-                      <h3>{copy.noDoctorsTitle}</h3>
-                      <p>{copy.noDoctorsText}</p>
-                    </div>
-                  )}
-                </div>
-
-                <form className="booking-form" onSubmit={handleBooking}>
-                  <div className="panel-heading">
-                    <div>
-                      <span className="section-chip">{copy.step2}</span>
-                      <h2>{copy.details}</h2>
-                    </div>
-                    <span className="badge">
-                      <ClockIcon />
-                      {copy.realtimeSlots}
-                    </span>
-                  </div>
-
-                  <div className="field-grid">
-                    <label className="field">
-                      <span>{copy.date}</span>
-                      <div className="field-box">
-                        <CalendarIcon />
-                        <input
-                          type="date"
-                          min={minimumBookingDate}
-                          value={selectedDate}
-                          onChange={(event) => handleDateChange(event.target.value)}
-                        />
-                      </div>
-                      <small className="field-note">{bookingRulesMessage}</small>
-                    </label>
-
-                    <label className="field">
-                      <span>{copy.phone}</span>
-                      <div className="field-box">
-                        <PhoneIcon />
-                        <input
-                          type="tel"
-                          value={patientPhone}
-                          onChange={(event) => setPatientPhone(event.target.value)}
-                          placeholder="+998 90 123 45 67"
-                        />
-                      </div>
-                    </label>
-                  </div>
-
-                  <div className="slot-grid">
-                    {selectedDate && availableSlots.length > 0 ? (
-                      availableSlots.map((time) => {
-                        const isBooked = bookedSlotSet.has(time);
-
-                        return (
-                          <button
-                            key={time}
-                            type="button"
-                            disabled={isBooked}
-                            className={`slot-button ${
-                              selectedTime === time ? "slot-button-active" : ""
-                            } ${isBooked ? "slot-button-disabled" : ""}`}
-                            onClick={() => setSelectedTime(time)}
-                          >
-                            {isBooked ? format(copy.slotBooked, { time }) : time}
-                          </button>
-                        );
-                      })
-                    ) : (
-                      <div className="empty-state">
-                          <h3>{selectedDate ? copy.noSlots : copy.chooseDateFirst}</h3>
-                          <p>
-                            {selectedDate ? copy.noSlotsText : copy.chooseDateText}
-                          </p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="field-grid">
-                    <label className="field">
-                      <span>{copy.fullname}</span>
-                      <div className="field-box">
-                        <UserGroupIcon />
-                        <input
-                          type="text"
-                          value={patientName}
-                          onChange={(event) => setPatientName(event.target.value)}
-                           placeholder={copy.fullnamePlaceholder}
-                        />
-                      </div>
-                    </label>
-
-                    <label className="field field-full">
-                      <span>{copy.note}</span>
-                      <textarea
-                        value={notes}
-                        onChange={(event) => setNotes(event.target.value)}
-                        rows={4}
-                        placeholder={copy.notePlaceholder}
-                      />
-                    </label>
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="button button-primary button-large button-block"
-                    disabled={!isReady || isSubmittingBooking}
-                  >
-                    {isSubmittingBooking ? copy.confirming : copy.confirmBooking}
-                    <ArrowRightIcon />
-                  </button>
-                  {bookingError && <p className="auth-error-text">{bookingError}</p>}
-                </form>
-              </>
-            )}
-
-            {activeTab === "appointments" && (
-              <div className="workspace-section workspace-history-stack">
-                <div className="workspace-history-section">
-                  <div className="panel-heading">
-                    <div>
-                      <span className="section-chip">{copy.appointmentsChip}</span>
-                      <h2>{copy.activeAppointments}</h2>
-                    </div>
-                    <span className="badge">
-                      <ClockIcon />
-                      {activeAppointments.length}
-                    </span>
-                  </div>
-
-                  <div className="appointment-list">
-                    {activeAppointments.map((appointment) => {
-                      const isCancelled = appointment.status === "Bekor qilindi";
-                      const alreadyReviewed = Boolean(appointment.reviewRating);
-                      const canCompleteAppointment = hasAppointmentStarted(
-                        appointment.date,
-                        appointment.time,
-                      );
-
-                      return (
-                        <article key={appointment.id} className="appointment-card">
-                          <div className="appointment-card-head">
-                            <div>
-                              <h3>{appointment.doctorName}</h3>
-                              <p>{translateSpecialty(appointment.specialty)}</p>
-                            </div>
-                            <span className="badge">{translateStatus(appointment.status)}</span>
-                          </div>
-
-                          <div className="appointment-meta-grid">
-                            <div>
-                              <CalendarIcon />
-                              <span>{appointment.date}</span>
-                            </div>
-                            <div>
-                              <ClockIcon />
-                              <span>{appointment.time}</span>
-                            </div>
-                            <div>
-                              <LocationIcon />
-                              <span>{appointment.clinic}</span>
-                            </div>
-                          </div>
-
-                          {appointment.notes && <p>{appointment.notes}</p>}
-
-                          {getMapSearchUrl(getDoctorMapQuery(appointment)) && (
-                            <a
-                              href={getMapSearchUrl(getDoctorMapQuery(appointment))}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-map-link"
-                            >
-                              {mapActionLabel}
-                              <ArrowRightIcon />
-                            </a>
-                          )}
-
-                          {alreadyReviewed && (
-                            <div className="review-summary-card">
-                              <div className="review-summary-head">
-                                <strong>{copy.reviewLeft}</strong>
-                                <span>{appointment.reviewRating} / 5</span>
-                              </div>
-                              <div className="review-stars-row review-stars-row-readonly">
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                  <span
-                                    key={star}
-                                    className={`review-star-icon ${
-                                      star <= (appointment.reviewRating ?? 0) ? "review-star-icon-active" : ""
-                                    }`}
-                                  >
-                                    <StarIcon />
-                                  </span>
-                                ))}
-                              </div>
-                              {appointment.reviewComment && <p>{appointment.reviewComment}</p>}
-                            </div>
-                          )}
-
-                          <div className="appointment-actions">
-                            {canCompleteAppointment ? (
-                              <button
-                                type="button"
-                                className="button button-secondary"
-                                disabled={alreadyReviewed || isCancelled}
-                                onClick={() => openReviewModal(appointment)}
-                              >
-                                {alreadyReviewed ? copy.reviewSent : copy.completeReview}
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                className="button button-ghost"
-                                onClick={() => void handleCancelAppointment(appointment)}
-                              >
-                                {copy.cancel}
-                              </button>
-                            )}
-                          </div>
-                        </article>
-                      );
-                    })}
-
-                    {activeAppointments.length === 0 && (
-                      <div className="empty-state">
-                        <h3>{copy.noAppointments}</h3>
-                        <p>{copy.noAppointmentsText}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="workspace-history-section">
-                  <div className="panel-heading">
-                    <div>
-                      <span className="section-chip">{historyChip}</span>
-                      <h2>{historyTitle}</h2>
-                    </div>
-                    <span className="badge">
-                      <ClockIcon />
-                      {appointmentHistory.length}
-                    </span>
-                  </div>
-                  <p className="preview-subtext">{historyText}</p>
-
-                  <div className="appointment-list appointment-list-history">
-                    {appointmentHistory.map((appointment) => (
-                      <article key={`history-${appointment.id}`} className="appointment-card appointment-card-history">
-                        <div className="appointment-card-head">
-                          <div>
-                            <h3>{appointment.doctorName}</h3>
-                            <p>{translateSpecialty(appointment.specialty)}</p>
-                          </div>
-                          <span className="badge">{translateStatus(appointment.status)}</span>
-                        </div>
-
-                        <div className="appointment-meta-grid">
-                          <div>
-                            <CalendarIcon />
-                            <span>{appointment.date}</span>
-                          </div>
-                          <div>
-                            <ClockIcon />
-                            <span>{appointment.time}</span>
-                          </div>
-                          <div>
-                            <LocationIcon />
-                            <span>{appointment.clinic}</span>
-                          </div>
-                        </div>
-
-                        {appointment.notes && <p>{appointment.notes}</p>}
-
-                        {getMapSearchUrl(getDoctorMapQuery(appointment)) && (
-                          <a
-                            href={getMapSearchUrl(getDoctorMapQuery(appointment))}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-map-link"
-                          >
-                            {mapActionLabel}
-                            <ArrowRightIcon />
-                          </a>
-                        )}
-
-                        {appointment.reviewRating && (
-                          <div className="review-summary-card">
-                            <div className="review-summary-head">
-                              <strong>{copy.reviewLeft}</strong>
-                              <span>{appointment.reviewRating} / 5</span>
-                            </div>
-                            <div className="review-stars-row review-stars-row-readonly">
-                              {[1, 2, 3, 4, 5].map((star) => (
-                                <span
-                                  key={`${appointment.id}-history-star-${star}`}
-                                  className={`review-star-icon ${
-                                    star <= (appointment.reviewRating ?? 0) ? "review-star-icon-active" : ""
-                                  }`}
-                                >
-                                  <StarIcon />
-                                </span>
-                              ))}
-                            </div>
-                            {appointment.reviewComment && <p>{appointment.reviewComment}</p>}
-                          </div>
-                        )}
-                      </article>
-                    ))}
-
-                    {appointmentHistory.length === 0 && (
-                      <div className="empty-state">
-                        <h3>{noHistoryTitle}</h3>
-                        <p>{noHistoryText}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === "profile" && (
-              <div className="workspace-section">
-                <div className="panel-heading">
-                  <div>
-                    <span className="section-chip">{copy.profileChip}</span>
-                    <h2>{copy.profileTitle}</h2>
-                  </div>
-                </div>
-
-                <form className="booking-form" onSubmit={handleProfileSave}>
-                  <div className="field-grid">
-                    <label className="field">
-                      <span>{copy.fullname}</span>
-                      <div className="field-box">
-                        <UserGroupIcon />
-                        <input
-                          type="text"
-                          value={profileDraft.name}
-                          onChange={(event) =>
-                            setProfileDraft((current) => ({ ...current, name: event.target.value }))
-                          }
-                        />
-                      </div>
-                    </label>
-
-                    <label className="field">
-                      <span>{copy.email}</span>
-                      <div className="field-box">
-                        <SparkIcon />
-                        <input
-                          type="email"
-                          value={profileDraft.email}
-                          onChange={(event) =>
-                            setProfileDraft((current) => ({ ...current, email: event.target.value }))
-                          }
-                        />
-                      </div>
-                    </label>
-
-                    <label className="field">
-                      <span>{copy.phone}</span>
-                      <div className="field-box">
-                        <PhoneIcon />
-                        <input
-                          type="tel"
-                          value={profileDraft.phone}
-                          onChange={(event) =>
-                            setProfileDraft((current) => ({ ...current, phone: event.target.value }))
-                          }
-                        />
-                      </div>
-                    </label>
-
-                    <label className="field">
-                      <span>{copy.city}</span>
-                      <div className="field-box">
-                        <LocationIcon />
-                        <input
-                          type="text"
-                          value={profileDraft.city}
-                          onChange={(event) =>
-                            setProfileDraft((current) => ({ ...current, city: event.target.value }))
-                          }
-                        />
-                      </div>
-                    </label>
-
-                    <label className="field">
-                      <span>{copy.birthDate}</span>
-                      <div className="field-box">
-                        <CalendarIcon />
-                        <input
-                          type="date"
-                          value={profileDraft.birthDate}
-                          onChange={(event) =>
-                            setProfileDraft((current) => ({ ...current, birthDate: event.target.value }))
-                          }
-                        />
-                      </div>
-                    </label>
-
-                    <label className="field field-full">
-                      <span>{copy.about}</span>
-                      <textarea
-                        value={profileDraft.about}
-                        onChange={(event) =>
-                          setProfileDraft((current) => ({ ...current, about: event.target.value }))
-                        }
-                        rows={4}
-                      />
-                    </label>
-                  </div>
-
-                  <button type="submit" className="button button-primary button-large">
-                    {copy.saveProfile}
-                    <CheckIcon />
-                  </button>
-                </form>
-              </div>
-            )}
-          </div>
-
-          <aside className="preview-column">
+        {activeTab === "booking" && (
+          <section className="user-workspace-grid">
             <article className="preview-card preview-highlight">
-              <span className="badge badge-gold">
-                <SparkIcon />
-                {copy.bookingSummary}
-              </span>
-              <h2>{selectedDoctor?.name ?? copy.noDoctor}</h2>
-              <p>{selectedDoctor ? translateSpecialty(selectedDoctor.specialty) : copy.noSpecialty}</p>
-              {selectedDoctor?.bio && <p className="preview-subtext">{selectedDoctor.bio}</p>}
-
-              <div className="preview-list">
-                <div>
-                  <CalendarIcon />
-                  <span>{selectedDate || copy.noDate}</span>
-                </div>
-                <div>
-                  <ClockIcon />
-                  <span>{selectedTime || copy.noTime}</span>
-                </div>
-                <div>
-                  <LocationIcon />
-                  <span>{selectedDoctor ? translateRegion(selectedDoctor.region) : copy.noRegion}</span>
-                </div>
-                <div>
-                  <LocationIcon />
-                  <span>{selectedDoctor?.clinic ?? copy.noClinic}</span>
-                </div>
-                <div>
-                  <LocationIcon />
-                  <span>{selectedDoctor?.address ?? copy.noAddress}</span>
-                </div>
-              </div>
-
-              <div className="price-line">
-                <span>{copy.consultation}</span>
-                <strong>{selectedDoctor?.price ?? "-"}</strong>
-              </div>
-
-              {selectedDoctorMapUrl && (
-                <a href={selectedDoctorMapUrl} target="_blank" rel="noreferrer" className="button button-secondary button-block">
-                  {mapActionLabel}
-                  <ArrowRightIcon />
-                </a>
-              )}
-            </article>
-
-            <article className="preview-card">
               <div className="panel-heading">
                 <div>
-                  <h3>{copy.mapTitle}</h3>
-                  <p>{copy.mapText}</p>
-                </div>
-                {selectedDoctorMapUrl && (
-                  <a href={selectedDoctorMapUrl} target="_blank" rel="noreferrer" className="button button-secondary">
-                    {mapActionLabel}
-                    <ArrowRightIcon />
-                  </a>
-                )}
-              </div>
-
-              <div className="map-preview-empty map-preview-empty-static">
-                <LocationIcon />
-                <strong>{selectedDoctor ? selectedDoctor.clinic : copy.mapEmptyTitle}</strong>
-                <p>{selectedDoctor ? selectedDoctor.address : copy.mapEmptyText}</p>
-                {selectedDoctorMapUrl && (
-                  <a href={selectedDoctorMapUrl} target="_blank" rel="noreferrer" className="button button-secondary">
-                    {mapActionLabel}
-                    <ArrowRightIcon />
-                  </a>
-                )}
-              </div>
-
-              <p className="map-preview-caption">{selectedDoctor?.address ?? copy.addressMissing}</p>
-            </article>
-
-            <article className="preview-card">
-              <h3>{copy.aboutDoctor}</h3>
-              <div className="info-stack">
-                <div>
-                  <span>{copy.rating}</span>
-                  <strong>{selectedDoctor ? selectedDoctor.rating.toFixed(1) : "-"}</strong>
-                </div>
-                <div>
-                  <span>{copy.ratingCount}</span>
-                  <strong>{language === "uz" ? `${selectedDoctor?.reviewCount ?? 0} ta` : `${selectedDoctor?.reviewCount ?? 0}`}</strong>
-                </div>
-                <div>
-                  <span>{copy.experience}</span>
-                  <strong>{selectedDoctor?.experience ?? "-"}</strong>
-                </div>
-                <div>
-                  <span>{copy.nearestSlot}</span>
-                  <strong>{selectedDoctor?.availability ?? "-"}</strong>
+                  <span className="section-chip">Doctor list</span>
+                  <h2>Doktorlar ro'yxati</h2>
                 </div>
               </div>
-              <p className="preview-subtext">
-                {copy.aboutDoctorText}
-              </p>
-            </article>
 
-            <article className="preview-card">
-              <h3>{copy.benefits}</h3>
-              <div className="summary-checks">
-                {copy.benefitList.map((item: string) => (
-                  <div key={item}>
-                    <CheckIcon />
-                    <span>{item}</span>
+              <div className="field-grid">
+                <label className="field">
+                  <span>Qidiruv</span>
+                  <div className="field-box">
+                    <StethoscopeIcon />
+                    <input
+                      value={searchTerm}
+                      onChange={(event) => setSearchTerm(event.target.value)}
+                      placeholder="Doktor, yo'nalish yoki klinika"
+                    />
                   </div>
+                </label>
+                <label className="field">
+                  <span>Hudud</span>
+                  <div className="field-box field-box-select">
+                    <LocationIcon />
+                    <select value={regionFilter} onChange={(event) => setRegionFilter(event.target.value)}>
+                      <option value={ALL_REGIONS_OPTION}>{translateRegion(ALL_REGIONS_OPTION)}</option>
+                      {UZBEKISTAN_REGIONS.map((region) => (
+                        <option key={region} value={region}>
+                          {translateRegion(region)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </label>
+              </div>
+
+              <div className="doctor-scroll-grid">
+                {filteredDoctors.map((doctor) => (
+                  <button
+                    key={doctor.id}
+                    type="button"
+                    className={`doctor-select-card ${
+                      selectedDoctor?.id === doctor.id ? "doctor-select-card-active" : ""
+                    }`}
+                    onClick={() => setSelectedDoctorId(doctor.id)}
+                  >
+                    <div className="doctor-select-head">
+                      <div className="doctor-card-avatar">
+                        <StethoscopeIcon />
+                      </div>
+                      <span className="badge">{doctor.isOnline ? "Ishda" : "Offline"}</span>
+                    </div>
+                    <strong>{doctor.name}</strong>
+                    <span>{translateSpecialty(doctor.specialty)}</span>
+                    <span>{doctor.clinic}</span>
+                    <p>{getDoctorBookingRecommendation(doctor, appointments)}</p>
+                    <div className="doctor-slot-list">
+                      {doctor.availableSlots.slice(0, 4).map((slot) => (
+                        <span key={`${doctor.id}-${slot}`} className="doctor-slot-chip">
+                          {slot}
+                        </span>
+                      ))}
+                    </div>
+                  </button>
                 ))}
               </div>
             </article>
 
             <article className="preview-card">
-              <h3>{copy.serviceLevel}</h3>
-              <div className="service-level-card">
-                <span>{copy.serviceFlow}</span>
-                <strong>{copy.serviceText}</strong>
+              <div className="panel-heading">
+                <div>
+                  <span className="section-chip">Booking form</span>
+                  <h2>Request yaratish</h2>
+                </div>
+              </div>
+
+              {selectedDoctor ? (
+                <form className="booking-form" onSubmit={handleBooking}>
+                  <div className="booking-doctor-showcase">
+                    <div className="doctor-card-avatar">
+                      <StethoscopeIcon />
+                    </div>
+                    <div>
+                      <h3>{selectedDoctor.name}</h3>
+                      <p>{translateSpecialty(selectedDoctor.specialty)} · {selectedDoctor.clinic}</p>
+                      <span>{translateRegion(selectedDoctor.region)} · {selectedDoctor.price}</span>
+                    </div>
+                  </div>
+
+                  <div className="field-grid">
+                    <label className="field">
+                      <span>Ism</span>
+                      <div className="field-box">
+                        <UserGroupIcon />
+                        <input value={patientName} onChange={(event) => setPatientName(event.target.value)} required />
+                      </div>
+                    </label>
+                    <label className="field">
+                      <span>Telefon</span>
+                      <div className="field-box">
+                        <PhoneIcon />
+                        <input value={patientPhone} onChange={(event) => setPatientPhone(event.target.value)} required />
+                      </div>
+                    </label>
+                    <label className="field">
+                      <span>Sana</span>
+                      <div className="field-box">
+                        <CalendarIcon />
+                        <input
+                          type="date"
+                          value={selectedDate}
+                          min={getTodayInTashkent()}
+                          onChange={(event) => setSelectedDate(event.target.value)}
+                          required
+                        />
+                      </div>
+                    </label>
+                    <label className="field">
+                      <span>Vaqt</span>
+                      <div className="field-box field-box-select">
+                        <ClockIcon />
+                        <select value={selectedTime} onChange={(event) => setSelectedTime(event.target.value)} required>
+                          {availableSlots.map((slot) => (
+                            <option key={slot} value={slot} disabled={bookedSlotSet.has(slot)}>
+                              {slot}{bookedSlotSet.has(slot) ? " - band" : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </label>
+                    <label className="field field-full">
+                      <span>Izoh</span>
+                      <textarea
+                        rows={4}
+                        value={notes}
+                        onChange={(event) => setNotes(event.target.value)}
+                        placeholder="Shikoyat yoki qo'shimcha ma'lumot"
+                      />
+                    </label>
+                  </div>
+
+                  <button type="submit" className="button button-primary button-large" disabled={isSubmitting}>
+                    Request yuborish
+                    <ArrowRightIcon />
+                  </button>
+                </form>
+              ) : (
+                <div className="empty-state">
+                  <h3>Doktor topilmadi</h3>
+                  <p>Filterlarni o'zgartirib ko'ring.</p>
+                </div>
+              )}
+            </article>
+
+            <aside className="preview-column">
+              <article className="preview-card preview-highlight">
+                <span className="badge badge-gold">
+                  <SparkIcon />
+                  Selected doctor
+                </span>
+                <h2>{selectedDoctor?.name ?? "Doktor tanlanmagan"}</h2>
+                <p>{selectedDoctor ? translateSpecialty(selectedDoctor.specialty) : "-"}</p>
+                <p className="preview-subtext">{selectedDoctor?.bio ?? "Tanlangan doktorga oid ma'lumot shu yerda ko'rinadi."}</p>
+
+                <div className="preview-list">
+                  <div>
+                    <ClockIcon />
+                    <span>{selectedDoctor?.availability ?? "-"}</span>
+                  </div>
+                  <div>
+                    <LocationIcon />
+                    <span>{selectedDoctor?.address ?? "-"}</span>
+                  </div>
+                  <div>
+                    <StarIcon />
+                    <span>{selectedDoctor ? `${selectedDoctor.rating.toFixed(1)} / 5` : "-"}</span>
+                  </div>
+                </div>
+
+                {selectedDoctorMapUrl && (
+                  <a href={selectedDoctorMapUrl} target="_blank" rel="noreferrer" className="button button-secondary button-block">
+                    Xaritada ochish
+                    <ArrowRightIcon />
+                  </a>
+                )}
+              </article>
+            </aside>
+          </section>
+        )}
+
+        {activeTab === "appointments" && (
+          <section className="user-workspace-grid user-workspace-grid-full">
+            <article className="preview-card preview-highlight doctor-queue-card">
+              <div className="panel-heading">
+                <div>
+                  <span className="section-chip">Active requests</span>
+                  <h2>Faol buyurtmalarim</h2>
+                </div>
+              </div>
+              <div className="doctor-request-list">
+                {activeAppointments.map((appointment) => (
+                  <article key={appointment.id} className="doctor-request-item">
+                    <div className="appointment-card-head">
+                      <div>
+                        <h3>{appointment.doctorName}</h3>
+                        <p>{translateSpecialty(appointment.specialty)}</p>
+                      </div>
+                      <span className="badge">{translateStatus(appointment.status)}</span>
+                    </div>
+                    <div className="appointment-meta-grid">
+                      <div>
+                        <CalendarIcon />
+                        <span>{appointment.date}</span>
+                      </div>
+                      <div>
+                        <ClockIcon />
+                        <span>{appointment.time}</span>
+                      </div>
+                      <div>
+                        <LocationIcon />
+                        <span>{appointment.clinic}</span>
+                      </div>
+                    </div>
+                    {appointment.notes && <p>{appointment.notes}</p>}
+                    <div className="doctor-request-actions">
+                      <button type="button" className="button button-ghost" onClick={() => void handleCancel(appointment.id)}>
+                        Bekor qilish
+                      </button>
+                    </div>
+                  </article>
+                ))}
+
+                {activeAppointments.length === 0 && (
+                  <div className="empty-state">
+                    <h3>Faol buyurtma yo'q</h3>
+                    <p>Yangi request yaratganingizda shu yerda ko'rinadi.</p>
+                  </div>
+                )}
               </div>
             </article>
-          </aside>
-        </section>
 
-        {confirmationText && (
+            <article className="preview-card doctor-queue-card">
+              <div className="panel-heading">
+                <div>
+                  <span className="section-chip">History</span>
+                  <h2>Tarix</h2>
+                </div>
+              </div>
+              <div className="doctor-request-list">
+                {historyAppointments.map((appointment) => {
+                  const canReview =
+                    appointment.status !== "Bekor qilindi" &&
+                    appointment.status !== "Rad etildi" &&
+                    hasAppointmentStarted(appointment.date, appointment.time) &&
+                    !appointment.reviewRating;
+
+                  return (
+                    <article key={appointment.id} className="doctor-request-item">
+                      <div className="appointment-card-head">
+                        <div>
+                          <h3>{appointment.doctorName}</h3>
+                          <p>{appointment.patientPhone}</p>
+                        </div>
+                        <span className="badge">{translateStatus(appointment.status)}</span>
+                      </div>
+                      <div className="appointment-meta-grid">
+                        <div>
+                          <CalendarIcon />
+                          <span>{appointment.date}</span>
+                        </div>
+                        <div>
+                          <ClockIcon />
+                          <span>{appointment.time}</span>
+                        </div>
+                        <div>
+                          <LocationIcon />
+                          <span>{appointment.clinic}</span>
+                        </div>
+                      </div>
+                      {appointment.reviewRating && (
+                        <p>{appointment.reviewRating} / 5 · {appointment.reviewComment || "Baholangan"}</p>
+                      )}
+                      {canReview && (
+                        <button type="button" className="button button-secondary" onClick={() => setReviewTarget(appointment)}>
+                          Baho berish
+                        </button>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            </article>
+          </section>
+        )}
+
+        {activeTab === "profile" && (
+          <section className="user-workspace-grid user-workspace-grid-full">
+            <article className="preview-card">
+              <div className="panel-heading">
+                <div>
+                  <span className="section-chip">Profile</span>
+                  <h2>Shaxsiy kabinet</h2>
+                </div>
+              </div>
+              <form className="booking-form" onSubmit={handleProfileSave}>
+                <div className="field-grid">
+                  <label className="field">
+                    <span>Ism</span>
+                    <div className="field-box">
+                      <UserGroupIcon />
+                      <input
+                        value={profileDraft.name}
+                        onChange={(event) =>
+                          setProfileDraft((current) => ({ ...current, name: event.target.value }))
+                        }
+                      />
+                    </div>
+                  </label>
+                  <label className="field">
+                    <span>Email</span>
+                    <div className="field-box">
+                      <SparkIcon />
+                      <input
+                        type="email"
+                        value={profileDraft.email}
+                        onChange={(event) =>
+                          setProfileDraft((current) => ({ ...current, email: event.target.value }))
+                        }
+                      />
+                    </div>
+                  </label>
+                  <label className="field">
+                    <span>Telefon</span>
+                    <div className="field-box">
+                      <PhoneIcon />
+                      <input
+                        value={profileDraft.phone}
+                        onChange={(event) =>
+                          setProfileDraft((current) => ({ ...current, phone: event.target.value }))
+                        }
+                      />
+                    </div>
+                  </label>
+                  <label className="field">
+                    <span>Shahar</span>
+                    <div className="field-box">
+                      <LocationIcon />
+                      <input
+                        value={profileDraft.city}
+                        onChange={(event) =>
+                          setProfileDraft((current) => ({ ...current, city: event.target.value }))
+                        }
+                      />
+                    </div>
+                  </label>
+                  <label className="field">
+                    <span>Tug'ilgan sana</span>
+                    <div className="field-box">
+                      <CalendarIcon />
+                      <input
+                        type="date"
+                        value={profileDraft.birthDate}
+                        onChange={(event) =>
+                          setProfileDraft((current) => ({ ...current, birthDate: event.target.value }))
+                        }
+                      />
+                    </div>
+                  </label>
+                  <label className="field field-full">
+                    <span>O'zingiz haqingizda</span>
+                    <textarea
+                      rows={4}
+                      value={profileDraft.about}
+                      onChange={(event) =>
+                        setProfileDraft((current) => ({ ...current, about: event.target.value }))
+                      }
+                    />
+                  </label>
+                </div>
+                <button type="submit" className="button button-primary button-large">
+                  Saqlash
+                  <CheckIcon />
+                </button>
+              </form>
+            </article>
+          </section>
+        )}
+
+        {notice && (
           <section className="confirmation-banner">
             <div className="confirmation-icon">
               <CheckIcon />
             </div>
             <div>
-              <h2>{successBannerTitle}</h2>
-              <p>{confirmationText}</p>
+              <h2>Yangilanish tayyor</h2>
+              <p>{notice}</p>
             </div>
           </section>
         )}
 
-        {workspaceError && (
+        {error && (
           <section className="confirmation-banner confirmation-banner-error">
             <div className="confirmation-icon confirmation-icon-error">
               <CloseIcon />
             </div>
             <div>
-              <h2>{errorBannerTitle}</h2>
-              <p>{workspaceError}</p>
+              <h2>Xatolik yuz berdi</h2>
+              <p>{error}</p>
             </div>
           </section>
         )}
       </main>
 
       {reviewTarget && (
-        <div className="modal-backdrop" onClick={closeReviewModal} role="presentation">
+        <div className="modal-backdrop" onClick={() => setReviewTarget(null)} role="presentation">
           <div
             className="modal-card review-modal-card"
             onClick={(event) => event.stopPropagation()}
             role="dialog"
             aria-modal="true"
-            aria-labelledby="review-modal-title"
+            aria-labelledby="review-title"
           >
-            <form className="review-form" onSubmit={handleReviewSubmit}>
+            <form className="review-form modal-scroll-area" onSubmit={handleReviewSubmit}>
               <div className="panel-heading">
                 <div>
-                  <span className="section-chip">{copy.reviewChip}</span>
-                  <h2 id="review-modal-title">{copy.reviewTitle}</h2>
+                  <span className="section-chip">Review</span>
+                  <h2 id="review-title">{reviewTarget.doctorName} uchun baho</h2>
                 </div>
-                <button type="button" className="icon-button" onClick={closeReviewModal}>
+                <button type="button" className="icon-button" onClick={() => setReviewTarget(null)}>
                   <CloseIcon />
                 </button>
               </div>
 
-              <p className="review-modal-copy">
-                {format(copy.reviewText, { doctorName: reviewTarget.doctorName })}
-              </p>
-
-              <div className="review-stars-block">
-                <span>{copy.yourRating}</span>
-                <div className="review-stars-row">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      className={`review-star-button ${
-                        star <= reviewRating ? "review-star-button-active" : ""
-                      }`}
-                      onClick={() => setReviewRating(star)}
-                    >
-                      <StarIcon />
-                    </button>
-                  ))}
-                </div>
+              <div className="review-stars-row">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    className={`review-star-button ${star <= reviewRating ? "review-star-button-active" : ""}`}
+                    onClick={() => setReviewRating(star)}
+                  >
+                    <StarIcon />
+                  </button>
+                ))}
               </div>
 
               <label className="field">
-                <span>{copy.reviewLabel}</span>
+                <span>Izoh</span>
                 <textarea
+                  rows={4}
                   value={reviewComment}
                   onChange={(event) => setReviewComment(event.target.value)}
-                  rows={4}
-                  placeholder={copy.reviewPlaceholder}
                 />
               </label>
 
-              {reviewError && <p className="auth-error-text">{reviewError}</p>}
-
               <div className="modal-actions">
-                <button type="button" className="button button-ghost" onClick={closeReviewModal}>
-                  {copy.cancel}
+                <button type="button" className="button button-ghost" onClick={() => setReviewTarget(null)}>
+                  Bekor qilish
                 </button>
-                <button type="submit" className="button button-primary" disabled={isSubmittingReview}>
-                  {copy.send}
+                <button type="submit" className="button button-primary">
+                  Yuborish
                   <CheckIcon />
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {bookingSuccessModal && (
-        <div className="modal-backdrop" onClick={closeBookingSuccessModal} role="presentation">
-          <div
-            className="modal-card review-modal-card booking-success-modal"
-            onClick={(event) => event.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="booking-success-title"
-          >
-            <div className="booking-success-hero">
-              <div className="confirmation-icon booking-success-icon">
-                <CheckIcon />
-              </div>
-              <span className="section-chip">{copy.successChip}</span>
-            </div>
-
-            <div className="booking-success-copy">
-              <h2 id="booking-success-title">{copy.successTitle}</h2>
-              <p>{copy.successText}</p>
-            </div>
-
-            <div className="preview-list booking-success-list">
-              <div>
-                <UserGroupIcon />
-                <span>{bookingSuccessModal.doctorName}</span>
-              </div>
-              <div>
-                <CalendarIcon />
-                <span>{bookingSuccessModal.date}</span>
-              </div>
-              <div>
-                <ClockIcon />
-                <span>{bookingSuccessModal.time}</span>
-              </div>
-              <div>
-                <LocationIcon />
-                <span>{bookingSuccessModal.clinic}</span>
-              </div>
-            </div>
-
-            <div className="modal-actions booking-success-actions">
-              <button type="button" className="button button-ghost" onClick={closeBookingSuccessModal}>
-                {copy.later}
-              </button>
-              <button type="button" className="button button-primary" onClick={openAppointmentsAfterSuccess}>
-                {copy.goAppointments}
-                <ArrowRightIcon />
-              </button>
-            </div>
           </div>
         </div>
       )}
@@ -1432,12 +841,3 @@ const User = () => {
 };
 
 export default User;
-
-
-
-
-
-
-
-
-
