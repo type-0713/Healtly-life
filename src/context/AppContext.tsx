@@ -972,6 +972,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
 
         if (status === "Tasdiqlandi") {
+          if (appointmentData.status !== "Kutilmoqda") {
+            throw new Error("Faqat kutilayotgan so'rovni qabul qilish mumkin.");
+          }
+
           transaction.update(appointmentRef, {
             status,
             handledAt: new Date().toISOString(),
@@ -982,12 +986,24 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
 
         if (status === "Rad etildi") {
+          if (appointmentData.status !== "Kutilmoqda") {
+            throw new Error("Faqat kutilayotgan so'rovni rad etish mumkin.");
+          }
+
           transaction.update(appointmentRef, {
             status,
             handledAt: new Date().toISOString(),
             rejectedReason: reason || "Doktor hozir buyurtma ola olmaydi",
           });
           return;
+        }
+
+        if (appointmentData.status !== "Tasdiqlandi") {
+          throw new Error("Faqat tasdiqlangan qabulni yakunlash mumkin.");
+        }
+
+        if (!hasAppointmentStarted(String(appointmentData.date ?? ""), String(appointmentData.time ?? ""))) {
+          throw new Error("Qabul vaqtiga yetmasdan uni yakunlab bo'lmaydi.");
         }
 
         transaction.update(appointmentRef, {
