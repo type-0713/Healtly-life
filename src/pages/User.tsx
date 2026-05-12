@@ -37,6 +37,14 @@ import {
 
 type TabId = "booking" | "appointments" | "profile";
 
+const canReviewAppointment = (appointment: Appointment) =>
+  (appointment.status === "Tasdiqlandi" || appointment.status === "Yakunlandi") &&
+  hasAppointmentStarted(appointment.date, appointment.time) &&
+  !appointment.reviewRating;
+
+const canCancelAppointment = (appointment: Appointment) =>
+  appointment.status !== "Tasdiqlandi" || !hasAppointmentStarted(appointment.date, appointment.time);
+
 const User = () => {
   const { language, translateError, translateRegion, translateSpecialty, translateStatus } = useI18n();
   const {
@@ -67,6 +75,7 @@ const User = () => {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isReviewSubmitting, setIsReviewSubmitting] = useState(false);
   const [reviewTarget, setReviewTarget] = useState<Appointment | null>(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
@@ -167,6 +176,11 @@ const User = () => {
     return selectedDoctor.availableSlots.filter((slot) => !isPastTimeSlotForDate(selectedDate, slot));
   }, [selectedDate, selectedDoctor]);
 
+  const selectableSlots = useMemo(
+    () => availableSlots.filter((slot) => !bookedSlotSet.has(slot)),
+    [availableSlots, bookedSlotSet],
+  );
+
   const nearestSlot = useMemo(() => {
     if (!selectedDoctor) {
       return null;
@@ -183,15 +197,15 @@ const User = () => {
     : "Hozircha bo'sh vaqt topilmadi";
 
   useEffect(() => {
-    if (!selectedTime && availableSlots[0]) {
-      setSelectedTime(availableSlots[0]);
+    if (!selectedTime && selectableSlots[0]) {
+      setSelectedTime(selectableSlots[0]);
       return;
     }
 
-    if (selectedTime && !availableSlots.includes(selectedTime)) {
-      setSelectedTime(availableSlots[0] ?? "");
+    if (selectedTime && !selectableSlots.includes(selectedTime)) {
+      setSelectedTime(selectableSlots[0] ?? "");
     }
-  }, [availableSlots, selectedTime]);
+  }, [selectableSlots, selectedTime]);
 
   const userAppointments = useMemo(
     () =>
@@ -230,10 +244,22 @@ const User = () => {
     [userAppointments],
   );
 
+  const normalizedReviewComment = reviewComment.trim();
+  const reviewReadyCount = useMemo(
+    () => userAppointments.filter((appointment) => canReviewAppointment(appointment)).length,
+    [userAppointments],
+  );
+
   const handleBooking = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!selectedDoctor || !selectedDate || !selectedTime || !patientName || !patientPhone) {
+      return;
+    }
+
+    if (!selectableSlots.includes(selectedTime)) {
+      setError("Tanlangan sana uchun bo'sh vaqt qolmagan. Iltimos, boshqa vaqtni tanlang.");
+      setNotice("");
       return;
     }
 
@@ -315,21 +341,42 @@ const User = () => {
       return;
     }
 
+    if (normalizedReviewComment.length < 8) {
+      setError("Sharh kamida 8 ta belgidan iborat bo'lishi kerak.");
+      setNotice("");
+      return;
+    }
+
     try {
+      setIsReviewSubmitting(true);
       setError("");
       setNotice("");
-      await submitDoctorReview(reviewTarget.id, reviewRating, reviewComment);
+      await submitDoctorReview(reviewTarget.id, reviewRating, normalizedReviewComment);
       setNotice("Baholash muvaffaqiyatli yuborildi.");
-      setReviewTarget(null);
-      setReviewComment("");
-      setReviewRating(5);
+      closeReviewModal();
     } catch (reviewErrorValue) {
       setError(
         reviewErrorValue instanceof Error
           ? translateError(reviewErrorValue.message)
           : translateError("Kirishda xatolik yuz berdi."),
       );
+    } finally {
+      setIsReviewSubmitting(false);
     }
+  };
+
+  const openReviewModal = (appointment: Appointment) => {
+    setReviewTarget(appointment);
+    setReviewRating(5);
+    setReviewComment("");
+    setError("");
+    setNotice("");
+  };
+
+  const closeReviewModal = () => {
+    setReviewTarget(null);
+    setReviewRating(5);
+    setReviewComment("");
   };
 
   const bookingRules = getBookingRulesMessage(language);
@@ -438,7 +485,7 @@ const User = () => {
 
         {activeTab === "booking" && (
           <section className="user-workspace-grid">
-            <article className="preview-card preview-highlight">
+            <article className="preview-card preview-highlight doctor-list-panel">
               <div className="panel-heading">
                 <div>
                   <span className="section-chip">Doktorlar ro'yxati</span>
@@ -474,37 +521,86 @@ const User = () => {
                 </label>
               </div>
 
+              <div className="doctor-list-toolbar">
+                <span className="badge">
+                  <StethoscopeIcon />
+                  {filteredDoctors.length} ta doktor
+                </span>
+                <p className="doctor-list-note">
+                  {selectedDoctor
+                    ? `${selectedDoctor.name} tanlangan. Kartalarni skroll qilib tezda solishtiring.`
+                    : "Kartalardan birini tanlang va bron formasi avtomatik yangilanadi."}
+                </p>
+              </div>
+
               <div className="doctor-scroll-grid">
-                {filteredDoctors.map((doctor) => (
-                  <button
-                    key={doctor.id}
-                    type="button"
-                    className={`doctor-select-card ${
-                      selectedDoctor?.id === doctor.id ? "doctor-select-card-active" : ""
-                    }`}
-                    onClick={() => setSelectedDoctorId(doctor.id)}
-                  >
-                    <div className="doctor-select-head">
-                      <div className="doctor-card-avatar">
-                        <StethoscopeIcon />
-                      </div>
-                      <span className="badge">{doctor.isOnline ? "Ishda" : "Ishda emas"}</span>
-                    </div>
-                    <div className="doctor-name-scroll">
-                      <strong>{doctor.name}</strong>
-                    </div>
-                    <span>{translateSpecialty(doctor.specialty)}</span>
-                    <span>{doctor.clinic}</span>
-                    <p>{getDoctorBookingRecommendation(doctor, appointments)}</p>
-                    <div className="doctor-slot-list">
-                      {doctor.availableSlots.slice(0, 4).map((slot) => (
-                        <span key={`${doctor.id}-${slot}`} className="doctor-slot-chip">
-                          {slot}
+                {filteredDoctors.map((doctor) => {
+                  const isSelected = selectedDoctor?.id === doctor.id;
+                  const bookingRecommendation = getDoctorBookingRecommendation(doctor, appointments);
+
+                  return (
+                    <button
+                      key={doctor.id}
+                      type="button"
+                      className={`doctor-select-card ${isSelected ? "doctor-select-card-active" : ""}`}
+                      onClick={() => setSelectedDoctorId(doctor.id)}
+                    >
+                      <div className="doctor-select-head">
+                        <div className="doctor-select-identity">
+                          <div className="doctor-card-avatar">
+                            <StethoscopeIcon />
+                          </div>
+                          <div className="doctor-select-title">
+                            <div className="doctor-name-scroll">
+                              <strong>{doctor.name}</strong>
+                            </div>
+                            <span>{translateSpecialty(doctor.specialty)}</span>
+                          </div>
+                        </div>
+                        <span className={`badge doctor-status-badge ${doctor.isOnline ? "doctor-status-online" : "doctor-status-offline"}`}>
+                          {doctor.isOnline ? "Ishda" : "Ishda emas"}
                         </span>
-                      ))}
-                    </div>
-                  </button>
-                ))}
+                      </div>
+
+                      <div className="doctor-select-summary">
+                        <span>{doctor.clinic}</span>
+                        <span>{translateRegion(doctor.region)}</span>
+                      </div>
+
+                      <div className="doctor-select-metrics">
+                        <div>
+                          <span>Reyting</span>
+                          <strong>{doctor.rating.toFixed(1)}</strong>
+                        </div>
+                        <div>
+                          <span>Tajriba</span>
+                          <strong>{doctor.experience}</strong>
+                        </div>
+                        <div>
+                          <span>Narx</span>
+                          <strong>{doctor.price}</strong>
+                        </div>
+                      </div>
+
+                      <p className="doctor-select-recommendation">{bookingRecommendation}</p>
+
+                      <div className="doctor-slot-list">
+                        {doctor.availableSlots.slice(0, 4).map((slot) => (
+                          <span key={`${doctor.id}-${slot}`} className="doctor-slot-chip">
+                            {slot}
+                          </span>
+                        ))}
+                      </div>
+                    </button>
+                  );
+                })}
+
+                {filteredDoctors.length === 0 && (
+                  <div className="empty-state doctor-empty-state">
+                    <h3>Doktor topilmadi</h3>
+                    <p>Qidiruv yoki hudud filterini o'zgartirib qayta urinib ko'ring.</p>
+                  </div>
+                )}
               </div>
             </article>
 
@@ -522,12 +618,17 @@ const User = () => {
                     <div className="doctor-card-avatar">
                       <StethoscopeIcon />
                     </div>
-                    <div>
+                    <div className="booking-doctor-copy">
                       <div className="doctor-name-scroll doctor-name-scroll-title">
                         <h3>{selectedDoctor.name}</h3>
                       </div>
                       <p>{translateSpecialty(selectedDoctor.specialty)} | {selectedDoctor.clinic}</p>
                       <span>{translateRegion(selectedDoctor.region)} | {selectedDoctor.price}</span>
+                      <div className="booking-doctor-pills">
+                        <span className="doctor-slot-chip">{selectedDoctor.experience} tajriba</span>
+                        <span className="doctor-slot-chip">{selectedDoctor.rating.toFixed(1)} reyting</span>
+                        <span className="doctor-slot-chip">{selectedDoctor.isOnline ? "Hozir ishda" : "Hozir offline"}</span>
+                      </div>
                     </div>
                   </div>
 
@@ -577,11 +678,17 @@ const User = () => {
                       <div className="field-box field-box-select">
                         <ClockIcon />
                         <select value={selectedTime} onChange={(event) => setSelectedTime(event.target.value)} required>
-                          {availableSlots.map((slot) => (
-                            <option key={slot} value={slot} disabled={bookedSlotSet.has(slot)}>
-                              {slot}{bookedSlotSet.has(slot) ? " - band" : ""}
+                          {selectableSlots.length > 0 ? (
+                            selectableSlots.map((slot) => (
+                              <option key={slot} value={slot}>
+                                {slot}
+                              </option>
+                            ))
+                          ) : (
+                            <option value="" disabled>
+                              Bo'sh vaqt qolmagan
                             </option>
-                          ))}
+                          )}
                         </select>
                       </div>
                     </label>
@@ -596,7 +703,17 @@ const User = () => {
                     </label>
                   </div>
 
-                  <button type="submit" className="button button-primary button-large" disabled={isSubmitting}>
+                  {selectableSlots.length === 0 && (
+                    <p className="doctor-form-warning">
+                      Tanlangan sana uchun barcha vaqtlar band. Sana yoki doktorni almashtiring.
+                    </p>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="button button-primary button-large"
+                    disabled={isSubmitting || selectableSlots.length === 0}
+                  >
                     Buyurtma yuborish
                     <ArrowRightIcon />
                   </button>
@@ -655,39 +772,77 @@ const User = () => {
                   <span className="section-chip">Faol buyurtmalar</span>
                   <h2>Faol buyurtmalarim</h2>
                 </div>
+                <span className="badge badge-gold">
+                  <StarIcon />
+                  {reviewReadyCount} ta sharh tayyor
+                </span>
               </div>
               <div className="doctor-request-list">
-                {activeAppointments.map((appointment) => (
-                  <article key={appointment.id} className="doctor-request-item">
-                    <div className="appointment-card-head">
-                      <div>
-                        <h3>{appointment.doctorName}</h3>
-                        <p>{translateSpecialty(appointment.specialty)}</p>
+                {activeAppointments.map((appointment) => {
+                  const canReview = canReviewAppointment(appointment);
+                  const canCancel = canCancelAppointment(appointment);
+
+                  return (
+                    <article key={appointment.id} className="doctor-request-item">
+                      <div className="appointment-card-head">
+                        <div>
+                          <h3>{appointment.doctorName}</h3>
+                          <p>{translateSpecialty(appointment.specialty)}</p>
+                        </div>
+                        <span className="badge">{translateStatus(appointment.status)}</span>
                       </div>
-                      <span className="badge">{translateStatus(appointment.status)}</span>
-                    </div>
-                    <div className="appointment-meta-grid">
-                      <div>
-                        <CalendarIcon />
-                        <span>{appointment.date}</span>
+                      <div className="appointment-meta-grid">
+                        <div>
+                          <CalendarIcon />
+                          <span>{appointment.date}</span>
+                        </div>
+                        <div>
+                          <ClockIcon />
+                          <span>{appointment.time}</span>
+                        </div>
+                        <div>
+                          <LocationIcon />
+                          <span>{appointment.clinic}</span>
+                        </div>
                       </div>
-                      <div>
-                        <ClockIcon />
-                        <span>{appointment.time}</span>
-                      </div>
-                      <div>
-                        <LocationIcon />
-                        <span>{appointment.clinic}</span>
-                      </div>
-                    </div>
-                    {appointment.notes && <p>{appointment.notes}</p>}
-                    <div className="doctor-request-actions">
-                      <button type="button" className="button button-ghost" onClick={() => void handleCancel(appointment.id)}>
-                        Bekor qilish
-                      </button>
-                    </div>
-                  </article>
-                ))}
+                      {appointment.notes && <p>{appointment.notes}</p>}
+
+                      {canReview && (
+                        <div className="appointment-review-banner">
+                          <strong>
+                            <StarIcon />
+                            Qabul tugadi, endi baho berishingiz mumkin
+                          </strong>
+                          <p>Izoh va yulduzcha bahosi doktor profilidagi reytingga darhol qo'shiladi.</p>
+                        </div>
+                      )}
+
+                      {(canCancel || canReview) && (
+                        <div className="doctor-request-actions">
+                          {canCancel && (
+                            <button
+                              type="button"
+                              className="button button-ghost"
+                              onClick={() => void handleCancel(appointment.id)}
+                            >
+                              Bekor qilish
+                            </button>
+                          )}
+                          {canReview && (
+                            <button
+                              type="button"
+                              className="button button-primary"
+                              onClick={() => openReviewModal(appointment)}
+                            >
+                              Baho berish
+                              <StarIcon />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
 
                 {activeAppointments.length === 0 && (
                   <div className="empty-state">
@@ -707,11 +862,7 @@ const User = () => {
               </div>
               <div className="doctor-request-list">
                 {historyAppointments.map((appointment) => {
-                  const canReview =
-                    appointment.status !== "Bekor qilindi" &&
-                    appointment.status !== "Rad etildi" &&
-                    hasAppointmentStarted(appointment.date, appointment.time) &&
-                    !appointment.reviewRating;
+                  const canReview = canReviewAppointment(appointment);
 
                   return (
                     <article key={appointment.id} className="doctor-request-item">
@@ -737,17 +888,26 @@ const User = () => {
                         </div>
                       </div>
                       {appointment.reviewRating && (
-                        <p>{appointment.reviewRating} / 5 | {appointment.reviewComment || "Izoh qoldirilmagan"}</p>
+                        <p className="review-summary-text">
+                          {appointment.reviewRating} / 5 | {appointment.reviewComment || "Izoh qoldirilmagan"}
+                        </p>
                       )}
                       {appointment.rejectedReason && <p>{appointment.rejectedReason}</p>}
                       {canReview && (
-                        <button type="button" className="button button-secondary" onClick={() => setReviewTarget(appointment)}>
+                        <button type="button" className="button button-secondary" onClick={() => openReviewModal(appointment)}>
                           Baho berish
                         </button>
                       )}
                     </article>
                   );
                 })}
+
+                {historyAppointments.length === 0 && (
+                  <div className="empty-state">
+                    <h3>Tarix hali bo'sh</h3>
+                    <p>Yakunlangan, bekor qilingan yoki rad etilgan buyurtmalar shu yerda ko'rinadi.</p>
+                  </div>
+                )}
               </div>
             </article>
           </section>
@@ -872,7 +1032,7 @@ const User = () => {
       </main>
 
       {reviewTarget && (
-        <div className="modal-backdrop" onClick={() => setReviewTarget(null)} role="presentation">
+        <div className="modal-backdrop" onClick={closeReviewModal} role="presentation">
           <div
             className="modal-card review-modal-card"
             onClick={(event) => event.stopPropagation()}
@@ -881,15 +1041,19 @@ const User = () => {
             aria-labelledby="review-title"
           >
             <form className="review-form modal-scroll-area" onSubmit={handleReviewSubmit}>
-                <div className="panel-heading">
-                  <div>
-                    <span className="section-chip">Baho</span>
-                    <h2 id="review-title">{reviewTarget.doctorName} uchun baho</h2>
-                  </div>
-                <button type="button" className="icon-button" onClick={() => setReviewTarget(null)}>
+              <div className="panel-heading">
+                <div>
+                  <span className="section-chip">Baho</span>
+                  <h2 id="review-title">{reviewTarget.doctorName} uchun baho</h2>
+                </div>
+                <button type="button" className="icon-button" onClick={closeReviewModal}>
                   <CloseIcon />
                 </button>
               </div>
+
+              <p className="review-modal-copy">
+                Qabul sifati bo'yicha qisqa va aniq sharh yozing. Bu baho doktor reytingiga qo'shiladi.
+              </p>
 
               <div className="review-stars-row">
                 {[1, 2, 3, 4, 5].map((star) => (
@@ -910,15 +1074,25 @@ const User = () => {
                   rows={4}
                   value={reviewComment}
                   onChange={(event) => setReviewComment(event.target.value)}
+                  placeholder="Qabul qanday o'tganini qisqacha yozing"
+                  maxLength={400}
                 />
               </label>
 
+              <p className="review-modal-copy">
+                {normalizedReviewComment.length}/400 belgi. Kamida 8 ta belgi yozing.
+              </p>
+
               <div className="modal-actions">
-                <button type="button" className="button button-ghost" onClick={() => setReviewTarget(null)}>
+                <button type="button" className="button button-ghost" onClick={closeReviewModal}>
                   Bekor qilish
                 </button>
-                <button type="submit" className="button button-primary">
-                  Yuborish
+                <button
+                  type="submit"
+                  className="button button-primary"
+                  disabled={isReviewSubmitting || normalizedReviewComment.length < 8}
+                >
+                  {isReviewSubmitting ? "Yuborilmoqda..." : "Yuborish"}
                   <CheckIcon />
                 </button>
               </div>

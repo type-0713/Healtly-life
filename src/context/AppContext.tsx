@@ -920,6 +920,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
 
         if (status === "Bekor qilindi") {
+          if (
+            appointmentData.status === "Bekor qilindi" ||
+            appointmentData.status === "Rad etildi" ||
+            appointmentData.status === "Yakunlandi"
+          ) {
+            throw new Error("Bu qabul holatini endi o'zgartirib bo'lmaydi.");
+          }
+
+          if (
+            appointmentData.status === "Tasdiqlandi" &&
+            hasAppointmentStarted(String(appointmentData.date ?? ""), String(appointmentData.time ?? ""))
+          ) {
+            throw new Error("Boshlangan qabulni bekor qilib bo'lmaydi.");
+          }
+
           transaction.update(appointmentRef, {
             status,
             cancelledAt: new Date().toISOString(),
@@ -992,6 +1007,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const actorKey = (currentUser?.uid ?? localUserId).trim().toLowerCase();
       const actorEmail = (currentUser?.email ?? localUserEmail ?? profile.email).trim().toLowerCase();
 
+      if (trimmedComment.length < 8) {
+        throw new Error("Sharh kamida 8 ta belgidan iborat bo'lishi kerak.");
+      }
+
       await runTransaction(db, async (transaction) => {
         const appointmentSnapshot = await transaction.get(appointmentRef);
 
@@ -1021,6 +1040,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
         if (appointmentData.status === "Bekor qilindi" || appointmentData.status === "Rad etildi") {
           throw new Error("Bekor qilingan qabulga baho berib bo'lmaydi.");
+        }
+
+        if (appointmentData.status !== "Tasdiqlandi" && appointmentData.status !== "Yakunlandi") {
+          throw new Error("Faqat tasdiqlangan yoki yakunlangan qabul uchun sharh qoldirish mumkin.");
         }
 
         const doctorRef = doc(db, "doctors", String(appointmentData.doctorId));
