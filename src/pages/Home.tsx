@@ -24,7 +24,7 @@ import { useI18n } from "../context/I18nContext";
 import { homeCopy } from "../i18n/homeCopy";
 import { getDoctorMapQuery, getMapSearchUrl } from "../lib/maps";
 import { ALL_REGIONS_OPTION, UZBEKISTAN_REGIONS } from "../lib/regions";
-import { getBookingRulesMessage } from "../lib/schedule";
+import { findNearestAvailableDoctorSlot, getBookingRulesMessage, getTodayInTashkent } from "../lib/schedule";
 
 const Home = () => {
   const { language, format, translateRegion, translateSpecialty } = useI18n();
@@ -109,8 +109,32 @@ const Home = () => {
 
   const closeMenu = () => setMenuOpen(false);
   const menuLabel = menuOpen ? copy.closeMenu : copy.openMenu;
-  const highlightedDoctorAvailability = highlightedDoctor?.availableSlots[0]
-    ? format(copy.nextSlot, { time: highlightedDoctor.availableSlots[0] })
+  const formatDoctorSlotLabel = (date: string, time: string) =>
+    date === getTodayInTashkent() ? time : `${date} | ${time}`;
+  const buildDoctorBookingTarget = (doctor: (typeof doctors)[number] | undefined) => {
+    if (!doctor) {
+      return "/user";
+    }
+
+    const nearestSlot = findNearestAvailableDoctorSlot(doctor, appointments);
+
+    if (!nearestSlot) {
+      return `/user?doctor=${encodeURIComponent(doctor.id)}`;
+    }
+
+    const params = new URLSearchParams({
+      doctor: doctor.id,
+      date: nearestSlot.date,
+      time: nearestSlot.time,
+    });
+
+    return `/user?${params.toString()}`;
+  };
+  const highlightedDoctorSlot = highlightedDoctor
+    ? findNearestAvailableDoctorSlot(highlightedDoctor, appointments)
+    : null;
+  const highlightedDoctorAvailability = highlightedDoctorSlot
+    ? format(copy.nextSlot, { time: formatDoctorSlotLabel(highlightedDoctorSlot.date, highlightedDoctorSlot.time) })
     : copy.noOpenSlots;
   const averageRating =
     doctors.length > 0
@@ -194,8 +218,13 @@ const Home = () => {
     }
   }, [isAdminAuthenticated, isDoctorAuthenticated, isUserAuthenticated, navigate]);
 
-  const getDoctorAvailability = (doctor: (typeof doctors)[number]) =>
-    doctor.availableSlots[0] ? format(copy.nextSlot, { time: doctor.availableSlots[0] }) : copy.noOpenSlots;
+  const getDoctorAvailability = (doctor: (typeof doctors)[number]) => {
+    const nearestSlot = findNearestAvailableDoctorSlot(doctor, appointments);
+
+    return nearestSlot
+      ? format(copy.nextSlot, { time: formatDoctorSlotLabel(nearestSlot.date, nearestSlot.time) })
+      : copy.noOpenSlots;
+  };
 
   return (
     <div className="page-shell">
@@ -266,7 +295,7 @@ const Home = () => {
               <p className="hero-text">{copy.heroText}</p>
 
               <div className="hero-actions">
-                <Link to="/user" className="button button-primary button-large">
+                <Link to={buildDoctorBookingTarget(highlightedDoctor)} className="button button-primary button-large">
                   {copy.bookNow}
                   <ArrowRightIcon />
                 </Link>
@@ -342,6 +371,10 @@ const Home = () => {
                 <span>{heroOverlayTitle}</span>
                 <strong>{highlightedDoctorAvailability}</strong>
                 <p>{heroOverlayText}</p>
+                <Link to={buildDoctorBookingTarget(highlightedDoctor)} className="button button-secondary button-block">
+                  Eng yaqin vaqtni ochish
+                  <ArrowRightIcon />
+                </Link>
               </div>
 
               <div className="hero-panel glass-card">
@@ -553,7 +586,9 @@ const Home = () => {
 
                   <div className="doctor-card-quickline">
                     <span>{doctor.price}</span>
-                    <span>{getDoctorAvailability(doctor)}</span>
+                    <Link to={buildDoctorBookingTarget(doctor)} className="doctor-slot-link">
+                      {getDoctorAvailability(doctor)}
+                    </Link>
                   </div>
 
                   <div className="doctor-confidence">
@@ -586,8 +621,9 @@ const Home = () => {
                       {copy.viewMap}
                       <ArrowRightIcon />
                     </a>
-                    <Link to="/user" className="button button-primary button-block">
+                    <Link to={buildDoctorBookingTarget(doctor)} className="button button-primary button-block">
                       {copy.bookVisit}
+                      <ArrowRightIcon />
                     </Link>
                   </div>
                 </article>

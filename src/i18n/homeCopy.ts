@@ -91,9 +91,9 @@ export const homeCopy: Record<Language, any> = {
     faqChip: "Savollar",
     faqTitle: "Xizmat va bronlash qoidalari bo'yicha muhim savollar",
     faqs: [
-      ["Bronlash qachon ochiq bo'ladi?", "Bronlash har kuni 09:00 dan 18:00 gacha ishlaydi, yakshanba kuni esa yopiq."],
-      ["Qaysi vaqtgacha slot tanlash mumkin?", "Qabul slotlari 09:00 dan 17:30 gacha ko'rsatiladi va faqat admin belgilagan vaqtlar chiqadi."],
-      ["Reytingni kim beradi?", "Doktor reytingini faqat qabuldan keyin foydalanuvchilar beradi, admin uni qo'lda o'zgartirmaydi."],
+      ["Bronlash qachon ishlaydi?", "Platforma 24/7 ishlaydi. Siz istalgan vaqtda buyurtma yuborishingiz mumkin."],
+      ["Doktor so'rovni qachon ko'radi?", "Buyurtma tizimga darhol tushadi, doktor esa uni bron vaqtidan 30 daqiqa o'tgach ko'radi."],
+      ["Reytingni kim beradi?", "Doktor reytingi faqat qabul yakunlangach foydalanuvchi bergan baho va izohlar asosida shakllanadi."],
     ],
     startChip: "Boshlash",
     startTitle: "MedElite tizimidan foydalanishni boshlang",

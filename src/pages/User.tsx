@@ -1,6 +1,6 @@
 import type { FormEvent } from "react";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import EmergencyCallButton from "../components/EmergencyCallButton";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import ThemeToggle from "../components/ThemeToggle";
@@ -27,7 +27,13 @@ import {
 import { useI18n } from "../context/I18nContext";
 import { getDoctorMapQuery, getMapSearchUrl } from "../lib/maps";
 import { ALL_REGIONS_OPTION, UZBEKISTAN_REGIONS } from "../lib/regions";
-import { getBookingRulesMessage, getTodayInTashkent, hasAppointmentStarted, isPastTimeSlotForDate } from "../lib/schedule";
+import {
+  findNearestAvailableDoctorSlot,
+  getBookingRulesMessage,
+  getTodayInTashkent,
+  hasAppointmentStarted,
+  isPastTimeSlotForDate,
+} from "../lib/schedule";
 
 type TabId = "booking" | "appointments" | "profile";
 
@@ -64,7 +70,11 @@ const User = () => {
   const [reviewTarget, setReviewTarget] = useState<Appointment | null>(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
   const deferredSearchTerm = useDeferredValue(searchTerm);
+  const requestedDoctorId = searchParams.get("doctor") ?? "";
+  const requestedDate = searchParams.get("date") ?? "";
+  const requestedTime = searchParams.get("time") ?? "";
 
   const activeUserEmail = (currentUser?.email ?? localUserEmail ?? profile.email).trim().toLowerCase();
   const activeUserKey = (currentUser?.uid ?? localUserId ?? activeUserEmail).trim().toLowerCase();
@@ -107,6 +117,32 @@ const User = () => {
     [filteredDoctors, selectedDoctorId],
   );
 
+  useEffect(() => {
+    if (!requestedDoctorId && !requestedDate && !requestedTime) {
+      return;
+    }
+
+    if (requestedDoctorId && !doctors.some((doctor) => doctor.id === requestedDoctorId)) {
+      return;
+    }
+
+    if (requestedDoctorId) {
+      setSelectedDoctorId(requestedDoctorId);
+    }
+
+    if (requestedDate) {
+      setSelectedDate(requestedDate);
+    }
+
+    if (requestedTime) {
+      setSelectedTime(requestedTime);
+    }
+
+    setError("");
+    setNotice("Tanlangan doktor va eng yaqin bo'sh vaqt formaga joylandi.");
+    setSearchParams({}, { replace: true });
+  }, [doctors, requestedDate, requestedDoctorId, requestedTime, setSearchParams]);
+
   const bookedSlotSet = useMemo(
     () =>
       new Set(
@@ -130,6 +166,21 @@ const User = () => {
 
     return selectedDoctor.availableSlots.filter((slot) => !isPastTimeSlotForDate(selectedDate, slot));
   }, [selectedDate, selectedDoctor]);
+
+  const nearestSlot = useMemo(() => {
+    if (!selectedDoctor) {
+      return null;
+    }
+
+    const slotSearchStartDate = selectedDate < getTodayInTashkent() ? getTodayInTashkent() : selectedDate;
+    return findNearestAvailableDoctorSlot(selectedDoctor, appointments, slotSearchStartDate);
+  }, [appointments, selectedDate, selectedDoctor]);
+
+  const nearestSlotLabel = nearestSlot
+    ? nearestSlot.date === getTodayInTashkent()
+      ? `Bugun | ${nearestSlot.time}`
+      : `${nearestSlot.date} | ${nearestSlot.time}`
+    : "Hozircha bo'sh vaqt topilmadi";
 
   useEffect(() => {
     if (!selectedTime && availableSlots[0]) {
@@ -283,6 +334,18 @@ const User = () => {
 
   const bookingRules = getBookingRulesMessage(language);
   const selectedDoctorMapUrl = getMapSearchUrl(getDoctorMapQuery(selectedDoctor ?? {}));
+  const handleUseNearestSlot = () => {
+    if (!nearestSlot) {
+      setError("Tanlangan doktor uchun hozircha bo'sh vaqt topilmadi.");
+      setNotice("");
+      return;
+    }
+
+    setSelectedDate(nearestSlot.date);
+    setSelectedTime(nearestSlot.time);
+    setError("");
+    setNotice(`Eng yaqin bo'sh vaqt tanlandi: ${nearestSlotLabel}.`);
+  };
 
   return (
     <div className="dashboard-page">
@@ -466,6 +529,19 @@ const User = () => {
                       <p>{translateSpecialty(selectedDoctor.specialty)} | {selectedDoctor.clinic}</p>
                       <span>{translateRegion(selectedDoctor.region)} | {selectedDoctor.price}</span>
                     </div>
+                  </div>
+
+                  <div className="booking-quick-actions">
+                    <button
+                      type="button"
+                      className="button button-secondary"
+                      onClick={handleUseNearestSlot}
+                      disabled={!nearestSlot}
+                    >
+                      Eng yaqin bo'sh vaqt
+                      <ClockIcon />
+                    </button>
+                    <span className="doctor-slot-hint">{nearestSlotLabel}</span>
                   </div>
 
                   <div className="field-grid">
@@ -680,12 +756,12 @@ const User = () => {
         {activeTab === "profile" && (
           <section className="user-workspace-grid user-workspace-grid-full">
             <article className="preview-card">
-              <div className="panel-heading">
-                <div>
-                  <span className="section-chip">Profile</span>
-                  <h2>Shaxsiy kabinet</h2>
+                <div className="panel-heading">
+                  <div>
+                    <span className="section-chip">Profil</span>
+                    <h2>Shaxsiy kabinet</h2>
+                  </div>
                 </div>
-              </div>
               <form className="booking-form" onSubmit={handleProfileSave}>
                 <div className="field-grid">
                   <label className="field">
@@ -805,11 +881,11 @@ const User = () => {
             aria-labelledby="review-title"
           >
             <form className="review-form modal-scroll-area" onSubmit={handleReviewSubmit}>
-              <div className="panel-heading">
-                <div>
-                  <span className="section-chip">Review</span>
-                  <h2 id="review-title">{reviewTarget.doctorName} uchun baho</h2>
-                </div>
+                <div className="panel-heading">
+                  <div>
+                    <span className="section-chip">Baho</span>
+                    <h2 id="review-title">{reviewTarget.doctorName} uchun baho</h2>
+                  </div>
                 <button type="button" className="icon-button" onClick={() => setReviewTarget(null)}>
                   <CloseIcon />
                 </button>

@@ -1713,6 +1713,30 @@ textarea {
   font-size: 0.84rem;
 }
 
+.doctor-slot-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border));
+  background: color-mix(in srgb, var(--accent-soft) 56%, var(--surface));
+  color: var(--heading);
+  font-weight: 700;
+  transition:
+    transform 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease,
+    background 0.22s ease;
+}
+
+.doctor-slot-link:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--border));
+  background: color-mix(in srgb, var(--accent-soft) 76%, var(--surface-hover));
+  box-shadow: var(--shadow-soft);
+}
+
 .map-preview-card {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(220px, 0.9fr);
@@ -1956,27 +1980,38 @@ textarea {
 }
 
 .auth-mode-switch {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
   gap: 12px;
-  width: fit-content;
-  padding: 6px;
+  width: 100%;
+  padding: 8px;
   margin: 18px 0 14px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface);
+  border-radius: 28px;
+  border: 1px solid color-mix(in srgb, var(--border) 94%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 92%, transparent), color-mix(in srgb, var(--surface) 92%, transparent)),
+    var(--surface);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .auth-mode-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 46px;
-  padding: 0 20px;
-  border-radius: 999px;
+  min-height: 50px;
+  padding: 0 16px;
+  border-radius: 22px;
+  border: 1px solid transparent;
   color: var(--muted);
-  transition: background 0.22s ease, color 0.22s ease, box-shadow 0.22s ease;
+  font-weight: 700;
+  text-align: center;
+  transition:
+    transform 0.22s ease,
+    background 0.22s ease,
+    color 0.22s ease,
+    box-shadow 0.22s ease,
+    border-color 0.22s ease;
 }
 
 .auth-mode-pill[type="button"] {
@@ -1984,10 +2019,22 @@ textarea {
   background: transparent;
 }
 
+.auth-mode-pill:hover {
+  transform: translateY(-1px);
+  color: var(--heading);
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--border));
+  background: color-mix(in srgb, var(--surface-hover) 84%, transparent);
+}
+
 .auth-mode-pill-active {
   color: var(--heading);
-  background: var(--panel-bg);
-  box-shadow: var(--shadow-soft);
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(240, 246, 255, 0.88)),
+    var(--panel-bg);
+  box-shadow:
+    0 16px 34px rgba(118, 169, 255, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .auth-action-switch {
@@ -2641,21 +2688,40 @@ textarea {
   z-index: 80;
   display: grid;
   place-items: center;
-  padding: 24px;
+  padding: clamp(16px, 2.8vw, 28px);
   background:
-    radial-gradient(circle at top, rgba(96, 142, 255, 0.16), transparent 28%),
-    rgba(4, 10, 20, 0.42);
-  backdrop-filter: blur(14px);
+    radial-gradient(circle at top, rgba(118, 169, 255, 0.18), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(255, 122, 122, 0.14), transparent 28%),
+    rgba(4, 10, 20, 0.5);
+  backdrop-filter: blur(18px);
 }
 
 .modal-card {
   width: min(100%, 620px);
-  border-radius: 30px;
-  background: var(--panel-strong);
+  position: relative;
+  overflow: hidden;
+  border-radius: 34px;
+  border: 1px solid color-mix(in srgb, var(--border) 96%, transparent);
+  background:
+    radial-gradient(circle at top right, rgba(255, 204, 115, 0.12), transparent 28%),
+    radial-gradient(circle at top left, rgba(118, 169, 255, 0.16), transparent 30%),
+    var(--panel-strong);
+  box-shadow:
+    0 30px 80px rgba(4, 10, 24, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.modal-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  opacity: 0.42;
 }
 
 .review-modal-card {
-  padding: 28px;
+  padding: 0;
 }
 
 .booking-success-modal {
@@ -3780,10 +3846,18 @@ textarea {
 .doctor-work-toggle {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 8px;
+  border-radius: 28px;
+  border: 1px solid color-mix(in srgb, var(--border) 92%, transparent);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 .doctor-work-toggle .button {
   width: 100%;
+  min-height: 60px;
+  border-radius: 22px;
+  font-weight: 700;
 }
 
 .booking-doctor-showcase {
@@ -3794,6 +3868,26 @@ textarea {
   border-radius: 22px;
   background: var(--surface);
   border: 1px solid var(--border);
+}
+
+.booking-quick-actions {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 18px;
+  padding: 14px;
+  border-radius: 24px;
+  border: 1px solid color-mix(in srgb, var(--accent) 14%, var(--border));
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--accent-soft) 42%, transparent), color-mix(in srgb, var(--surface) 96%, transparent)),
+    var(--surface);
+}
+
+.doctor-slot-hint {
+  color: var(--heading);
+  font-weight: 600;
+  line-height: 1.6;
 }
 
 .doctor-scroll-grid {
@@ -3926,7 +4020,20 @@ textarea {
 .modal-scroll-area {
   max-height: min(82vh, 900px);
   overflow-y: auto;
-  padding-right: 4px;
+  padding: clamp(20px, 2.4vw, 30px);
+  padding-right: calc(clamp(20px, 2.4vw, 30px) - 6px);
+}
+
+.modal-scroll-area .panel-heading {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: calc(clamp(20px, 2.4vw, 30px) * -1) calc(clamp(20px, 2.4vw, 30px) * -1) 18px;
+  padding: 20px clamp(20px, 2.4vw, 30px) 16px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel-strong) 96%, transparent), color-mix(in srgb, var(--panel-strong) 80%, transparent)),
+    transparent;
+  backdrop-filter: blur(14px);
 }
 
 .doctor-table-wrap {
@@ -4023,6 +4130,15 @@ textarea {
     filter 0.22s ease;
 }
 
+.emergency-fab-core::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  opacity: 0.82;
+}
+
 .emergency-fab-core svg {
   width: 20px;
   height: 20px;
@@ -4048,6 +4164,10 @@ textarea {
   transition:
     transform 0.22s ease,
     opacity 0.22s ease;
+}
+
+.emergency-fab-text strong {
+  letter-spacing: 0.02em;
 }
 
 .emergency-fab:hover .emergency-fab-core,
@@ -4152,6 +4272,16 @@ textarea {
     min-height: 50px;
   }
 
+  .auth-mode-switch-three,
+  .auth-action-switch,
+  .booking-quick-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-mode-pill {
+    min-height: 48px;
+  }
+
   .emergency-fab {
     right: 14px;
     bottom: 14px;
@@ -4172,5 +4302,9 @@ textarea {
   .booking-doctor-showcase {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .modal-scroll-area .panel-heading {
+    margin-bottom: 14px;
   }
 }

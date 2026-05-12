@@ -4,6 +4,18 @@ const pad = (value: number) => String(value).padStart(2, "0");
 
 export const DEFAULT_TIME_SLOTS = Array.from({ length: 24 }, (_, hour) => `${pad(hour)}:00`);
 
+type SlotSearchAppointment = {
+  doctorId: string;
+  date: string;
+  time: string;
+  status: string;
+};
+
+type SlotSearchDoctor = {
+  id: string;
+  availableSlots: string[];
+};
+
 const getTashkentDateParts = (date: Date) => {
   const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone: BOOKING_TIMEZONE,
@@ -36,6 +48,17 @@ export const getTodayInTashkent = () => {
 export const getCurrentTimeInTashkent = () => {
   const { hour, minute } = getTashkentDateParts(new Date());
   return `${pad(hour)}:${pad(minute)}`;
+};
+
+export const addDaysToDate = (dateString: string, days: number) => {
+  if (!dateString) {
+    return getTodayInTashkent();
+  }
+
+  const baseDate = new Date(`${dateString}T00:00:00Z`);
+  baseDate.setUTCDate(baseDate.getUTCDate() + days);
+
+  return `${baseDate.getUTCFullYear()}-${pad(baseDate.getUTCMonth() + 1)}-${pad(baseDate.getUTCDate())}`;
 };
 
 export const isSundayDate = () => false;
@@ -87,6 +110,45 @@ export const hasAppointmentStarted = (dateString: string, time: string) => {
 export const isBookingWindowOpen = () => true;
 
 export const getNextAvailableBookingDate = () => getTodayInTashkent();
+
+export const findNearestAvailableDoctorSlot = (
+  doctor: SlotSearchDoctor | null | undefined,
+  appointments: SlotSearchAppointment[],
+  startDate = getTodayInTashkent(),
+  daysToCheck = 14,
+) => {
+  if (!doctor || doctor.availableSlots.length === 0) {
+    return null;
+  }
+
+  for (let offset = 0; offset < daysToCheck; offset += 1) {
+    const candidateDate = addDaysToDate(startDate, offset);
+    const activeBookedSlots = new Set(
+      appointments
+        .filter(
+          (appointment) =>
+            appointment.doctorId === doctor.id &&
+            appointment.date === candidateDate &&
+            appointment.status !== "Bekor qilindi" &&
+            appointment.status !== "Rad etildi",
+        )
+        .map((appointment) => appointment.time),
+    );
+
+    const nextSlot = doctor.availableSlots.find(
+      (slot) => !isPastTimeSlotForDate(candidateDate, slot) && !activeBookedSlots.has(slot),
+    );
+
+    if (nextSlot) {
+      return {
+        date: candidateDate,
+        time: nextSlot,
+      };
+    }
+  }
+
+  return null;
+};
 
 export const getBookingRulesMessage = (language: "uz" | "ru" | "en" = "uz") => {
   if (language === "ru") {
