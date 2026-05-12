@@ -3988,9 +3988,9 @@ textarea {
   width: 100%;
   position: relative;
   overflow: hidden;
-  padding: 20px;
+  padding: 18px;
   display: grid;
-  gap: 14px;
+  gap: 12px;
   text-align: left;
   border-radius: 30px;
   border: 1px solid var(--border);
@@ -4047,11 +4047,44 @@ textarea {
 }
 
 .doctor-select-summary {
-  gap: 5px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
-.doctor-select-summary span:last-child {
+.doctor-select-summary-card,
+.doctor-select-bio {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+}
+
+.doctor-select-summary-card span,
+.doctor-select-bio > span {
   color: var(--muted);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.doctor-select-summary-card strong {
+  color: var(--heading);
+  line-height: 1.45;
+}
+
+.doctor-select-bio {
+  min-height: 112px;
+}
+
+.doctor-select-bio p {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--text);
+  line-height: 1.68;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 .doctor-select-metrics {
@@ -4062,7 +4095,8 @@ textarea {
 .doctor-select-metrics div {
   display: grid;
   gap: 6px;
-  padding: 12px 13px;
+  min-height: 84px;
+  padding: 14px 16px;
   border-radius: 18px;
   border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
   background: color-mix(in srgb, var(--surface) 88%, transparent);
@@ -4077,35 +4111,37 @@ textarea {
 
 .doctor-select-metrics strong {
   color: var(--heading);
-  font-size: 0.95rem;
+  font-size: 1.02rem;
   line-height: 1.4;
+  word-break: break-word;
 }
 
 .doctor-select-recommendation {
-  padding: 12px 14px;
+  padding: 11px 14px;
   border-radius: 18px;
   border: 1px solid color-mix(in srgb, var(--accent) 14%, var(--border));
   background: color-mix(in srgb, var(--surface) 76%, transparent);
+  line-height: 1.6;
 }
 
 .doctor-slot-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
 .doctor-slot-chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 38px;
-  padding: 0 14px;
+  min-height: 34px;
+  padding: 0 12px;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--border) 92%, transparent);
   background: color-mix(in srgb, var(--surface) 82%, transparent);
   color: var(--heading);
   font-weight: 600;
-  font-size: 0.92rem;
+  font-size: 0.86rem;
 }
 
 .doctor-status-badge {
@@ -4558,9 +4594,18 @@ textarea {
     grid-template-columns: 1fr;
   }
 
+  .doctor-select-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .doctor-select-bio {
+    min-height: auto;
+  }
+
   .doctor-select-metrics div {
     grid-template-columns: 1fr auto;
     align-items: center;
+    min-height: auto;
   }
 
   .doctor-slot-chip {

@@ -563,8 +563,19 @@ const User = () => {
                       </div>
 
                       <div className="doctor-select-summary">
-                        <span>{doctor.clinic}</span>
-                        <span>{translateRegion(doctor.region)}</span>
+                        <div className="doctor-select-summary-card">
+                          <span>Klinika</span>
+                          <strong>{doctor.clinic}</strong>
+                        </div>
+                        <div className="doctor-select-summary-card">
+                          <span>Hudud</span>
+                          <strong>{translateRegion(doctor.region)}</strong>
+                        </div>
+                      </div>
+
+                      <div className="doctor-select-bio">
+                        <span>O'zi haqida</span>
+                        <p>{doctor.bio}</p>
                       </div>
 
                       <div className="doctor-select-metrics">
