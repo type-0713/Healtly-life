@@ -19,6 +19,8 @@ import {
   type User as FirebaseUser,
 } from "firebase/auth";
 import {
+  collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -28,7 +30,6 @@ import {
   runTransaction,
   setDoc,
   writeBatch,
-  collection,
 } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import { inferUzbekRegion, isUzbekRegion } from "../lib/regions";
@@ -51,8 +52,11 @@ export type AppointmentStatus =
 
 export type Doctor = {
   id: string;
-  ownerUid: string;
+  accountEmail: string;
   ownerEmail: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
   name: string;
   specialty: string;
   region: string;
@@ -113,17 +117,35 @@ export type UserProfile = {
 export type ThemeMode = "dark" | "light";
 export type AccountRole = "user" | "admin" | "doctor" | null;
 
+export type DoctorRegistrationInput = {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+};
+
 export type DoctorProfileInput = {
-  name: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
   specialty: string;
-  region: string;
-  experience: string;
-  price: string;
   clinic: string;
   address: string;
-  mapQuery: string;
   bio: string;
-  availableSlots: string[];
+};
+
+type DoctorAccount = {
+  doctorId: string;
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  approvalStatus: DoctorApprovalStatus;
+  profileCompleted: boolean;
+  createdAt: string;
+  updatedAt: string;
 };
 
 type BookingInput = {
@@ -145,6 +167,7 @@ type AppContextValue = {
   currentUser: FirebaseUser | null;
   accountRole: AccountRole;
   currentDoctor: Doctor | null;
+  doctorSessionEmail: string;
   localUserEmail: string;
   localUserId: string;
   theme: ThemeMode;
@@ -172,7 +195,8 @@ type AppContextValue = {
   toggleDoctorOnlineStatus: (isOnline: boolean) => Promise<void>;
   signInWithCredentials: (email: string, password: string) => Promise<void>;
   registerWithCredentials: (email: string, password: string) => Promise<void>;
-  registerDoctorWithCredentials: (email: string, password: string) => Promise<void>;
+  signInDoctorWithCredentials: (email: string, password: string) => Promise<void>;
+  registerDoctorWithCredentials: (input: DoctorRegistrationInput) => Promise<void>;
   signInAsAdmin: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
@@ -190,8 +214,11 @@ type SeedDoctor = Omit<
 const defaultDoctors: SeedDoctor[] = [
   {
     id: "default-alisher-karimov",
-    ownerUid: "",
+    accountEmail: "",
     ownerEmail: "",
+    firstName: "Alisher",
+    lastName: "Karimov",
+    phone: "+998900000001",
     name: "Dr. Alisher Karimov",
     specialty: "Kardiolog",
     region: "Toshkent shahri",
@@ -201,13 +228,16 @@ const defaultDoctors: SeedDoctor[] = [
     clinic: "MedElite Heart Center",
     address: "Toshkent shahri, Yunusobod tumani, Amir Temur ko'chasi 108",
     mapQuery: "Tashkent, Amir Temur Avenue 108, MedElite Heart Center",
-    bio: "Yurak-qon tomir kasalliklari bo'yicha premium konsultatsiya va monitoring.",
+    bio: "Yurak-qon tomir kasalliklari bo'yicha konsultatsiya va muntazam kuzatuv olib boradi.",
     availableSlots: DEFAULT_TIME_SLOTS,
   },
   {
     id: "default-gulsara-niyazova",
-    ownerUid: "",
+    accountEmail: "",
     ownerEmail: "",
+    firstName: "Gulsara",
+    lastName: "Niyazova",
+    phone: "+998900000002",
     name: "Dr. Gulsara Niyazova",
     specialty: "Terapevt",
     region: "Toshkent shahri",
@@ -217,13 +247,16 @@ const defaultDoctors: SeedDoctor[] = [
     clinic: "MedElite Family Care",
     address: "Toshkent shahri, Mirzo Ulug'bek tumani, Buyuk Ipak Yo'li 215",
     mapQuery: "Tashkent, Buyuk Ipak Yoli 215, MedElite Family Care",
-    bio: "Kundalik sog'liq nazorati va oilaviy davolash rejalarini boshqaradi.",
+    bio: "Kundalik sog'liq nazorati va oilaviy davolash rejasini yuritadi.",
     availableSlots: DEFAULT_TIME_SLOTS,
   },
   {
     id: "default-rustam-abdullayev",
-    ownerUid: "",
+    accountEmail: "",
     ownerEmail: "",
+    firstName: "Rustam",
+    lastName: "Abdullayev",
+    phone: "+998900000003",
     name: "Dr. Rustam Abdullayev",
     specialty: "Ortoped",
     region: "Toshkent shahri",
@@ -233,7 +266,7 @@ const defaultDoctors: SeedDoctor[] = [
     clinic: "MedElite Motion Lab",
     address: "Toshkent shahri, Chilonzor tumani, Bunyodkor shoh ko'chasi 47",
     mapQuery: "Tashkent, Bunyodkor Avenue 47, MedElite Motion Lab",
-    bio: "Bo'g'im, umurtqa va reabilitatsiya bo'yicha keng tajribaga ega.",
+    bio: "Bo'g'im, umurtqa va reabilitatsiya bo'yicha ko'p yillik tajribaga ega.",
     availableSlots: DEFAULT_TIME_SLOTS,
   },
 ];
@@ -249,6 +282,8 @@ const defaultProfile: UserProfile = {
 
 const USER_SESSION_KEY = "medelite-user-session";
 const USER_ID_KEY = "medelite-user-id";
+const DOCTOR_SESSION_ID_KEY = "medelite-doctor-session-id";
+const DOCTOR_SESSION_EMAIL_KEY = "medelite-doctor-session-email";
 const THEME_KEY = "medelite-theme";
 const ADMIN_SESSION_KEY = "medelite-admin-session";
 const DEFAULT_THEME: ThemeMode = "light";
@@ -267,8 +302,6 @@ const roleCollection = collection(db, "accountRoles");
 const createLocalUserId = () =>
   `local-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
 
-const getRoleRef = (uid: string) => doc(roleCollection, uid);
-
 const normalizeDoctorText = (value: unknown) =>
   String(value ?? "")
     .trim()
@@ -284,16 +317,6 @@ const normalizeDoctorIdentity = (
     normalizeDoctorText(doctor.clinic),
     normalizeDoctorText(doctor.address),
   ].join("::");
-
-const sanitizeDoctorSlots = (slots: unknown, fallbackSlots: string[] = DEFAULT_TIME_SLOTS) => {
-  const slotSet = new Set(
-    (Array.isArray(slots) ? slots : fallbackSlots)
-      .map((slot) => String(slot))
-      .filter((slot) => isTimeSlotAllowed(slot)),
-  );
-  const orderedSlots = DEFAULT_TIME_SLOTS.filter((slot) => slotSet.has(slot));
-  return orderedSlots.length ? orderedSlots : fallbackSlots;
-};
 
 const normalizeDoctorRegion = (
   region: unknown,
@@ -313,53 +336,35 @@ const normalizeDoctorRegion = (
   );
 };
 
+const sanitizeDoctorSlots = (slots: unknown, fallbackSlots: string[] = DEFAULT_TIME_SLOTS) => {
+  const slotSet = new Set(
+    (Array.isArray(slots) ? slots : fallbackSlots)
+      .map((slot) => String(slot))
+      .filter((slot) => isTimeSlotAllowed(slot)),
+  );
+  const orderedSlots = DEFAULT_TIME_SLOTS.filter((slot) => slotSet.has(slot));
+  return orderedSlots.length ? orderedSlots : fallbackSlots;
+};
+
 const buildAvailabilityLabel = (doctor: Pick<Doctor, "availableSlots" | "isOnline" | "approvalStatus">) => {
   if (doctor.approvalStatus !== "approved") {
     return "Admin tasdig'i kutilmoqda";
   }
 
-  if (!doctor.isOnline) {
-    return "Hozir ishda emas, lekin request qabul qiladi";
+  if (!doctor.availableSlots.length) {
+    return "Bo'sh vaqtlar hali qo'shilmagan";
   }
 
-  if (!doctor.availableSlots.length) {
-    return "24/7 request qabul qiladi";
+  if (!doctor.isOnline) {
+    return "Hozir ishda emas, lekin bo'sh vaqtlari uchun so'rov qabul qiladi";
   }
 
   return `Bo'sh vaqtlar: ${doctor.availableSlots.slice(0, 3).join(", ")}`;
 };
 
-const createDoctorDraft = (uid: string, email: string) => {
-  const createdAt = new Date().toISOString();
-  const fallbackName = email.split("@")[0]?.replace(/[._-]+/g, " ").trim() || "Yangi doktor";
-  return {
-    id: uid,
-    ownerUid: uid,
-    ownerEmail: email,
-    name: fallbackName,
-    specialty: "",
-    region: "Toshkent shahri",
-    rating: 5,
-    reviewCount: 0,
-    experience: "",
-    price: "",
-    availability: "Admin tasdig'i kutilmoqda",
-    clinic: "",
-    address: "",
-    mapQuery: "",
-    bio: "",
-    availableSlots: DEFAULT_TIME_SLOTS,
-    approvalStatus: "pending" as const,
-    profileCompleted: false,
-    isOnline: false,
-    createdAt,
-    updatedAt: createdAt,
-  };
-};
-
 const toDoctor = (id: string, data: Record<string, unknown>): Doctor => {
   const reviewCount = Number(data.reviewCount ?? 0);
-  const rawRating = Number(data.rating ?? 5);
+  const rating = Number(data.rating ?? 5);
   const availableSlots = sanitizeDoctorSlots(data.availableSlots);
   const approvalStatus =
     String(data.approvalStatus ?? "") === "approved"
@@ -368,16 +373,18 @@ const toDoctor = (id: string, data: Record<string, unknown>): Doctor => {
         ? "rejected"
         : "pending";
   const isOnline = Boolean(data.isOnline);
-  const profileCompleted = Boolean(data.profileCompleted);
 
   const doctor: Doctor = {
     id,
-    ownerUid: String(data.ownerUid ?? ""),
-    ownerEmail: String(data.ownerEmail ?? ""),
-    name: String(data.name ?? ""),
+    accountEmail: String(data.accountEmail ?? data.ownerEmail ?? ""),
+    ownerEmail: String(data.ownerEmail ?? data.accountEmail ?? ""),
+    firstName: String(data.firstName ?? ""),
+    lastName: String(data.lastName ?? ""),
+    phone: String(data.phone ?? ""),
+    name: String(data.name ?? "").trim(),
     specialty: String(data.specialty ?? ""),
     region: normalizeDoctorRegion(data.region, data.address, data.clinic, data.mapQuery),
-    rating: reviewCount > 0 ? rawRating : 5,
+    rating: reviewCount > 0 ? rating : 5,
     reviewCount,
     experience: String(data.experience ?? ""),
     price: String(data.price ?? ""),
@@ -388,12 +395,14 @@ const toDoctor = (id: string, data: Record<string, unknown>): Doctor => {
     bio: String(data.bio ?? ""),
     availableSlots,
     approvalStatus,
-    profileCompleted,
+    profileCompleted: Boolean(data.profileCompleted),
     isOnline,
     createdAt: String(data.createdAt ?? ""),
     updatedAt: String(data.updatedAt ?? ""),
   };
 
+  doctor.name =
+    doctor.name || [doctor.firstName, doctor.lastName].filter(Boolean).join(" ").trim() || "Yangi doktor";
   doctor.availability = buildAvailabilityLabel(doctor);
   return doctor;
 };
@@ -437,11 +446,12 @@ const toAppointment = (id: string, data: Record<string, unknown>): Appointment =
   handledAt: String(data.handledAt ?? ""),
   cancelledAt: String(data.cancelledAt ?? ""),
   rejectedReason: String(data.rejectedReason ?? ""),
-  reviewRating:
-    typeof data.reviewRating === "number" ? Number(data.reviewRating) : undefined,
+  reviewRating: typeof data.reviewRating === "number" ? Number(data.reviewRating) : undefined,
   reviewComment: String(data.reviewComment ?? ""),
   reviewedAt: String(data.reviewedAt ?? ""),
 });
+
+const getRoleRef = (uid: string) => doc(roleCollection, uid);
 
 const getStoredRole = async (uid: string) => {
   const snapshot = await getDoc(getRoleRef(uid));
@@ -451,31 +461,96 @@ const getStoredRole = async (uid: string) => {
   }
 
   const rawRole = String(snapshot.data().role ?? "");
-
-  if (rawRole === "admin" || rawRole === "user" || rawRole === "doctor") {
-    return rawRole;
-  }
-
-  return null;
+  return rawRole === "user" ? "user" : null;
 };
 
-const ensureRole = async (uid: string, fallbackRole: Exclude<AccountRole, null>) => {
+const ensureRole = async (uid: string) => {
   const currentRole = await getStoredRole(uid);
 
   if (currentRole) {
     return currentRole;
   }
 
-  await setDoc(getRoleRef(uid), { role: fallbackRole }, { merge: true });
-  return fallbackRole;
+  await setDoc(getRoleRef(uid), { role: "user" }, { merge: true });
+  return "user";
 };
+
+const mapFirebaseAuthError = (error: unknown) => {
+  const code =
+    typeof error === "object" && error !== null && "code" in error
+      ? String((error as { code?: unknown }).code ?? "")
+      : "";
+
+  switch (code) {
+    case "auth/email-already-in-use":
+      return "Bu email allaqachon ro'yxatdan o'tgan.";
+    case "auth/invalid-email":
+      return "Email formati noto'g'ri.";
+    case "auth/weak-password":
+      return "Parol kamida 6 ta belgidan iborat bo'lishi kerak.";
+    case "auth/invalid-credential":
+    case "auth/user-not-found":
+    case "auth/wrong-password":
+      return "Email yoki parol noto'g'ri.";
+    case "auth/popup-closed-by-user":
+      return "Kirish oynasi yopib yuborildi.";
+    default:
+      return error instanceof Error ? error.message : "Kirishda xatolik yuz berdi.";
+  }
+};
+
+const createDoctorDraft = (input: {
+  doctorId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+}): Doctor => {
+  const now = new Date().toISOString();
+  const name = [input.firstName, input.lastName].filter(Boolean).join(" ").trim() || "Yangi doktor";
+
+  return {
+    id: input.doctorId,
+    accountEmail: input.email,
+    ownerEmail: input.email,
+    firstName: input.firstName,
+    lastName: input.lastName,
+    phone: input.phone,
+    name,
+    specialty: "",
+    region: "Toshkent shahri",
+    rating: 5,
+    reviewCount: 0,
+    experience: "",
+    price: "",
+    availability: "Admin tasdig'i kutilmoqda",
+    clinic: "",
+    address: "",
+    mapQuery: "",
+    bio: "",
+    availableSlots: ["09:00", "10:00", "14:00", "18:00"],
+    approvalStatus: "pending",
+    profileCompleted: false,
+    isOnline: false,
+    createdAt: now,
+    updatedAt: now,
+  };
+};
+
+const doctorAccountDocId = (email: string) => email.trim().toLowerCase();
+
+const createDoctorId = (email: string) =>
+  `doctor-${email
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")}`;
 
 const syncDefaultDoctors = async () => {
   const doctorSnapshot = await getDocs(doctorCollection);
   const batch = writeBatch(db);
-  let hasWrites = false;
 
-  for (const defaultDoctor of defaultDoctors) {
+  defaultDoctors.forEach((defaultDoctor) => {
     const matchingDoctor = doctorSnapshot.docs.find(
       (item) =>
         item.id === defaultDoctor.id ||
@@ -484,31 +559,27 @@ const syncDefaultDoctors = async () => {
     );
     const now = new Date().toISOString();
 
-    const payload = {
-      ...defaultDoctor,
-      rating: Number(matchingDoctor?.data().rating ?? 5),
-      reviewCount: Number(matchingDoctor?.data().reviewCount ?? 0),
-      approvalStatus: "approved",
-      profileCompleted: true,
-      isOnline: true,
-      availableSlots: DEFAULT_TIME_SLOTS,
-      availability: "24/7 navbat qabul qiladi",
-      createdAt: String(matchingDoctor?.data().createdAt ?? now),
-      updatedAt: now,
-    };
-
-    batch.set(doc(db, "doctors", defaultDoctor.id), payload, { merge: true });
+    batch.set(
+      doc(db, "doctors", defaultDoctor.id),
+      {
+        ...defaultDoctor,
+        rating: Number(matchingDoctor?.data().rating ?? 5),
+        reviewCount: Number(matchingDoctor?.data().reviewCount ?? 0),
+        approvalStatus: "approved",
+        profileCompleted: true,
+        isOnline: true,
+        createdAt: String(matchingDoctor?.data().createdAt ?? now),
+        updatedAt: now,
+      },
+      { merge: true },
+    );
 
     if (matchingDoctor && matchingDoctor.id !== defaultDoctor.id) {
       batch.delete(matchingDoctor.ref);
     }
+  });
 
-    hasWrites = true;
-  }
-
-  if (hasWrites) {
-    await batch.commit();
-  }
+  await batch.commit();
 };
 
 const getDoctorPriceValue = (price: string) => {
@@ -524,6 +595,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       ? ""
       : window.localStorage.getItem(USER_ID_KEY) ??
         (initialLocalEmail ? createLocalUserId() : "");
+  const initialDoctorSessionId =
+    typeof window === "undefined" ? "" : window.localStorage.getItem(DOCTOR_SESSION_ID_KEY) ?? "";
+  const initialDoctorSessionEmail =
+    typeof window === "undefined"
+      ? ""
+      : window.localStorage.getItem(DOCTOR_SESSION_EMAIL_KEY) ?? "";
   const initialTheme =
     typeof window === "undefined"
       ? DEFAULT_THEME
@@ -540,7 +617,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     email: initialLocalEmail || defaultProfile.email,
   });
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
-  const [accountRole, setAccountRole] = useState<AccountRole>(null);
+  const [accountRole, setAccountRole] = useState<AccountRole>(
+    initialAdminSession ? "admin" : initialDoctorSessionId ? "doctor" : null,
+  );
+  const [doctorSessionId, setDoctorSessionId] = useState(initialDoctorSessionId);
+  const [doctorSessionEmail, setDoctorSessionEmail] = useState(initialDoctorSessionEmail);
   const [localUserEmail, setLocalUserEmail] = useState(initialLocalEmail);
   const [localUserId, setLocalUserId] = useState(initialLocalUserId);
   const [adminSessionActive, setAdminSessionActive] = useState(initialAdminSession);
@@ -548,29 +629,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [authLoading, setAuthLoading] = useState(true);
 
   const doctors = useMemo(
-    () => doctorRoster.filter((doctor) => doctor.approvalStatus === "approved"),
+    () =>
+      doctorRoster.filter(
+        (doctor) => doctor.approvalStatus === "approved" && doctor.profileCompleted,
+      ),
     [doctorRoster],
   );
 
-  const currentDoctor = useMemo(() => {
-    if (!currentUser || accountRole !== "doctor") {
-      return null;
-    }
-
-    return (
-      doctorRoster.find(
-        (doctor) =>
-          doctor.ownerUid === currentUser.uid ||
-          (currentUser.email && doctor.ownerEmail === currentUser.email),
-      ) ?? null
-    );
-  }, [accountRole, currentUser, doctorRoster]);
+  const currentDoctor = useMemo(
+    () => doctorRoster.find((doctor) => doctor.id === doctorSessionId) ?? null,
+    [doctorRoster, doctorSessionId],
+  );
 
   const doctorApprovalStatus = currentDoctor?.approvalStatus ?? null;
   const isAdminAuthenticated = adminSessionActive;
-  const isDoctorAuthenticated = Boolean(currentUser && accountRole === "doctor");
+  const isDoctorAuthenticated = Boolean(doctorSessionId && doctorSessionEmail);
   const isUserAuthenticated = Boolean(
-    (currentUser && accountRole !== "doctor") || (localUserEmail && localUserId),
+    (currentUser && accountRole === "user") || (!currentUser && localUserEmail && localUserId),
   );
 
   useEffect(() => {
@@ -594,17 +669,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [adminSessionActive]);
 
   useEffect(() => {
+    if (doctorSessionId && doctorSessionEmail) {
+      window.localStorage.setItem(DOCTOR_SESSION_ID_KEY, doctorSessionId);
+      window.localStorage.setItem(DOCTOR_SESSION_EMAIL_KEY, doctorSessionEmail);
+      return;
+    }
+
+    window.localStorage.removeItem(DOCTOR_SESSION_ID_KEY);
+    window.localStorage.removeItem(DOCTOR_SESSION_EMAIL_KEY);
+  }, [doctorSessionEmail, doctorSessionId]);
+
+  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
 
       if (user) {
         setAdminSessionActive(false);
-      }
-
-      if (!user) {
-        if (!adminSessionActive) {
-          setAccountRole(null);
+        if (!doctorSessionId) {
+          setAccountRole("user");
         }
+      } else if (!adminSessionActive && !doctorSessionId) {
+        setAccountRole(null);
         setProfile(defaultProfile);
       }
 
@@ -612,7 +697,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return unsubscribe;
-  }, [adminSessionActive]);
+  }, [adminSessionActive, doctorSessionId]);
 
   useEffect(() => {
     void syncDefaultDoctors().catch(() => undefined);
@@ -645,56 +730,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    if (!currentUser) {
-      return;
-    }
-
-    const unsubscribe = onSnapshot(getRoleRef(currentUser.uid), (snapshot) => {
-      if (!snapshot.exists()) {
-        setAccountRole(null);
-        return;
-      }
-
-      const rawRole = String(snapshot.data().role ?? "");
-
-      if (rawRole === "admin" || rawRole === "user" || rawRole === "doctor") {
-        setAccountRole(rawRole);
-        return;
-      }
-
-      setAccountRole(null);
-    });
-
-    return unsubscribe;
-  }, [currentUser]);
-
-  useEffect(() => {
-    if (!currentUser || accountRole !== "doctor") {
-      return;
-    }
-
-    const existingDoctor = doctorRoster.find(
-      (doctor) =>
-        doctor.ownerUid === currentUser.uid ||
-        (currentUser.email && doctor.ownerEmail === currentUser.email),
-    );
-
-    if (existingDoctor) {
-      return;
-    }
-
-    const email = currentUser.email?.trim().toLowerCase();
-
-    if (!email) {
-      return;
-    }
-
-    void setDoc(doc(db, "doctors", currentUser.uid), createDoctorDraft(currentUser.uid, email), {
-      merge: true,
-    }).catch(() => undefined);
-  }, [accountRole, currentUser, doctorRoster]);
-
-  useEffect(() => {
     if (!currentUser && !localUserEmail) {
       return;
     }
@@ -719,41 +754,70 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return unsubscribe;
   }, [currentUser, localUserEmail, localUserId]);
 
-  const removeDoctorHandler = useCallback(async (doctorId: string) => {
-    const snapshot = await getDocs(appointmentCollection);
-    const batch = writeBatch(db);
-
-    snapshot.docs.forEach((item) => {
-      const data = item.data() as Partial<Appointment>;
-
-      if (String(data.doctorId ?? "") === doctorId && data.status === "Kutilmoqda") {
-        batch.update(item.ref, {
-          status: "Rad etildi",
-          handledAt: new Date().toISOString(),
-          rejectedReason: "Doktor ro'yxatdan olib tashlandi",
-        });
-      }
-    });
-
-    batch.delete(doc(db, "doctors", doctorId));
-    await batch.commit();
+  const clearLocalUserSession = useCallback(() => {
+    setLocalUserEmail("");
+    setLocalUserId("");
+    window.localStorage.removeItem(USER_SESSION_KEY);
+    window.localStorage.removeItem(USER_ID_KEY);
   }, []);
 
-  const setDoctorApprovalHandler = useCallback(
-    async (doctorId: string, status: DoctorApprovalStatus) => {
-      const doctorRef = doc(db, "doctors", doctorId);
+  const clearDoctorSession = useCallback(() => {
+    setDoctorSessionId("");
+    setDoctorSessionEmail("");
+    window.localStorage.removeItem(DOCTOR_SESSION_ID_KEY);
+    window.localStorage.removeItem(DOCTOR_SESSION_EMAIL_KEY);
+  }, []);
+
+  const removeDoctorHandler = useCallback(async (doctorId: string) => {
+    const doctorRef = doc(db, "doctors", doctorId);
+    const doctorSnapshot = await getDoc(doctorRef);
+    const doctorData = doctorSnapshot.exists()
+      ? (doctorSnapshot.data() as Partial<Doctor>)
+      : undefined;
+
+    if (doctorData?.ownerEmail) {
+      await deleteDoc(doc(db, "doctorAccounts", doctorAccountDocId(String(doctorData.ownerEmail))));
+    }
+
+    await deleteDoc(doctorRef);
+  }, []);
+
+  const setDoctorApprovalHandler = useCallback(async (doctorId: string, status: DoctorApprovalStatus) => {
+    const doctorRef = doc(db, "doctors", doctorId);
+    const snapshot = await getDoc(doctorRef);
+
+    if (!snapshot.exists()) {
+      throw new Error("Doktor topilmadi.");
+    }
+
+    const doctorData = snapshot.data() as Partial<Doctor>;
+    const email = String(doctorData.ownerEmail ?? doctorData.accountEmail ?? "").trim().toLowerCase();
+    const now = new Date().toISOString();
+    const payload = {
+      approvalStatus: status,
+      isOnline: false,
+      availability:
+        status === "approved"
+          ? "Approved. Doktor ishga chiqishni o'zi yoqadi"
+          : status === "rejected"
+            ? "Admin tomonidan rad etildi"
+            : "Admin tasdig'i kutilmoqda",
+      updatedAt: now,
+    };
+
+    await setDoc(doctorRef, payload, { merge: true });
+
+    if (email) {
       await setDoc(
-        doctorRef,
+        doc(db, "doctorAccounts", doctorAccountDocId(email)),
         {
           approvalStatus: status,
-          isOnline: status === "approved",
-          updatedAt: new Date().toISOString(),
+          updatedAt: now,
         },
         { merge: true },
       );
-    },
-    [],
-  );
+    }
+  }, []);
 
   const bookAppointmentHandler = useCallback(
     async (input: BookingInput) => {
@@ -761,6 +825,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       if (!doctor) {
         throw new Error("Shifokor topilmadi.");
+      }
+
+      if (!doctor.availableSlots.length) {
+        throw new Error("Doktor hali bo'sh vaqtlarini qo'shmagan.");
       }
 
       if (doctor.approvalStatus !== "approved") {
@@ -806,7 +874,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         doctorAssignedAt: "",
         handledAt: "",
         cancelledAt: "",
-        rejectedReason: "",
+        rejectedReason: doctor.isOnline
+          ? ""
+          : "Doktor ishda bo'lmasa ham, bo'sh vaqt mavjudligi sabab so'rov yuborildi",
       };
 
       await runTransaction(db, async (transaction) => {
@@ -832,9 +902,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     async (appointmentId: string, status: AppointmentStatus) => {
       const appointmentRef = doc(db, "appointments", appointmentId);
       const actorKey = (currentUser?.uid ?? localUserId).trim().toLowerCase();
-      const actorEmail = (currentUser?.email ?? localUserEmail ?? profile.email)
-        .trim()
-        .toLowerCase();
+      const actorEmail = (currentUser?.email ?? localUserEmail ?? profile.email).trim().toLowerCase();
 
       await runTransaction(db, async (transaction) => {
         const appointmentSnapshot = await transaction.get(appointmentRef);
@@ -851,15 +919,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           throw new Error("Siz faqat o'zingizning qabulingizni boshqara olasiz.");
         }
 
-        if (status !== "Bekor qilindi") {
-          return;
+        if (status === "Bekor qilindi") {
+          transaction.update(appointmentRef, {
+            status,
+            cancelledAt: new Date().toISOString(),
+            handledAt: new Date().toISOString(),
+          });
         }
-
-        transaction.update(appointmentRef, {
-          status,
-          cancelledAt: new Date().toISOString(),
-          handledAt: new Date().toISOString(),
-        });
       });
     },
     [currentUser?.email, currentUser?.uid, localUserEmail, localUserId, profile.email],
@@ -924,9 +990,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const trimmedComment = comment.trim();
       const appointmentRef = doc(db, "appointments", appointmentId);
       const actorKey = (currentUser?.uid ?? localUserId).trim().toLowerCase();
-      const actorEmail = (currentUser?.email ?? localUserEmail ?? profile.email)
-        .trim()
-        .toLowerCase();
+      const actorEmail = (currentUser?.email ?? localUserEmail ?? profile.email).trim().toLowerCase();
 
       await runTransaction(db, async (transaction) => {
         const appointmentSnapshot = await transaction.get(appointmentRef);
@@ -1018,37 +1082,58 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const updateDoctorProfileHandler = useCallback(
     async (patch: DoctorProfileInput) => {
-      if (!currentUser || accountRole !== "doctor") {
+      if (!currentDoctor || !doctorSessionEmail) {
         throw new Error("Doktor kabinetiga kirish kerak.");
       }
 
-      const availableSlots = sanitizeDoctorSlots(patch.availableSlots);
-      const doctorRef = doc(db, "doctors", currentDoctor?.id ?? currentUser.uid);
-      const existingDoctor = currentDoctor ?? createDoctorDraft(currentUser.uid, currentUser.email ?? "");
+      const firstName = patch.firstName.trim();
+      const lastName = patch.lastName.trim();
+      const phone = patch.phone.trim();
+      const specialty = patch.specialty.trim();
+      const clinic = patch.clinic.trim();
+      const address = patch.address.trim();
+      const bio = patch.bio.trim();
+      const availableSlots = sanitizeDoctorSlots(
+        currentDoctor.availableSlots,
+        currentDoctor.availableSlots.length ? currentDoctor.availableSlots : DEFAULT_TIME_SLOTS,
+      );
+
+      if (!firstName || !lastName || !phone || !specialty || !clinic || !address || !bio) {
+        throw new Error("Doktor ma'lumotlarini to'liq kiriting.");
+      }
 
       const nextDoctor: Doctor = {
-        ...existingDoctor,
-        name: patch.name.trim(),
-        specialty: patch.specialty.trim(),
-        region: normalizeDoctorRegion(patch.region, patch.address, patch.clinic, patch.mapQuery),
-        experience: patch.experience.trim(),
-        price: patch.price.trim(),
-        clinic: patch.clinic.trim(),
-        address: patch.address.trim(),
-        mapQuery: patch.mapQuery.trim() || patch.address.trim() || patch.clinic.trim(),
-        bio: patch.bio.trim(),
+        ...currentDoctor,
+        firstName,
+        lastName,
+        phone,
+        name: [firstName, lastName].filter(Boolean).join(" ").trim(),
+        specialty,
+        region: normalizeDoctorRegion("", address, clinic, address),
+        experience: currentDoctor.experience.trim() || "Tajriba kiritilmagan",
+        price: currentDoctor.price.trim() || "Narx kelishiladi",
+        clinic,
+        address,
+        mapQuery: address,
+        bio,
         availableSlots,
-        approvalStatus: existingDoctor.approvalStatus,
         profileCompleted: true,
-        isOnline: existingDoctor.isOnline,
         updatedAt: new Date().toISOString(),
         availability: "",
       };
 
       nextDoctor.availability = buildAvailabilityLabel(nextDoctor);
-      await setDoc(doctorRef, nextDoctor, { merge: true });
+      await setDoc(doc(db, "doctors", currentDoctor.id), nextDoctor, { merge: true });
+      await setDoc(
+        doc(db, "doctorAccounts", doctorAccountDocId(doctorSessionEmail)),
+        {
+          profileCompleted: true,
+          updatedAt: nextDoctor.updatedAt,
+        },
+        { merge: true },
+      );
     },
-    [accountRole, currentDoctor, currentUser],
+    [currentDoctor, doctorSessionEmail],
   );
 
   const toggleDoctorOnlineStatusHandler = useCallback(
@@ -1077,15 +1162,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       throw new Error("Email va parolni to'liq kiriting.");
     }
 
-    const credential = await signInWithEmailAndPassword(auth, email.trim(), password);
-    const role = await ensureRole(credential.user.uid, "user");
-    setAccountRole(role);
-    setAdminSessionActive(false);
-    setLocalUserEmail("");
-    setLocalUserId("");
-    window.localStorage.removeItem(USER_SESSION_KEY);
-    window.localStorage.removeItem(USER_ID_KEY);
-  }, []);
+    try {
+      const credential = await signInWithEmailAndPassword(auth, email.trim(), password);
+      await ensureRole(credential.user.uid);
+      setAccountRole("user");
+      setAdminSessionActive(false);
+      clearDoctorSession();
+      clearLocalUserSession();
+    } catch (error) {
+      throw new Error(mapFirebaseAuthError(error));
+    }
+  }, [clearDoctorSession, clearLocalUserSession]);
 
   const registerWithCredentialsHandler = useCallback(async (email: string, password: string) => {
     const normalizedEmail = email.trim();
@@ -1094,37 +1181,114 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       throw new Error("Email va parolni to'liq kiriting.");
     }
 
-    const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
-    await setDoc(getRoleRef(credential.user.uid), { role: "user" }, { merge: true });
-    setAccountRole("user");
-    setAdminSessionActive(false);
-    setLocalUserEmail("");
-    setLocalUserId("");
-    window.localStorage.removeItem(USER_SESSION_KEY);
-    window.localStorage.removeItem(USER_ID_KEY);
-  }, []);
-
-  const registerDoctorWithCredentialsHandler = useCallback(async (email: string, password: string) => {
-    const normalizedEmail = email.trim().toLowerCase();
-
-    if (!normalizedEmail || !password.trim()) {
-      throw new Error("Email va parolni to'liq kiriting.");
+    try {
+      const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
+      await setDoc(getRoleRef(credential.user.uid), { role: "user" }, { merge: true });
+      setAccountRole("user");
+      setAdminSessionActive(false);
+      clearDoctorSession();
+      clearLocalUserSession();
+    } catch (error) {
+      throw new Error(mapFirebaseAuthError(error));
     }
+  }, [clearDoctorSession, clearLocalUserSession]);
 
-    const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
-    await setDoc(getRoleRef(credential.user.uid), { role: "doctor" }, { merge: true });
-    await setDoc(
-      doc(db, "doctors", credential.user.uid),
-      createDoctorDraft(credential.user.uid, normalizedEmail),
-      { merge: true },
-    );
-    setAccountRole("doctor");
-    setAdminSessionActive(false);
-    setLocalUserEmail("");
-    setLocalUserId("");
-    window.localStorage.removeItem(USER_SESSION_KEY);
-    window.localStorage.removeItem(USER_ID_KEY);
-  }, []);
+  const signInDoctorWithCredentialsHandler = useCallback(
+    async (email: string, password: string) => {
+      const normalizedEmail = email.trim().toLowerCase();
+
+      if (!normalizedEmail || !password.trim()) {
+        throw new Error("Email va parolni to'liq kiriting.");
+      }
+
+      const accountRef = doc(db, "doctorAccounts", doctorAccountDocId(normalizedEmail));
+      const snapshot = await getDoc(accountRef);
+
+      if (!snapshot.exists()) {
+        throw new Error("Doktor login ma'lumotlari topilmadi.");
+      }
+
+      const account = snapshot.data() as DoctorAccount;
+
+      if (String(account.password ?? "") !== password.trim()) {
+        throw new Error("Doktor emaili yoki paroli noto'g'ri.");
+      }
+
+      if (auth.currentUser) {
+        await signOut(auth);
+      }
+
+      clearLocalUserSession();
+      setAdminSessionActive(false);
+      setCurrentUser(null);
+      setDoctorSessionId(account.doctorId);
+      setDoctorSessionEmail(normalizedEmail);
+      setAccountRole("doctor");
+    },
+    [clearLocalUserSession],
+  );
+
+  const registerDoctorWithCredentialsHandler = useCallback(
+    async (input: DoctorRegistrationInput) => {
+      const email = input.email.trim().toLowerCase();
+      const password = input.password.trim();
+      const firstName = input.firstName.trim();
+      const lastName = input.lastName.trim();
+      const phone = input.phone.trim();
+
+      if (!email || !password || !firstName || !lastName || !phone) {
+        throw new Error("Doktor uchun barcha maydonlarni to'liq kiriting.");
+      }
+
+      if (password.length < 6) {
+        throw new Error("Parol kamida 6 ta belgidan iborat bo'lishi kerak.");
+      }
+
+      const doctorId = createDoctorId(email);
+      const accountRef = doc(db, "doctorAccounts", doctorAccountDocId(email));
+      const accountSnapshot = await getDoc(accountRef);
+
+      if (accountSnapshot.exists()) {
+        throw new Error("Bu email bilan doktor arizasi allaqachon mavjud.");
+      }
+
+      const now = new Date().toISOString();
+      const accountPayload: DoctorAccount = {
+        doctorId,
+        email,
+        password,
+        firstName,
+        lastName,
+        phone,
+        approvalStatus: "pending",
+        profileCompleted: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      const doctorDraft = createDoctorDraft({
+        doctorId,
+        email,
+        firstName,
+        lastName,
+        phone,
+      });
+
+      if (auth.currentUser) {
+        await signOut(auth);
+      }
+
+      clearLocalUserSession();
+      setAdminSessionActive(false);
+      setCurrentUser(null);
+      await setDoc(accountRef, accountPayload, { merge: true });
+      await setDoc(doc(db, "doctors", doctorId), doctorDraft, { merge: true });
+      setDoctorSessionId(doctorId);
+      setDoctorSessionEmail(email);
+      setAccountRole("doctor");
+    },
+    [clearLocalUserSession],
+  );
 
   const signInAsAdminHandler = useCallback(async (email: string, password: string) => {
     const normalizedLogin = email.trim();
@@ -1144,54 +1308,66 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     setCurrentUser(null);
     setProfile(defaultProfile);
+    clearLocalUserSession();
+    clearDoctorSession();
     setAccountRole("admin");
     setAdminSessionActive(true);
-    setLocalUserEmail("");
-    setLocalUserId("");
-    window.localStorage.removeItem(USER_SESSION_KEY);
-    window.localStorage.removeItem(USER_ID_KEY);
-  }, []);
+  }, [clearDoctorSession, clearLocalUserSession]);
 
   const signInWithGoogleHandler = useCallback(async () => {
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: "select_account" });
-    const credential = await signInWithPopup(auth, provider);
-    await ensureRole(credential.user.uid, "user");
-    setAdminSessionActive(false);
-  }, []);
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
+      const credential = await signInWithPopup(auth, provider);
+      await ensureRole(credential.user.uid);
+      setAdminSessionActive(false);
+      clearDoctorSession();
+    } catch (error) {
+      throw new Error(mapFirebaseAuthError(error));
+    }
+  }, [clearDoctorSession]);
 
   const signInWithAppleHandler = useCallback(async () => {
-    const provider = new OAuthProvider("apple.com");
-    provider.addScope("email");
-    provider.addScope("name");
-    const credential = await signInWithPopup(auth, provider);
-    await ensureRole(credential.user.uid, "user");
-    setAdminSessionActive(false);
-  }, []);
+    try {
+      const provider = new OAuthProvider("apple.com");
+      provider.addScope("email");
+      provider.addScope("name");
+      const credential = await signInWithPopup(auth, provider);
+      await ensureRole(credential.user.uid);
+      setAdminSessionActive(false);
+      clearDoctorSession();
+    } catch (error) {
+      throw new Error(mapFirebaseAuthError(error));
+    }
+  }, [clearDoctorSession]);
 
   const signInWithMicrosoftHandler = useCallback(async () => {
-    const provider = new OAuthProvider("microsoft.com");
-    provider.setCustomParameters({ prompt: "select_account", tenant: "common" });
-    const credential = await signInWithPopup(auth, provider);
-    await ensureRole(credential.user.uid, "user");
-    setAdminSessionActive(false);
-  }, []);
+    try {
+      const provider = new OAuthProvider("microsoft.com");
+      provider.setCustomParameters({ prompt: "select_account", tenant: "common" });
+      const credential = await signInWithPopup(auth, provider);
+      await ensureRole(credential.user.uid);
+      setAdminSessionActive(false);
+      clearDoctorSession();
+    } catch (error) {
+      throw new Error(mapFirebaseAuthError(error));
+    }
+  }, [clearDoctorSession]);
 
   const signOutHandler = useCallback(async () => {
     setAccountRole(null);
     setAdminSessionActive(false);
-    setLocalUserEmail("");
-    setLocalUserId("");
-    window.localStorage.removeItem(USER_SESSION_KEY);
-    window.localStorage.removeItem(USER_ID_KEY);
+    clearLocalUserSession();
+    clearDoctorSession();
     window.localStorage.removeItem(ADMIN_SESSION_KEY);
 
     if (auth.currentUser) {
       await signOut(auth);
     }
 
+    setCurrentUser(null);
     setProfile(defaultProfile);
-  }, []);
+  }, [clearDoctorSession, clearLocalUserSession]);
 
   const setThemeHandler = useCallback((nextTheme: ThemeMode) => {
     setThemeState(nextTheme);
@@ -1210,6 +1386,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       currentUser,
       accountRole,
       currentDoctor,
+      doctorSessionEmail,
       localUserEmail,
       localUserId,
       theme,
@@ -1229,6 +1406,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       toggleDoctorOnlineStatus: toggleDoctorOnlineStatusHandler,
       signInWithCredentials: signInWithCredentialsHandler,
       registerWithCredentials: registerWithCredentialsHandler,
+      signInDoctorWithCredentials: signInDoctorWithCredentialsHandler,
       registerDoctorWithCredentials: registerDoctorWithCredentialsHandler,
       signInAsAdmin: signInAsAdminHandler,
       signInWithGoogle: signInWithGoogleHandler,
@@ -1239,14 +1417,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setTheme: setThemeHandler,
     }),
     [
-      appointments,
       accountRole,
+      appointments,
       authLoading,
       bookAppointmentHandler,
       currentDoctor,
       currentUser,
       doctorApprovalStatus,
       doctorRoster,
+      doctorSessionEmail,
       doctors,
       isAdminAuthenticated,
       isDoctorAuthenticated,
@@ -1260,6 +1439,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setDoctorApprovalHandler,
       setThemeHandler,
       signInAsAdminHandler,
+      signInDoctorWithCredentialsHandler,
       signInWithAppleHandler,
       signInWithCredentialsHandler,
       signInWithGoogleHandler,
@@ -1329,8 +1509,12 @@ export const getDoctorBookingRecommendation = (doctor: Doctor, appointments: App
       appointment.status !== "Rad etildi",
   ).length;
 
+  if (!doctor.availableSlots.length) {
+    return "Bo'sh vaqtlar kiritilmagani uchun yangi so'rov yuborilmaydi";
+  }
+
   if (doctor.isOnline && performance.pendingOrders === 0) {
-    return "Hozir online va yangi requestlar uchun tayyor";
+    return "Hozir ishda va yangi so'rovlar uchun tayyor";
   }
 
   if (!doctor.isOnline && todayQueue > 0) {
@@ -1338,8 +1522,8 @@ export const getDoctorBookingRecommendation = (doctor: Doctor, appointments: App
   }
 
   if (performance.pendingOrders > 0) {
-    return `${performance.pendingOrders} ta request javob kutmoqda`;
+    return `${performance.pendingOrders} ta so'rov javob kutmoqda`;
   }
 
-  return "Bo'sh vaqtlar asosida request yuboriladi";
+  return "So'rovlar bo'sh vaqtlar asosida yuboriladi";
 };

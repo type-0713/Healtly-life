@@ -1,6 +1,7 @@
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import EmergencyCallButton from "../components/EmergencyCallButton";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import ThemeToggle from "../components/ThemeToggle";
 import {
@@ -11,6 +12,7 @@ import {
   HeartPulseIcon,
   LockIcon,
   MailIcon,
+  PhoneIcon,
   ShieldIcon,
   SparkIcon,
   StethoscopeIcon,
@@ -24,170 +26,155 @@ type Action = "login" | "register";
 
 const copy = {
   uz: {
-    title: "Realtime tibbiy platformaga kirish",
-    text: "User, doktor va admin oqimlari bitta joyda boshqariladi. Doktor ro'yxatdan o'tgach, admin tasdig'idan keyin kabineti ochiladi.",
-    modes: {
-      user: "User",
-      doctor: "Doktor",
-      admin: "Admin",
-    },
-    actions: {
-      login: "Kirish",
-      register: "Ro'yxatdan o'tish",
-    },
+    title: "Tibbiy platformaga kirish",
+    text: "Foydalanuvchi, doktor va admin uchun alohida kirish tartibi mavjud. Doktor kirishi alohida ma'lumotlar bazasi orqali ishlaydi.",
+    modes: { user: "Bemor", doctor: "Doktor", admin: "Admin" },
+    actions: { login: "Kirish", register: "Ro'yxatdan o'tish" },
+    userTitle: "Bemor kabineti",
+    doctorTitle: "Doktor ro'yxatdan o'tishi",
+    adminTitle: "Admin nazorati",
+    userText: "Shifokor toping, buyurtma bering va qabul tarixini kuzating.",
+    doctorText:
+      "Doktor uchun birinchi bosqichda faqat email, ism, familya va telefon olinadi. Admin tasdiqlagach qolgan ish ma'lumotlari so'raladi.",
+    adminText: "Doktorlarni tasdiqlang, navbatni kuzating va buyurtmalarni boshqaring.",
     email: "Email",
-    adminLogin: "Admin login",
+    firstName: "Ism",
+    lastName: "Familya",
+    phone: "Telefon",
     password: "Parol",
     confirmPassword: "Parolni tasdiqlang",
-    userTitle: "Bemor kabineti",
-    doctorTitle: "Doktor onboarding",
-    adminTitle: "Admin nazorati",
-    userText: "Shifokor toping, 24/7 buyurtma bering va qabullar tarixini boshqaring.",
-    doctorText: "Yangi doktor sifatida ro'yxatdan o'ting, admin tasdig'ini kuting va keyin shaxsiy kabinetni to'ldiring.",
-    adminText: "Doktorlarni tasdiqlang, oqimni nazorat qiling va realtime holatni ko'ring.",
-    submitUserLogin: "Kabinetga kirish",
-    submitUserRegister: "Kabinet yaratish",
-    submitDoctorLogin: "Doktor sifatida kirish",
-    submitDoctorRegister: "Doktor sifatida ro'yxatdan o'tish",
-    submitAdmin: "Admin panelga kirish",
-    waiting: "Tasdiqlangandan keyin doktor modal orqali o'zi haqidagi ma'lumotlarni to'ldiradi.",
-    providerTitle: "Tez kirish",
-    activeSession: "Faol sessiya",
-    logout: "Chiqish",
-    remember: "Qurilmada sessiyani ushlab turish",
+    adminLogin: "Admin login",
+    userLogin: "Kabinetga kirish",
+    userRegister: "Kabinet yaratish",
+    doctorLogin: "Doktor sifatida kirish",
+    doctorRegister: "Doktor arizasini yuborish",
+    adminSubmit: "Admin panelga kirish",
+    waiting:
+      "Admin tasdiqlagach, doktor kabinetiga kirganda qolgan ma'lumotlarni to'ldirish oynasi ochiladi.",
+    provider: "Tez kirish",
     backHome: "Bosh sahifa",
+    remember: "Sessiyani qurilmada ushlab turish",
+    logout: "Chiqish",
+    active: "Faol sessiya",
     metrics: [
-      ["24/7", "Cheklovsiz booking"],
-      ["30 min", "Doktorga kechikib tushadigan request"],
-      ["Realtime", "Admin va doktor oqimi"],
+      ["24/7", "Buyurtma qabul qilish"],
+      ["30 min", "Doktorga kechikib boradigan so'rov"],
+      ["Alohida login", "Doktor uchun mustaqil kirish"],
     ],
     highlights: [
       {
-        icon: ShieldIcon,
-        title: "Tasdiqlash oqimi",
-        text: "Har bir yangi doktor avval admin ko'rigidan o'tadi.",
+        title: "Doktor arizasi",
+        text: "Dastlab faqat asosiy shaxsiy ma'lumotlar olinadi.",
       },
       {
-        icon: CalendarIcon,
-        title: "24/7 navbat",
-        text: "Booking istalgan vaqtda yaratiladi, request esa 30 daqiqadan keyin doktorga boradi.",
+        title: "Admin tasdig'i",
+        text: "Tasdiqlangandan keyin keyingi ma'lumotlar bosqichi ochiladi.",
       },
       {
-        icon: StethoscopeIcon,
-        title: "Shaxsiy kabinet",
-        text: "Doktor approved bo'lgach profilini o'zi to'ldiradi va bo'sh vaqtlarini belgilaydi.",
+        title: "Kechikib yuboriladigan so'rovlar",
+        text: "So'rov doktorga 30 daqiqadan keyin boradi va u uni qabul yoki rad etadi.",
       },
     ],
   },
   ru: {
-    title: "Вход в медицинскую realtime платформу",
-    text: "Потоки user, doctor и admin управляются из одной точки. После регистрации врача кабинет откроется только после одобрения администратора.",
-    modes: {
-      user: "User",
-      doctor: "Doctor",
-      admin: "Admin",
-    },
-    actions: {
-      login: "Вход",
-      register: "Регистрация",
-    },
-    email: "Email",
-    adminLogin: "Логин администратора",
-    password: "Пароль",
-    confirmPassword: "Подтвердите пароль",
+    title: "Вход в realtime медицинскую платформу",
+    text: "Потоки user, doctor и admin управляются из одного места. Для doctor вход теперь работает без Firebase Auth.",
+    modes: { user: "User", doctor: "Doctor", admin: "Admin" },
+    actions: { login: "Вход", register: "Регистрация" },
     userTitle: "Кабинет пациента",
     doctorTitle: "Поток врача",
     adminTitle: "Панель администратора",
     userText: "Находите врачей, создавайте заявки 24/7 и управляйте историей приёмов.",
-    doctorText: "Регистрируйтесь как новый врач, ждите одобрения администратора и затем заполните личный кабинет.",
-    adminText: "Одобряйте врачей, контролируйте поток и следите за realtime статусом.",
-    submitUserLogin: "Войти в кабинет",
-    submitUserRegister: "Создать кабинет",
-    submitDoctorLogin: "Войти как врач",
-    submitDoctorRegister: "Зарегистрироваться как врач",
-    submitAdmin: "Войти в админ-панель",
-    waiting: "После одобрения врач сам заполнит данные в модальном окне.",
-    providerTitle: "Быстрый вход",
-    activeSession: "Активная сессия",
-    logout: "Выйти",
-    remember: "Сохранить сессию на устройстве",
+    doctorText:
+      "На первом шаге для врача собираются только email, имя, фамилия и телефон. После одобрения администратора откроется следующий этап.",
+    adminText: "Одобряйте врачей, отслеживайте поток и управляйте realtime очередью.",
+    email: "Email",
+    firstName: "Имя",
+    lastName: "Фамилия",
+    phone: "Телефон",
+    password: "Пароль",
+    confirmPassword: "Подтвердите пароль",
+    adminLogin: "Логин администратора",
+    userLogin: "Войти в кабинет",
+    userRegister: "Создать кабинет",
+    doctorLogin: "Войти как врач",
+    doctorRegister: "Отправить заявку врача",
+    adminSubmit: "Войти в админ-панель",
+    waiting:
+      "После одобрения администратором при входе в кабинет врача откроется модальное окно с дополнительными данными.",
+    provider: "Быстрый вход",
     backHome: "Главная",
+    remember: "Оставить сессию на устройстве",
+    logout: "Выйти",
+    active: "Активная сессия",
     metrics: [
       ["24/7", "Записи без ограничений"],
-      ["30 min", "Задержка перед отправкой врачу"],
-      ["Realtime", "Поток admin и doctor"],
+      ["30 min", "Отложенная отправка врачу"],
+      ["No Auth", "Отдельный database login для doctor"],
     ],
     highlights: [
       {
-        icon: ShieldIcon,
-        title: "Поток одобрения",
-        text: "Каждый новый врач сначала проходит проверку администратора.",
+        title: "Заявка врача",
+        text: "На первом шаге запрашиваются только базовые личные данные.",
       },
       {
-        icon: CalendarIcon,
-        title: "Очередь 24/7",
-        text: "Бронирование создаётся в любое время, а запрос уходит врачу через 30 минут.",
+        title: "Одобрение admin",
+        text: "После одобрения откроется следующий профессиональный этап.",
       },
       {
-        icon: StethoscopeIcon,
-        title: "Личный кабинет",
-        text: "После одобрения врач сам заполняет профиль и выбирает свободные часы.",
+        title: "Запросы 24/7",
+        text: "Запрос приходит врачу через 30 минут, и он сам решает принять или отклонить его.",
       },
     ],
   },
   en: {
     title: "Access the realtime medical platform",
-    text: "User, doctor, and admin flows are managed in one place. A doctor account opens fully only after admin approval.",
-    modes: {
-      user: "User",
-      doctor: "Doctor",
-      admin: "Admin",
-    },
-    actions: {
-      login: "Sign in",
-      register: "Register",
-    },
-    email: "Email",
-    adminLogin: "Admin login",
-    password: "Password",
-    confirmPassword: "Confirm password",
+    text: "User, doctor, and admin flows are managed in one place. Doctor sign-in now uses a separate database flow instead of Firebase Auth.",
+    modes: { user: "User", doctor: "Doctor", admin: "Admin" },
+    actions: { login: "Sign in", register: "Register" },
     userTitle: "Patient workspace",
     doctorTitle: "Doctor onboarding",
     adminTitle: "Admin control",
     userText: "Find doctors, place 24/7 requests, and manage appointment history.",
-    doctorText: "Register as a new doctor, wait for admin approval, then complete your personal workspace.",
-    adminText: "Approve doctors, control the flow, and monitor the realtime status.",
-    submitUserLogin: "Enter workspace",
-    submitUserRegister: "Create workspace",
-    submitDoctorLogin: "Sign in as doctor",
-    submitDoctorRegister: "Register as doctor",
-    submitAdmin: "Open admin panel",
-    waiting: "After approval, the doctor completes the profile in a modal inside the cabinet.",
-    providerTitle: "Quick access",
-    activeSession: "Active session",
-    logout: "Logout",
-    remember: "Keep this session on the device",
+    doctorText:
+      "At the first step, the doctor provides only email, first name, last name, and phone. The next professional step opens after admin approval.",
+    adminText: "Approve doctors, watch the flow, and manage the realtime queue.",
+    email: "Email",
+    firstName: "First name",
+    lastName: "Last name",
+    phone: "Phone",
+    password: "Password",
+    confirmPassword: "Confirm password",
+    adminLogin: "Admin login",
+    userLogin: "Enter workspace",
+    userRegister: "Create workspace",
+    doctorLogin: "Sign in as doctor",
+    doctorRegister: "Submit doctor request",
+    adminSubmit: "Open admin panel",
+    waiting:
+      "Once approved by the admin, the doctor sees a modal with the remaining professional details on cabinet entry.",
+    provider: "Quick access",
     backHome: "Home",
+    remember: "Keep the session on this device",
+    logout: "Logout",
+    active: "Active session",
     metrics: [
       ["24/7", "Unlimited booking"],
       ["30 min", "Delayed doctor request"],
-      ["Realtime", "Admin and doctor flow"],
+      ["No Auth", "Separate database login for doctors"],
     ],
     highlights: [
       {
-        icon: ShieldIcon,
-        title: "Approval flow",
-        text: "Every new doctor passes admin review first.",
+        title: "Doctor request",
+        text: "Only the core personal details are collected on the first step.",
       },
       {
-        icon: CalendarIcon,
-        title: "24/7 queue",
-        text: "Booking can be created anytime, and the doctor receives it 30 minutes later.",
+        title: "Admin approval",
+        text: "The next professional step opens only after approval.",
       },
       {
-        icon: StethoscopeIcon,
-        title: "Personal cabinet",
-        text: "Once approved, the doctor completes the profile and manages free time slots.",
+        title: "24/7 requests",
+        text: "The request reaches the doctor after 30 minutes, and the doctor decides to accept or decline it.",
       },
     ],
   },
@@ -198,8 +185,10 @@ const LoginPage = () => {
   const [searchParams] = useSearchParams();
   const {
     accountRole,
+    currentDoctor,
     currentUser,
     doctorApprovalStatus,
+    doctorSessionEmail,
     isAdminAuthenticated,
     isDoctorAuthenticated,
     isUserAuthenticated,
@@ -208,6 +197,7 @@ const LoginPage = () => {
     registerDoctorWithCredentials,
     registerWithCredentials,
     signInAsAdmin,
+    signInDoctorWithCredentials,
     signInWithApple,
     signInWithCredentials,
     signInWithGoogle,
@@ -220,6 +210,9 @@ const LoginPage = () => {
   const [email, setEmail] = useState(profile.email || localUserEmail);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
   const [authMessage, setAuthMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -234,6 +227,7 @@ const LoginPage = () => {
       ? "register"
       : "login") as Action;
   const nextPath = searchParams.get("next") ?? "/user";
+  const isDoctorRegister = mode === "doctor" && action === "register";
 
   useEffect(() => {
     if (isAdminAuthenticated) {
@@ -262,6 +256,9 @@ const LoginPage = () => {
     setPassword("");
     setConfirmPassword("");
     setAuthMessage("");
+    setFirstName("");
+    setLastName("");
+    setPhone("");
   }, [mode, action]);
 
   const buildLink = (nextMode: Mode, nextAction: Action = action) => {
@@ -281,35 +278,26 @@ const LoginPage = () => {
 
   const headerContent = useMemo(() => {
     if (mode === "doctor") {
-      return {
-        title: text.doctorTitle,
-        body: text.doctorText,
-      };
+      return { title: text.doctorTitle, body: text.doctorText };
     }
 
     if (mode === "admin") {
-      return {
-        title: text.adminTitle,
-        body: text.adminText,
-      };
+      return { title: text.adminTitle, body: text.adminText };
     }
 
-    return {
-      title: text.userTitle,
-      body: text.userText,
-    };
+    return { title: text.userTitle, body: text.userText };
   }, [mode, text.adminText, text.adminTitle, text.doctorText, text.doctorTitle, text.userText, text.userTitle]);
 
   const submitLabel =
     mode === "admin"
-      ? text.submitAdmin
+      ? text.adminSubmit
       : mode === "doctor"
         ? action === "register"
-          ? text.submitDoctorRegister
-          : text.submitDoctorLogin
+          ? text.doctorRegister
+          : text.doctorLogin
         : action === "register"
-          ? text.submitUserRegister
-          : text.submitUserLogin;
+          ? text.userRegister
+          : text.userLogin;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -330,9 +318,15 @@ const LoginPage = () => {
 
       if (mode === "doctor") {
         if (action === "register") {
-          await registerDoctorWithCredentials(email, password);
+          await registerDoctorWithCredentials({
+            email,
+            password,
+            firstName,
+            lastName,
+            phone,
+          });
         } else {
-          await signInWithCredentials(email, password);
+          await signInDoctorWithCredentials(email, password);
         }
         navigate("/doctor");
         return;
@@ -373,6 +367,12 @@ const LoginPage = () => {
     }
   };
 
+  const activeSessionLabel = isAdminAuthenticated
+    ? "admin"
+    : isDoctorAuthenticated
+      ? `${doctorSessionEmail}${doctorApprovalStatus ? ` | ${doctorApprovalStatus}` : ""}`
+      : `${currentUser?.email ?? email}${accountRole ? ` | ${accountRole}` : ""}`;
+
   return (
     <div className="auth-page">
       <span className="site-orb site-orb-one" />
@@ -398,7 +398,7 @@ const LoginPage = () => {
 
           <span className="badge badge-gold">
             <SparkIcon />
-            Realtime access
+            Tizimga kirish
           </span>
           <h1>{text.title}</h1>
           <p>{text.text}</p>
@@ -413,21 +413,17 @@ const LoginPage = () => {
           </div>
 
           <div className="auth-benefits auth-benefits-rich">
-            {text.highlights.map((item) => {
-              const Icon = item.icon;
-
-              return (
-                <article key={item.title} className="glass-card auth-benefit-card">
-                  <div className="icon-shell">
-                    <Icon />
-                  </div>
-                  <div>
-                    <h3>{item.title}</h3>
-                    <p>{item.text}</p>
-                  </div>
-                </article>
-              );
-            })}
+            {text.highlights.map((item, index) => (
+              <article key={item.title} className="glass-card auth-benefit-card">
+                <div className="icon-shell">
+                  {index === 0 ? <UserGroupIcon /> : index === 1 ? <ShieldIcon /> : <CalendarIcon />}
+                </div>
+                <div>
+                  <h3>{item.title}</h3>
+                  <p>{item.text}</p>
+                </div>
+              </article>
+            ))}
           </div>
         </section>
 
@@ -469,6 +465,40 @@ const LoginPage = () => {
             )}
 
             <form className="auth-form" onSubmit={handleSubmit}>
+              {isDoctorRegister && (
+                <>
+                  <label className="field">
+                    <span>{text.firstName}</span>
+                    <div className="field-box">
+                      <UserGroupIcon />
+                      <input value={firstName} onChange={(event) => setFirstName(event.target.value)} required />
+                    </div>
+                  </label>
+
+                  <label className="field">
+                    <span>{text.lastName}</span>
+                    <div className="field-box">
+                      <UserGroupIcon />
+                      <input value={lastName} onChange={(event) => setLastName(event.target.value)} required />
+                    </div>
+                  </label>
+
+                  <label className="field">
+                    <span>{text.phone}</span>
+                    <div className="field-box">
+                      <PhoneIcon />
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(event) => setPhone(event.target.value)}
+                        placeholder="+998 90 123 45 67"
+                        required
+                      />
+                    </div>
+                  </label>
+                </>
+              )}
+
               <label className="field">
                 <span>{mode === "admin" ? text.adminLogin : text.email}</span>
                 <div className="field-box">
@@ -493,7 +523,7 @@ const LoginPage = () => {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    placeholder="••••••••"
+                    placeholder="********"
                     required
                     autoCapitalize="none"
                     spellCheck={false}
@@ -518,7 +548,7 @@ const LoginPage = () => {
                       type={showPassword ? "text" : "password"}
                       value={confirmPassword}
                       onChange={(event) => setConfirmPassword(event.target.value)}
-                      placeholder="••••••••"
+                      placeholder="********"
                       required
                     />
                   </div>
@@ -543,7 +573,7 @@ const LoginPage = () => {
 
             {mode === "user" && action === "login" && (
               <div className="provider-login-block">
-                <p className="provider-login-title">{text.providerTitle}</p>
+                <p className="provider-login-title">{text.provider}</p>
                 <div className="provider-login-grid">
                   <button
                     type="button"
@@ -573,20 +603,14 @@ const LoginPage = () => {
               </div>
             )}
 
-            {(currentUser || isAdminAuthenticated) && (
+            {(currentUser || isAdminAuthenticated || isDoctorAuthenticated) && (
               <div className="auth-success-card">
                 <div className="summary-checks">
                   <div>
                     <SparkIcon />
                     <span>
-                      {text.activeSession}:{" "}
-                      {isAdminAuthenticated
-                        ? "admin"
-                        : `${currentUser?.email ?? email}${accountRole ? ` | ${accountRole}` : ""}${
-                            accountRole === "doctor" && doctorApprovalStatus
-                              ? ` | ${doctorApprovalStatus}`
-                              : ""
-                          }`}
+                      {text.active}: {activeSessionLabel}
+                      {currentDoctor?.name ? ` | ${currentDoctor.name}` : ""}
                     </span>
                   </div>
                 </div>
@@ -600,6 +624,8 @@ const LoginPage = () => {
           </div>
         </div>
       </div>
+
+      <EmergencyCallButton />
     </div>
   );
 };

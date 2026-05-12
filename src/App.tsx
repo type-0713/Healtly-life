@@ -12,9 +12,9 @@ const Doctor = lazy(() => import("./pages/Doctor"));
 
 const loadingCopy = {
   uz: {
-    chip: "Realtime startup",
+    chip: "Tizim yuklanmoqda",
     title: "MedElite paneli tayyorlanmoqda",
-    text: "Kirish, rollar va realtime bron oqimi tekshirilmoqda.",
+    text: "Kirish holati, rollar va buyurtmalar tekshirilmoqda.",
     footer: "Bir necha soniya kuting",
   },
   ru: {

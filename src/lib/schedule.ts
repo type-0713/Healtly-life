@@ -97,5 +97,5 @@ export const getBookingRulesMessage = (language: "uz" | "ru" | "en" = "uz") => {
     return "The platform works 24/7, and the doctor receives the request 30 minutes after booking.";
   }
 
-  return "Platforma 24/7 ishlaydi, buyurtma esa doktorga bron qilingandan 30 daqiqa keyin tushadi.";
+  return "Platforma kunu tun ishlaydi. Buyurtma doktorga 30 daqiqadan keyin ko'rinadi.";
 };

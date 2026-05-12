@@ -1,6 +1,7 @@
 import type { FormEvent } from "react";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import EmergencyCallButton from "../components/EmergencyCallButton";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import ThemeToggle from "../components/ThemeToggle";
 import {
@@ -159,7 +160,10 @@ const User = () => {
   const activeAppointments = useMemo(
     () =>
       userAppointments.filter(
-        (appointment) => appointment.status !== "Yakunlandi" && appointment.status !== "Bekor qilindi",
+        (appointment) =>
+          appointment.status !== "Yakunlandi" &&
+          appointment.status !== "Bekor qilindi" &&
+          appointment.status !== "Rad etildi",
       ),
     [userAppointments],
   );
@@ -167,7 +171,10 @@ const User = () => {
   const historyAppointments = useMemo(
     () =>
       userAppointments.filter(
-        (appointment) => appointment.status === "Yakunlandi" || appointment.status === "Bekor qilindi",
+        (appointment) =>
+          appointment.status === "Yakunlandi" ||
+          appointment.status === "Bekor qilindi" ||
+          appointment.status === "Rad etildi",
       ),
     [userAppointments],
   );
@@ -202,7 +209,7 @@ const User = () => {
 
       setNotice(
         appointment
-          ? `Buyurtma yaratildi. Doktor bu requestni ${appointment.requestVisibleAt.slice(11, 16)} atrofida ko'radi.`
+          ? `Buyurtma yaratildi. Doktor bu so'rovni taxminan ${appointment.requestVisibleAt.slice(11, 16)} da ko'radi.`
           : "Buyurtma yaratilmadi.",
       );
       setNotes("");
@@ -295,7 +302,7 @@ const User = () => {
               <LanguageSwitcher compact />
               <ThemeToggle compact />
               <Link to="/doctor" className="button button-secondary" onClick={() => setMenuOpen(false)}>
-                Doctor panel
+                Doktor bo'limi
               </Link>
               <button type="button" className="button button-ghost" onClick={() => void signOutUser()}>
                 Chiqish
@@ -317,11 +324,11 @@ const User = () => {
       <main className="container dashboard-content">
         <section className="dashboard-hero">
           <div>
-            <span className="section-chip">24/7 user workspace</span>
-            <h1>Doktor tanlang va request yuboring</h1>
+            <span className="section-chip">Foydalanuvchi bo'limi</span>
+            <h1>Doktor tanlang va buyurtma yuboring</h1>
             <p>
               Platforma 24/7 ishlaydi. Siz tanlagan buyurtma darhol saqlanadi, ammo doktor uni 30
-              daqiqa kechikish bilan oladi va qabul qilish yoki rad etishni o'zi hal qiladi.
+              daqiqadan keyin ko'radi va qabul qilish yoki rad etishni o'zi hal qiladi.
             </p>
           </div>
           <div className="dashboard-tagline glass-card">
@@ -358,7 +365,7 @@ const User = () => {
             <button
               key={tabId}
               type="button"
-              className={`auth-mode-pill ${activeTab === tabId ? "auth-mode-pill-active" : ""}`}
+              className={`dashboard-tab-pill ${activeTab === tabId ? "dashboard-tab-pill-active" : ""}`}
               onClick={() => setActiveTab(tabId)}
             >
               {label}
@@ -371,7 +378,7 @@ const User = () => {
             <article className="preview-card preview-highlight">
               <div className="panel-heading">
                 <div>
-                  <span className="section-chip">Doctor list</span>
+                  <span className="section-chip">Doktorlar ro'yxati</span>
                   <h2>Doktorlar ro'yxati</h2>
                 </div>
               </div>
@@ -418,9 +425,11 @@ const User = () => {
                       <div className="doctor-card-avatar">
                         <StethoscopeIcon />
                       </div>
-                      <span className="badge">{doctor.isOnline ? "Ishda" : "Offline"}</span>
+                      <span className="badge">{doctor.isOnline ? "Ishda" : "Ishda emas"}</span>
                     </div>
-                    <strong>{doctor.name}</strong>
+                    <div className="doctor-name-scroll">
+                      <strong>{doctor.name}</strong>
+                    </div>
                     <span>{translateSpecialty(doctor.specialty)}</span>
                     <span>{doctor.clinic}</span>
                     <p>{getDoctorBookingRecommendation(doctor, appointments)}</p>
@@ -439,8 +448,8 @@ const User = () => {
             <article className="preview-card">
               <div className="panel-heading">
                 <div>
-                  <span className="section-chip">Booking form</span>
-                  <h2>Request yaratish</h2>
+                  <span className="section-chip">Buyurtma formasi</span>
+                  <h2>Buyurtma yaratish</h2>
                 </div>
               </div>
 
@@ -451,9 +460,11 @@ const User = () => {
                       <StethoscopeIcon />
                     </div>
                     <div>
-                      <h3>{selectedDoctor.name}</h3>
-                      <p>{translateSpecialty(selectedDoctor.specialty)} · {selectedDoctor.clinic}</p>
-                      <span>{translateRegion(selectedDoctor.region)} · {selectedDoctor.price}</span>
+                      <div className="doctor-name-scroll doctor-name-scroll-title">
+                        <h3>{selectedDoctor.name}</h3>
+                      </div>
+                      <p>{translateSpecialty(selectedDoctor.specialty)} | {selectedDoctor.clinic}</p>
+                      <span>{translateRegion(selectedDoctor.region)} | {selectedDoctor.price}</span>
                     </div>
                   </div>
 
@@ -510,7 +521,7 @@ const User = () => {
                   </div>
 
                   <button type="submit" className="button button-primary button-large" disabled={isSubmitting}>
-                    Request yuborish
+                    Buyurtma yuborish
                     <ArrowRightIcon />
                   </button>
                 </form>
@@ -526,9 +537,11 @@ const User = () => {
               <article className="preview-card preview-highlight">
                 <span className="badge badge-gold">
                   <SparkIcon />
-                  Selected doctor
+                  Tanlangan doktor
                 </span>
-                <h2>{selectedDoctor?.name ?? "Doktor tanlanmagan"}</h2>
+                <div className="doctor-name-scroll doctor-name-scroll-heading">
+                  <h2>{selectedDoctor?.name ?? "Doktor tanlanmagan"}</h2>
+                </div>
                 <p>{selectedDoctor ? translateSpecialty(selectedDoctor.specialty) : "-"}</p>
                 <p className="preview-subtext">{selectedDoctor?.bio ?? "Tanlangan doktorga oid ma'lumot shu yerda ko'rinadi."}</p>
 
@@ -563,7 +576,7 @@ const User = () => {
             <article className="preview-card preview-highlight doctor-queue-card">
               <div className="panel-heading">
                 <div>
-                  <span className="section-chip">Active requests</span>
+                  <span className="section-chip">Faol buyurtmalar</span>
                   <h2>Faol buyurtmalarim</h2>
                 </div>
               </div>
@@ -603,7 +616,7 @@ const User = () => {
                 {activeAppointments.length === 0 && (
                   <div className="empty-state">
                     <h3>Faol buyurtma yo'q</h3>
-                    <p>Yangi request yaratganingizda shu yerda ko'rinadi.</p>
+                    <p>Yangi buyurtma yaratganingizda shu yerda ko'rinadi.</p>
                   </div>
                 )}
               </div>
@@ -612,7 +625,7 @@ const User = () => {
             <article className="preview-card doctor-queue-card">
               <div className="panel-heading">
                 <div>
-                  <span className="section-chip">History</span>
+                    <span className="section-chip">Tarix</span>
                   <h2>Tarix</h2>
                 </div>
               </div>
@@ -629,7 +642,7 @@ const User = () => {
                       <div className="appointment-card-head">
                         <div>
                           <h3>{appointment.doctorName}</h3>
-                          <p>{appointment.patientPhone}</p>
+                          <p>{translateSpecialty(appointment.specialty)}</p>
                         </div>
                         <span className="badge">{translateStatus(appointment.status)}</span>
                       </div>
@@ -648,8 +661,9 @@ const User = () => {
                         </div>
                       </div>
                       {appointment.reviewRating && (
-                        <p>{appointment.reviewRating} / 5 · {appointment.reviewComment || "Baholangan"}</p>
+                        <p>{appointment.reviewRating} / 5 | {appointment.reviewComment || "Izoh qoldirilmagan"}</p>
                       )}
+                      {appointment.rejectedReason && <p>{appointment.rejectedReason}</p>}
                       {canReview && (
                         <button type="button" className="button button-secondary" onClick={() => setReviewTarget(appointment)}>
                           Baho berish
@@ -836,6 +850,8 @@ const User = () => {
           </div>
         </div>
       )}
+
+      <EmergencyCallButton />
     </div>
   );
 };

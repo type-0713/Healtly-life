@@ -15,6 +15,7 @@ import {
   PhoneIcon,
   ShieldIcon,
   SparkIcon,
+  StarIcon,
   StethoscopeIcon,
   UserGroupIcon,
 } from "../components/PremiumIcons";
@@ -27,20 +28,15 @@ import {
 } from "../context/AppContext";
 import { useI18n } from "../context/I18nContext";
 import { getMapSearchUrl } from "../lib/maps";
-import { UZBEKISTAN_REGIONS } from "../lib/regions";
-import { DEFAULT_TIME_SLOTS } from "../lib/schedule";
 
 const emptyDoctorForm: DoctorProfileInput = {
-  name: "",
+  firstName: "",
+  lastName: "",
+  phone: "",
   specialty: "",
-  region: "Toshkent shahri",
-  experience: "",
-  price: "",
   clinic: "",
   address: "",
-  mapQuery: "",
   bio: "",
-  availableSlots: ["09:00", "10:00", "14:00", "18:00"],
 };
 
 const playDoctorAlert = () => {
@@ -114,16 +110,13 @@ const Doctor = () => {
     }
 
     setDoctorForm({
-      name: currentDoctor.name || "",
+      firstName: currentDoctor.firstName || "",
+      lastName: currentDoctor.lastName || "",
+      phone: currentDoctor.phone || "",
       specialty: currentDoctor.specialty || "",
-      region: currentDoctor.region || "Toshkent shahri",
-      experience: currentDoctor.experience || "",
-      price: currentDoctor.price || "",
       clinic: currentDoctor.clinic || "",
       address: currentDoctor.address || "",
-      mapQuery: currentDoctor.mapQuery || "",
       bio: currentDoctor.bio || "",
-      availableSlots: currentDoctor.availableSlots.length ? currentDoctor.availableSlots : emptyDoctorForm.availableSlots,
     });
   }, [currentDoctor]);
 
@@ -159,9 +152,7 @@ const Doctor = () => {
 
   const acceptedQueue = useMemo(
     () =>
-      doctorAppointments.filter(
-        (appointment) => appointment.status === "Tasdiqlandi" || appointment.status === "Yakunlandi",
-      ),
+      doctorAppointments.filter((appointment) => appointment.status === "Tasdiqlandi"),
     [doctorAppointments],
   );
 
@@ -179,6 +170,17 @@ const Doctor = () => {
   const performance = currentDoctor
     ? calculateDoctorPerformance(currentDoctor, appointments)
     : { totalOrders: 0, totalEarnings: 0, pendingOrders: 0 };
+  const doctorReviews = useMemo(
+    () =>
+      doctorAppointments
+        .filter((appointment) => typeof appointment.reviewRating === "number")
+        .sort((left, right) =>
+          String(right.reviewedAt || right.handledAt || right.createdAt).localeCompare(
+            String(left.reviewedAt || left.handledAt || left.createdAt),
+          ),
+        ),
+    [doctorAppointments],
+  );
 
   useEffect(() => {
     const nextReadyIds = requestQueue.map((appointment) => appointment.id);
@@ -240,17 +242,32 @@ const Doctor = () => {
     }
   };
 
-  const toggleSlot = (slot: string) => {
-    setDoctorForm((current) => ({
-      ...current,
-      availableSlots: current.availableSlots.includes(slot)
-        ? current.availableSlots.filter((item) => item !== slot)
-        : [...current.availableSlots, slot].sort(),
-    }));
-  };
-
   if (!currentDoctor) {
-    return null;
+    return (
+      <div className="dashboard-page doctor-page">
+        <main className="container dashboard-content">
+          <section className="preview-card doctor-waiting-card">
+            <div className="panel-heading">
+              <div>
+                <span className="section-chip">Doktor sessiyasi</span>
+                <h2>Doktor profili topilmadi</h2>
+              </div>
+            </div>
+            <p className="preview-subtext">
+              Sessiya saqlangan, lekin doktor yozuvi database'da topilmadi. Qayta kirib ko'ring.
+            </p>
+            <div className="modal-actions">
+              <Link to="/login?mode=doctor" className="button button-secondary">
+                Login sahifasi
+              </Link>
+              <button type="button" className="button button-primary" onClick={() => void signOutUser()}>
+                Sessiyani tozalash
+              </button>
+            </div>
+          </section>
+        </main>
+      </div>
+    );
   }
 
   const waitingTitle =
@@ -260,7 +277,7 @@ const Doctor = () => {
   const waitingText =
     doctorApprovalStatus === "rejected"
       ? "Admin bilan bog'lanib profil ma'lumotlarini yangilang yoki keyinroq qayta urinib ko'ring."
-      : "Ro'yxatdan o'tish muvaffaqiyatli yakunlandi. Admin tasdiqlaganidan keyin kabinet to'liq ochiladi va onboarding modal chiqadi.";
+      : "Ro'yxatdan o'tish muvaffaqiyatli yakunlandi. Admin tasdiqlagach kabinet to'liq ochiladi va qolgan ma'lumotlarni kiritish oynasi chiqadi.";
 
   return (
     <div className="dashboard-page doctor-page">
@@ -280,7 +297,7 @@ const Doctor = () => {
               <LanguageSwitcher compact />
               <ThemeToggle compact />
               <Link to="/user" className="button button-secondary" onClick={() => setMenuOpen(false)}>
-                User panel
+                Foydalanuvchi bo'limi
               </Link>
               <button type="button" className="button button-ghost" onClick={() => void signOutUser()}>
                 Chiqish
@@ -302,11 +319,11 @@ const Doctor = () => {
       <main className="container dashboard-content">
         <section className="dashboard-hero doctor-hero">
           <div>
-            <span className="section-chip">Doctor realtime desk</span>
+            <span className="section-chip">Doktor bo'limi</span>
             <h1>{currentDoctor.name || "Yangi doktor kabineti"}</h1>
             <p>
-              Requestlar 30 daqiqalik kechikish bilan tushadi, online/offline holat esa faqat
-              ishlash rejimingizni bildiradi. Offline bo'lsangiz ham, bo'sh vaqt bo'lsa request sizga
+              So'rovlar 30 daqiqalik kechikish bilan tushadi, ishda yoki ishda emas holati esa
+              faqat ishlash rejimingizni bildiradi. Ishda bo'lmasangiz ham, bo'sh vaqt bo'lsa so'rov sizga
               yetib keladi va qabul qilish-qilmaslikni o'zingiz hal qilasiz.
             </p>
           </div>
@@ -316,7 +333,7 @@ const Doctor = () => {
             {currentDoctor.approvalStatus === "approved"
               ? currentDoctor.isOnline
                 ? "Ishda"
-                : "Ishda emas, ammo requestlar keladi"
+                : "Ishda emas, ammo so'rovlar keladi"
               : "Tasdiq kutilmoqda"}
           </div>
         </section>
@@ -325,7 +342,7 @@ const Doctor = () => {
           <section className="preview-card doctor-waiting-card">
             <div className="panel-heading">
               <div>
-                <span className="section-chip">Approval flow</span>
+                <span className="section-chip">Tasdiqlash holati</span>
                 <h2>{waitingTitle}</h2>
               </div>
               <span className="badge">
@@ -357,7 +374,7 @@ const Doctor = () => {
                 <strong>{performance.totalOrders}</strong>
               </article>
               <article className="dashboard-mini-card">
-                <span>Kutilayotgan request</span>
+                <span>Kutilayotgan so'rov</span>
                 <strong>{requestQueue.length}</strong>
               </article>
               <article className="dashboard-mini-card">
@@ -374,7 +391,7 @@ const Doctor = () => {
               <article className="preview-card preview-highlight">
                 <div className="panel-heading">
                   <div>
-                    <span className="section-chip">Work mode</span>
+                    <span className="section-chip">Ish holati</span>
                     <h2>Ish holati va qabul oqimi</h2>
                   </div>
                   <span className={`badge ${currentDoctor.isOnline ? "badge-gold" : ""}`}>
@@ -384,7 +401,7 @@ const Doctor = () => {
                 </div>
                 <p className="preview-subtext">
                   Tugma sizning hozirgi ish holatingizni ko'rsatadi. Lekin bo'sh vaqtlar mavjud bo'lsa,
-                  foydalanuvchi sizga request yubora oladi va siz uni keyin qabul qilishingiz yoki rad
+                  foydalanuvchi sizga so'rov yubora oladi va siz uni keyin qabul qilishingiz yoki rad
                   etishingiz mumkin.
                 </p>
                 <div className="doctor-work-toggle">
@@ -408,15 +425,23 @@ const Doctor = () => {
               <article className="preview-card">
                 <div className="panel-heading">
                   <div>
-                    <span className="section-chip">About doctor</span>
+                    <span className="section-chip">Doktor haqida</span>
                     <h2>Profil ko'rinishi</h2>
                   </div>
                   <span className="badge">
                     <UserGroupIcon />
-                    {currentDoctor.reviewCount} review
+                    {currentDoctor.reviewCount} baho
                   </span>
                 </div>
                 <div className="info-stack">
+                  <div>
+                    <span>Asosiy ism</span>
+                    <strong>{currentDoctor.name || "-"}</strong>
+                  </div>
+                  <div>
+                    <span>Telefon</span>
+                    <strong>{currentDoctor.phone || "-"}</strong>
+                  </div>
                   <div>
                     <span>Yo'nalish</span>
                     <strong>{translateSpecialty(currentDoctor.specialty || "-")}</strong>
@@ -430,16 +455,13 @@ const Doctor = () => {
                     <strong>{currentDoctor.clinic || "-"}</strong>
                   </div>
                   <div>
-                    <span>Narx</span>
-                    <strong>{currentDoctor.price || "-"}</strong>
+                    <span>Manzil</span>
+                    <strong>{currentDoctor.address || "-"}</strong>
                   </div>
-                </div>
-                <div className="doctor-slot-list">
-                  {currentDoctor.availableSlots.map((slot) => (
-                    <span key={slot} className="doctor-slot-chip">
-                      {slot}
-                    </span>
-                  ))}
+                  <div>
+                    <span>Qisqacha ma'lumot</span>
+                    <strong>{currentDoctor.bio || "-"}</strong>
+                  </div>
                 </div>
               </article>
             </section>
@@ -448,7 +470,7 @@ const Doctor = () => {
               <article className="preview-card preview-highlight doctor-queue-card">
                 <div className="panel-heading">
                   <div>
-                    <span className="section-chip">Ready requests</span>
+                    <span className="section-chip">Tayyor so'rovlar</span>
                     <h2>Qabul qilish uchun tayyor buyurtmalar</h2>
                   </div>
                   <span className="badge badge-gold">
@@ -513,7 +535,7 @@ const Doctor = () => {
 
                   {requestQueue.length === 0 && (
                     <div className="empty-state">
-                      <h3>Hozircha tayyor request yo'q</h3>
+                      <h3>Hozircha tayyor so'rov yo'q</h3>
                       <p>Yangi buyurtma 30 daqiqa kechikishdan keyin shu bo'limga tushadi.</p>
                     </div>
                   )}
@@ -523,7 +545,7 @@ const Doctor = () => {
               <article className="preview-card doctor-queue-card">
                 <div className="panel-heading">
                   <div>
-                    <span className="section-chip">Delay queue</span>
+                    <span className="section-chip">Kechikish navbati</span>
                     <h2>30 daqiqalik navbat</h2>
                   </div>
                   <span className="badge">
@@ -539,7 +561,7 @@ const Doctor = () => {
                           <h3>{appointment.patientName}</h3>
                           <p>{appointment.patientEmail || appointment.patientPhone}</p>
                         </div>
-                        <span className="badge">30 min queue</span>
+                        <span className="badge">30 daqiqalik navbat</span>
                       </div>
                       <div className="appointment-meta-grid">
                         <div>
@@ -561,7 +583,7 @@ const Doctor = () => {
                   {delayedQueue.length === 0 && (
                     <div className="empty-state">
                       <h3>Navbatda buyurtma yo'q</h3>
-                      <p>Yangi bookinglar paydo bo'lsa avval shu yerda kechikish bilan ko'rinadi.</p>
+                      <p>Yangi buyurtmalar paydo bo'lsa, avval shu yerda kutiladi.</p>
                     </div>
                   )}
                 </div>
@@ -572,7 +594,7 @@ const Doctor = () => {
               <article className="preview-card doctor-queue-card">
                 <div className="panel-heading">
                   <div>
-                    <span className="section-chip">Accepted flow</span>
+                    <span className="section-chip">Qabul qilinganlar</span>
                     <h2>Faol qabullar</h2>
                   </div>
                   <span className="badge">
@@ -633,7 +655,7 @@ const Doctor = () => {
               <article className="preview-card doctor-queue-card">
                 <div className="panel-heading">
                   <div>
-                    <span className="section-chip">History</span>
+                    <span className="section-chip">Tarix</span>
                     <h2>Tarix</h2>
                   </div>
                   <span className="badge">
@@ -670,6 +692,77 @@ const Doctor = () => {
                   ))}
                 </div>
               </article>
+            </section>
+
+            <section className="preview-card preview-highlight">
+              <div className="panel-heading">
+                <div>
+                  <span className="section-chip">Bemor baholari</span>
+                  <h2>Anonim izohlar va reytinglar</h2>
+                  <p className="panel-heading-note">
+                    Har bir baho anonim ko'rsatiladi. Siz faqat qo'yilgan yulduzlar, izoh va vaqtni ko'rasiz.
+                  </p>
+                </div>
+                <span className="badge badge-gold">
+                  <StarIcon />
+                  {doctorReviews.length} baho
+                </span>
+              </div>
+
+              <div className="doctor-table-wrap">
+                <table className="doctor-performance-table doctor-review-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Bemor</th>
+                      <th>Baho</th>
+                      <th>Izoh</th>
+                      <th>Vaqt</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {doctorReviews.map((appointment, index) => (
+                      <tr key={appointment.id}>
+                        <td>{index + 1}</td>
+                        <td>
+                          <div className="doctor-table-main">
+                            <strong>Anonim bemor</strong>
+                            <span>{appointment.reviewRating} / 5 baho</span>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="doctor-review-rating">
+                            <strong>{appointment.reviewRating} / 5</strong>
+                            <div className="review-stars-row review-stars-row-readonly">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <span
+                                  key={`${appointment.id}-review-star-${star}`}
+                                  className={`review-star-icon ${
+                                    star <= Number(appointment.reviewRating) ? "review-star-icon-active" : ""
+                                  }`}
+                                >
+                                  <StarIcon />
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="doctor-review-comment">
+                          {appointment.reviewComment?.trim() || "Izoh qoldirilmagan"}
+                        </td>
+                        <td>{String(appointment.reviewedAt || appointment.handledAt || appointment.createdAt).slice(0, 16).replace("T", " ")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {doctorReviews.length === 0 && (
+                <div className="empty-state">
+                  <h3>Hali baho qoldirilmagan</h3>
+                  <p>Qabullar yakunlangach, foydalanuvchilar qoldirgan anonim baholar shu yerda ko'rinadi.</p>
+                </div>
+              )}
             </section>
           </>
         )}
@@ -711,7 +804,7 @@ const Doctor = () => {
             <form className="booking-form modal-scroll-area" onSubmit={handleProfileSubmit}>
               <div className="panel-heading">
                 <div>
-                  <span className="section-chip">Doctor setup</span>
+                  <span className="section-chip">Ma'lumotlarni to'ldirish</span>
                   <h2 id="doctor-profile-title">Doktor profilini to'ldirish</h2>
                 </div>
                 <button type="button" className="icon-button" onClick={() => setShowProfileModal(false)}>
@@ -721,13 +814,39 @@ const Doctor = () => {
 
               <div className="field-grid">
                 <label className="field">
-                  <span>To'liq ism</span>
+                  <span>Ism</span>
                   <div className="field-box">
                     <UserGroupIcon />
                     <input
-                      value={doctorForm.name}
+                      value={doctorForm.firstName}
                       onChange={(event) =>
-                        setDoctorForm((current) => ({ ...current, name: event.target.value }))
+                        setDoctorForm((current) => ({ ...current, firstName: event.target.value }))
+                      }
+                      required
+                    />
+                  </div>
+                </label>
+                <label className="field">
+                  <span>Familya</span>
+                  <div className="field-box">
+                    <UserGroupIcon />
+                    <input
+                      value={doctorForm.lastName}
+                      onChange={(event) =>
+                        setDoctorForm((current) => ({ ...current, lastName: event.target.value }))
+                      }
+                      required
+                    />
+                  </div>
+                </label>
+                <label className="field">
+                  <span>Telefon</span>
+                  <div className="field-box">
+                    <PhoneIcon />
+                    <input
+                      value={doctorForm.phone}
+                      onChange={(event) =>
+                        setDoctorForm((current) => ({ ...current, phone: event.target.value }))
                       }
                       required
                     />
@@ -746,54 +865,8 @@ const Doctor = () => {
                     />
                   </div>
                 </label>
-                <label className="field">
-                  <span>Hudud</span>
-                  <div className="field-box field-box-select">
-                    <LocationIcon />
-                    <select
-                      value={doctorForm.region}
-                      onChange={(event) =>
-                        setDoctorForm((current) => ({ ...current, region: event.target.value }))
-                      }
-                    >
-                      {UZBEKISTAN_REGIONS.map((region) => (
-                        <option key={region} value={region}>
-                          {translateRegion(region)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </label>
-                <label className="field">
-                  <span>Tajriba</span>
-                  <div className="field-box">
-                    <ClockIcon />
-                    <input
-                      value={doctorForm.experience}
-                      onChange={(event) =>
-                        setDoctorForm((current) => ({ ...current, experience: event.target.value }))
-                      }
-                      placeholder="Masalan, 8 yil"
-                      required
-                    />
-                  </div>
-                </label>
-                <label className="field">
-                  <span>Narx</span>
-                  <div className="field-box">
-                    <SparkIcon />
-                    <input
-                      value={doctorForm.price}
-                      onChange={(event) =>
-                        setDoctorForm((current) => ({ ...current, price: event.target.value }))
-                      }
-                      placeholder="Masalan, 180 000 so'm"
-                      required
-                    />
-                  </div>
-                </label>
                 <label className="field field-full">
-                  <span>Klinika</span>
+                  <span>Shifoxona</span>
                   <div className="field-box">
                     <ShieldIcon />
                     <input
@@ -806,7 +879,7 @@ const Doctor = () => {
                   </div>
                 </label>
                 <label className="field field-full">
-                  <span>Manzil</span>
+                  <span>Shifoxona manzili</span>
                   <div className="field-box">
                     <LocationIcon />
                     <input
@@ -819,19 +892,7 @@ const Doctor = () => {
                   </div>
                 </label>
                 <label className="field field-full">
-                  <span>Map qidiruv matni</span>
-                  <div className="field-box">
-                    <LocationIcon />
-                    <input
-                      value={doctorForm.mapQuery}
-                      onChange={(event) =>
-                        setDoctorForm((current) => ({ ...current, mapQuery: event.target.value }))
-                      }
-                    />
-                  </div>
-                </label>
-                <label className="field field-full">
-                  <span>Bio</span>
+                  <span>O'zingiz haqingizda</span>
                   <textarea
                     rows={4}
                     value={doctorForm.bio}
@@ -841,26 +902,6 @@ const Doctor = () => {
                     required
                   />
                 </label>
-                <div className="field field-full">
-                  <span>Bo'sh vaqtlar</span>
-                  <div className="slot-grid slot-grid-admin">
-                    {DEFAULT_TIME_SLOTS.map((slot) => (
-                      <button
-                        key={slot}
-                        type="button"
-                        className={`slot-button ${
-                          doctorForm.availableSlots.includes(slot) ? "slot-button-active" : ""
-                        }`}
-                        onClick={() => toggleSlot(slot)}
-                      >
-                        {slot}
-                      </button>
-                    ))}
-                  </div>
-                  <small className="field-note">
-                    Ishda bo'lmasangiz ham shu vaqtlar bo'yicha request sizga keladi.
-                  </small>
-                </div>
               </div>
 
               <div className="modal-actions">

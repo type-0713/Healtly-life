@@ -22,7 +22,7 @@ import {
 import { useI18n } from "../context/I18nContext";
 
 const Admin = () => {
-  const { translateRegion, translateSpecialty } = useI18n();
+  const { translateRegion, translateSpecialty, translateStatus } = useI18n();
   const {
     appointments,
     doctorRoster,
@@ -109,7 +109,7 @@ const Admin = () => {
               <LanguageSwitcher compact />
               <ThemeToggle compact />
               <Link to="/doctor" className="button button-secondary" onClick={() => setMenuOpen(false)}>
-                Doctor panel
+                Doktor bo'limi
               </Link>
               <button type="button" className="button button-ghost" onClick={() => void signOutUser()}>
                 Chiqish
@@ -131,16 +131,16 @@ const Admin = () => {
       <main className="container dashboard-content">
         <section className="dashboard-hero">
           <div>
-            <span className="section-chip">Realtime admin control</span>
-            <h1>Doktor approval va buyurtma boshqaruvi</h1>
+            <span className="section-chip">Admin boshqaruvi</span>
+            <h1>Doktorlar va buyurtmalar boshqaruvi</h1>
             <p>
               Admin endi doktor qo'shmaydi. Yangi doktorlar o'zlari ro'yxatdan o'tadi, siz esa bu yerda
-              ularga ruxsat berasiz, o'chirasiz va butun oqimni realtime tarzda kuzatasiz.
+              ularga ruxsat berasiz, o'chirasiz va barcha buyurtmalarni kuzatib borasiz.
             </p>
           </div>
           <div className="dashboard-tagline glass-card">
             <SparkIcon />
-            24/7 platforma faol
+            Tizim doimiy ishlaydi
           </div>
         </section>
 
@@ -167,7 +167,7 @@ const Admin = () => {
           <article className="preview-card preview-highlight">
             <div className="panel-heading">
               <div>
-                <span className="section-chip">Approval desk</span>
+                <span className="section-chip">Tasdiqlash</span>
                 <h2>Yangi doktor arizalari</h2>
               </div>
               <span className="badge badge-gold">
@@ -182,6 +182,7 @@ const Admin = () => {
                   <div className="doctor-admin-copy">
                     <strong>{doctor.name || doctor.ownerEmail}</strong>
                     <span>{doctor.ownerEmail}</span>
+                    <span>{doctor.phone || "Telefon kiritilmagan"}</span>
                     <span>{translateSpecialty(doctor.specialty || "Mutaxassislik kiritilmagan")}</span>
                     <span>{translateRegion(doctor.region)}</span>
                     <p>{doctor.bio || "Doktor hali to'liq bio kiritmagan."}</p>
@@ -220,7 +221,7 @@ const Admin = () => {
           <article className="preview-card">
             <div className="panel-heading">
               <div>
-                <span className="section-chip">Rejected</span>
+                <span className="section-chip">Rad etilganlar</span>
                 <h2>Rad etilgan arizalar</h2>
               </div>
               <span className="badge">
@@ -248,10 +249,10 @@ const Admin = () => {
         <section className="preview-card preview-highlight">
           <div className="panel-heading">
             <div>
-              <span className="section-chip">Doctor table</span>
+              <span className="section-chip">Doktorlar jadvali</span>
               <h2>Doktorlar jadvali</h2>
               <p className="panel-heading-note">
-                Har bir doktor bo'yicha buyurtmalar soni, daromad, status va tavsiya ko'rsatiladi.
+                Har bir doktor uchun buyurtmalar soni, daromad, holat va qisqa izoh ko'rsatiladi.
               </p>
             </div>
             <span className="badge">
@@ -283,6 +284,7 @@ const Admin = () => {
                         <div className="doctor-table-main">
                           <strong>{doctor.name}</strong>
                           <span>{doctor.ownerEmail || doctor.clinic}</span>
+                          <span>{doctor.phone}</span>
                         </div>
                       </td>
                       <td>{translateSpecialty(doctor.specialty)}</td>
@@ -312,7 +314,7 @@ const Admin = () => {
           <article className="preview-card">
             <div className="panel-heading">
               <div>
-                <span className="section-chip">Realtime feed</span>
+                <span className="section-chip">So'nggi buyurtmalar</span>
                 <h2>So'nggi buyurtmalar</h2>
               </div>
             </div>
@@ -324,7 +326,7 @@ const Admin = () => {
                       <h3>{appointment.patientName}</h3>
                       <p>{appointment.doctorName}</p>
                     </div>
-                    <span className="badge">{appointment.status}</span>
+                    <span className="badge">{translateStatus(appointment.status)}</span>
                   </div>
                   <div className="appointment-meta-grid">
                     <div>
@@ -333,11 +335,11 @@ const Admin = () => {
                     </div>
                     <div>
                       <StethoscopeIcon />
-                      <span>{appointment.specialty}</span>
+                      <span>{translateSpecialty(appointment.specialty)}</span>
                     </div>
                     <div>
                       <ShieldIcon />
-                      <span>{appointment.requestVisibleAt ? "30 min delay" : "Instant"}</span>
+                      <span>{appointment.requestVisibleAt ? "30 daqiqadan keyin" : "Darhol"}</span>
                     </div>
                   </div>
                 </article>
@@ -348,26 +350,26 @@ const Admin = () => {
           <article className="preview-card">
             <div className="panel-heading">
               <div>
-                <span className="section-chip">Checklist</span>
-                <h2>Yangi oqim tayyorligi</h2>
+                <span className="section-chip">Holat</span>
+                <h2>Tizimning joriy holati</h2>
               </div>
             </div>
             <div className="summary-checks">
               <div>
                 <CheckIcon />
-                <span>Doktor self-register flow yoqildi</span>
+                <span>Doktor o'zi ro'yxatdan o'tadigan tizim yoqilgan</span>
               </div>
               <div>
                 <CheckIcon />
-                <span>Approval va delete boshqaruvi admin panelga ko'chirildi</span>
+                <span>Ruxsat berish va o'chirish admin bo'limida boshqariladi</span>
               </div>
               <div>
                 <CheckIcon />
-                <span>Doctor requestlar 30 daqiqa kechikish bilan ko'rinadi</span>
+                <span>Doktor so'rovlari 30 daqiqa kechikish bilan ko'rinadi</span>
               </div>
               <div>
                 <CheckIcon />
-                <span>Online/offline va bo'sh vaqtlar user booking bilan bog'landi</span>
+                <span>Ish holati va bo'sh vaqtlar buyurtmalar bilan bog'langan</span>
               </div>
             </div>
           </article>

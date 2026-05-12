@@ -2,6 +2,7 @@ import { useDeferredValue, useEffect, useMemo, useState, type ReactNode } from "
 import { Link, useNavigate } from "react-router-dom";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import ThemeToggle from "../components/ThemeToggle";
+import EmergencyCallButton from "../components/EmergencyCallButton";
 import {
   ArrowRightIcon,
   CalendarIcon,
@@ -120,13 +121,13 @@ const Home = () => {
       ? "Цифровой ритм клиники"
       : language === "en"
         ? "Digital clinic rhythm"
-        : "Raqamli klinika ritmi";
+        : "Klinikaning raqamli ishlashi";
   const heroCommandText =
     language === "ru"
       ? "Живая витрина слотов, рейтинга и скорости ответа для пациентов премиального уровня."
       : language === "en"
         ? "A live showcase of slot readiness, doctor trust, and premium response speed."
-        : "Premium bemorlar uchun slot tayyorligi, doktor ishonchi va tezkor javobni bir joyda ko'rsatadigan jonli vitrina.";
+        : "Bu bo'limda bo'sh vaqtlar, doktorlar reytingi va buyurtmalar holati bir joyda ko'rsatiladi.";
   const heroCommandMetrics = [
     {
       label: language === "ru" ? "Готовые врачи" : language === "en" ? "Ready doctors" : "Tayyor doktorlar",
@@ -142,33 +143,33 @@ const Home = () => {
     },
   ];
   const heroOverlayTitle =
-    language === "ru" ? "Premium care sync" : language === "en" ? "Premium care sync" : "Premium care sync";
+    language === "ru" ? "Синхронная работа" : language === "en" ? "Synchronized service" : "Mos ishlash";
   const heroOverlayText =
     language === "ru"
       ? "Маршрут пациента, подтверждение и карта врача синхронизированы."
       : language === "en"
         ? "Patient path, approval, and doctor location are synchronized."
-        : "Bemor yo'li, tasdiq va doktor lokatsiyasi sinxron ishlaydi.";
+        : "Bemor tanlovi, buyurtma holati va doktor manzili bir-biriga bog'langan.";
   const heroOverlayFoot =
     language === "ru"
       ? "Обновление в реальном времени"
       : language === "en"
         ? "Realtime refreshed"
-        : "Realtime yangilanadi";
+        : "Ma'lumotlar yangilanib turadi";
   const signatureTitle =
     language === "ru"
       ? "Поток сервиса, который ощущается как продукт класса люкс"
       : language === "en"
         ? "A care flow that feels like a luxury product"
-        : "Premium mahsulotdek his qilinadigan tibbiy oqim";
+        : "Qulay va tushunarli tibbiy xizmat jarayoni";
   const signatureText =
     language === "ru"
       ? "Каждый экран показывает уверенность, скорость и контроль: от поиска врача до подтверждённого визита."
       : language === "en"
         ? "Every screen projects confidence, speed, and control from doctor discovery to confirmed visit."
-        : "Har bir ekran doktordan qabulgacha bo'lgan yo'lda ishonch, tezlik va nazorat hissini beradi.";
+        : "Har bir ekran doktordan qabulgacha bo'lgan jarayonni sodda va tushunarli qiladi.";
   const signaturePillars = [
-    language === "ru" ? "Премиальная навигация" : language === "en" ? "Premium navigation" : "Premium navigatsiya",
+    language === "ru" ? "Премиальная навигация" : language === "en" ? "Clear navigation" : "Tushunarli navigatsiya",
     language === "ru" ? "Читаемый статус визита" : language === "en" ? "Readable visit status" : "Tushunarli qabul statusi",
     language === "ru" ? "Единый стиль доверия" : language === "en" ? "Unified trust language" : "Yagona ishonch uslubi",
   ];
@@ -361,7 +362,7 @@ const Home = () => {
                   <article className="metric-card metric-card-accent">
                     <p>{copy.responseTime}</p>
                     <strong>30 min</strong>
-                    <span>Doktorga request kechikib tushadi</span>
+                    <span>So'rov doktorga 30 daqiqadan keyin ko'rinadi</span>
                   </article>
                 </div>
 
@@ -769,6 +770,8 @@ const Home = () => {
           </div>
         </div>
       </footer>
+
+      <EmergencyCallButton />
     </div>
   );
 };

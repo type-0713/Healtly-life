@@ -410,6 +410,9 @@ textarea {
   padding: 0 20px;
   border-radius: 999px;
   border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
   transition:
     transform 0.22s ease,
     border-color 0.22s ease,
@@ -417,8 +420,23 @@ textarea {
     box-shadow 0.22s ease;
 }
 
+.button::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 55%);
+  opacity: 0;
+  transition: opacity 0.22s ease;
+  z-index: -1;
+}
+
 .button:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+}
+
+.button:hover::before {
+  opacity: 1;
 }
 
 .button:disabled {
@@ -2440,7 +2458,8 @@ textarea {
 .dashboard-mini-card:hover,
 .stat-card:hover,
 .metric-card:hover,
-.ops-strip-card:hover {
+.ops-strip-card:hover,
+.preview-card:hover {
   transform: translateY(-3px);
   border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
   box-shadow: 0 24px 52px rgba(16, 24, 40, 0.16);
@@ -3670,6 +3689,50 @@ textarea {
   flex-wrap: wrap;
   gap: 12px;
   margin: 0 0 24px;
+  padding: 8px;
+  border-radius: 28px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  box-shadow: var(--shadow-soft);
+}
+
+.dashboard-tab-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 180px;
+  min-height: 56px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 22px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 700;
+  transition:
+    transform 0.22s ease,
+    color 0.22s ease,
+    background 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+.dashboard-tab-pill:hover {
+  color: var(--heading);
+  background: color-mix(in srgb, var(--surface-hover) 92%, transparent);
+  transform: translateY(-1px);
+}
+
+.dashboard-tab-pill-active {
+  color: var(--heading);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(240, 246, 255, 0.88)),
+    var(--panel-bg);
+  box-shadow: 0 14px 32px rgba(118, 169, 255, 0.18);
+}
+
+[data-theme="dark"] .dashboard-tab-pill-active {
+  background:
+    linear-gradient(145deg, rgba(122, 170, 255, 0.2), rgba(63, 107, 233, 0.24)),
+    rgba(255, 255, 255, 0.06);
 }
 
 .doctor-kpi-grid,
@@ -3712,6 +3775,15 @@ textarea {
 .doctor-request-actions {
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.doctor-work-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.doctor-work-toggle .button {
+  width: 100%;
 }
 
 .booking-doctor-showcase {
@@ -3779,6 +3851,40 @@ textarea {
   color: var(--muted);
 }
 
+.doctor-name-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  padding-bottom: 2px;
+}
+
+.doctor-name-scroll strong,
+.doctor-name-scroll h2,
+.doctor-name-scroll h3 {
+  display: inline-block;
+  min-width: max-content;
+  margin: 0;
+}
+
+.doctor-name-scroll-title,
+.doctor-name-scroll-heading {
+  padding-bottom: 4px;
+}
+
+.doctor-name-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.doctor-name-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 48%, transparent);
+}
+
+.doctor-name-scroll::-webkit-scrollbar-track {
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+}
+
 .doctor-request-list {
   display: grid;
   gap: 16px;
@@ -3792,10 +3898,22 @@ textarea {
   border-radius: 24px;
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--surface) 84%, transparent);
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .doctor-request-item p {
   margin: 12px 0 0;
+}
+
+.doctor-request-item:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+  background: color-mix(in srgb, var(--surface-hover) 78%, transparent);
+  box-shadow: var(--shadow-soft);
 }
 
 .doctor-profile-modal,
@@ -3812,7 +3930,8 @@ textarea {
 }
 
 .doctor-table-wrap {
-  overflow-x: auto;
+  max-height: 520px;
+  overflow: auto;
   border-radius: 24px;
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--surface) 84%, transparent);
@@ -3837,6 +3956,125 @@ textarea {
   font-size: 0.88rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.doctor-review-rating {
+  display: grid;
+  gap: 10px;
+}
+
+.doctor-review-comment {
+  min-width: 240px;
+  color: var(--text);
+  line-height: 1.65;
+}
+
+.doctor-review-table td {
+  min-width: 120px;
+}
+
+.doctor-review-table .review-stars-row-readonly {
+  gap: 8px;
+}
+
+.doctor-review-table .review-star-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+}
+
+.emergency-fab {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 80;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: #fff;
+  text-decoration: none;
+}
+
+.emergency-fab-pulse {
+  position: absolute;
+  inset: -8px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 94, 94, 0.28) 0%, rgba(255, 94, 94, 0) 72%);
+  animation: emergency-pulse 2.2s ease-in-out infinite;
+}
+
+.emergency-fab-core {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  width: 74px;
+  height: 74px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: linear-gradient(145deg, #ff7d7d 0%, #ef3d49 56%, #ba1f2d 100%);
+  box-shadow:
+    0 22px 44px rgba(191, 27, 44, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  transition:
+    transform 0.22s ease,
+    box-shadow 0.22s ease,
+    filter 0.22s ease;
+}
+
+.emergency-fab-core svg {
+  width: 20px;
+  height: 20px;
+}
+
+.emergency-fab-core strong {
+  margin-top: 2px;
+  font-size: 0.92rem;
+  letter-spacing: 0.08em;
+}
+
+.emergency-fab-text {
+  position: relative;
+  min-height: 48px;
+  padding: 0 16px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  background: color-mix(in srgb, var(--panel-strong) 92%, rgba(122, 15, 26, 0.8));
+  border: 1px solid rgba(255, 122, 122, 0.28);
+  color: var(--heading);
+  box-shadow: var(--shadow-soft);
+  transition:
+    transform 0.22s ease,
+    opacity 0.22s ease;
+}
+
+.emergency-fab:hover .emergency-fab-core,
+.emergency-fab:focus-visible .emergency-fab-core {
+  transform: translateY(-3px) scale(1.03);
+  filter: saturate(1.08);
+  box-shadow:
+    0 26px 52px rgba(191, 27, 44, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.26);
+}
+
+.emergency-fab:hover .emergency-fab-text,
+.emergency-fab:focus-visible .emergency-fab-text {
+  transform: translateX(-2px);
+}
+
+@keyframes emergency-pulse {
+  0%,
+  100% {
+    transform: scale(0.92);
+    opacity: 0.64;
+  }
+
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
 }
 
 .doctor-table-main {
@@ -3898,6 +4136,37 @@ textarea {
   .doctor-select-card,
   .doctor-request-item {
     padding: 16px;
+  }
+
+  .workspace-tabs,
+  .doctor-work-toggle {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-tabs {
+    display: grid;
+  }
+
+  .dashboard-tab-pill {
+    width: 100%;
+    min-height: 50px;
+  }
+
+  .emergency-fab {
+    right: 14px;
+    bottom: 14px;
+    gap: 10px;
+  }
+
+  .emergency-fab-core {
+    width: 66px;
+    height: 66px;
+  }
+
+  .emergency-fab-text {
+    min-height: 42px;
+    padding: 0 14px;
+    font-size: 0.9rem;
   }
 
   .booking-doctor-showcase {
