@@ -22,6 +22,7 @@ import {
 import {
   calculateDoctorPerformance,
   formatCurrency,
+  getAppointmentVisibilityDelayMinutes,
   getDoctorRequestReady,
   useAppContext,
   type DoctorProfileInput,
@@ -103,6 +104,9 @@ const Doctor = () => {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const readyRequestIds = useRef<string[]>([]);
+
+  const formatTimestamp = (timestamp?: string) =>
+    timestamp ? String(timestamp).slice(0, 16).replace("T", " ") : "-";
 
   useEffect(() => {
     if (!currentDoctor) {
@@ -322,9 +326,8 @@ const Doctor = () => {
             <span className="section-chip">Doktor bo'limi</span>
             <h1>{currentDoctor.name || "Yangi doktor kabineti"}</h1>
             <p>
-              So'rovlar 30 daqiqalik kechikish bilan tushadi, ishda yoki ishda emas holati esa
-              faqat ishlash rejimingizni bildiradi. Ishda bo'lmasangiz ham, bo'sh vaqt bo'lsa so'rov sizga
-              yetib keladi va qabul qilish-qilmaslikni o'zingiz hal qilasiz.
+              Ishda va bo'sh paytingizda so'rovlar darhol tushadi. Faol qabul mavjud bo'lsa keyingi
+              request 22 daqiqalik kechikish bilan keladi, offline holatda esa navbat 30 daqiqagacha cho'ziladi.
             </p>
           </div>
 
@@ -485,7 +488,11 @@ const Doctor = () => {
                       <div className="appointment-card-head">
                         <div>
                           <h3>{appointment.patientName}</h3>
-                          <p>{appointment.patientPhone}</p>
+                          <p>
+                            <a href={`tel:${appointment.patientPhone}`} className="doctor-request-link">
+                              {appointment.patientPhone}
+                            </a>
+                          </p>
                         </div>
                         <span className="badge">{translateStatus(appointment.status)}</span>
                       </div>
@@ -503,7 +510,27 @@ const Doctor = () => {
                           <span>{appointment.clinic}</span>
                         </div>
                       </div>
-                      {appointment.notes && <p>{appointment.notes}</p>}
+                      <div className="appointment-meta-grid">
+                        <div>
+                          <UserGroupIcon />
+                          <span>Kim: {appointment.patientName}</span>
+                        </div>
+                        <div>
+                          <ClockIcon />
+                          <span>Qachon: {formatTimestamp(appointment.createdAt)}</span>
+                        </div>
+                        <div>
+                          <PhoneIcon />
+                          <span>
+                            <a href={`tel:${appointment.patientPhone}`} className="doctor-request-link">
+                              {appointment.patientPhone}
+                            </a>
+                          </span>
+                        </div>
+                      </div>
+                      <p>
+                        <strong>Nima uchun:</strong> {appointment.notes || "Izoh kiritilmagan"}
+                      </p>
                       <div className="doctor-request-actions">
                         <button
                           type="button"
@@ -536,7 +563,7 @@ const Doctor = () => {
                   {requestQueue.length === 0 && (
                     <div className="empty-state">
                       <h3>Hozircha tayyor so'rov yo'q</h3>
-                      <p>Yangi buyurtma 30 daqiqa kechikishdan keyin shu bo'limga tushadi.</p>
+                      <p>Yangi buyurtma doktor yuklamasi va online holatiga qarab shu bo'limga tushadi.</p>
                     </div>
                   )}
                 </div>
@@ -546,7 +573,7 @@ const Doctor = () => {
                 <div className="panel-heading">
                   <div>
                     <span className="section-chip">Kechikish navbati</span>
-                    <h2>30 daqiqalik navbat</h2>
+                    <h2>Kechiktirilgan navbat</h2>
                   </div>
                   <span className="badge">
                     <ClockIcon />
@@ -554,31 +581,62 @@ const Doctor = () => {
                   </span>
                 </div>
                 <div className="doctor-request-list">
-                  {delayedQueue.map((appointment) => (
-                    <article key={appointment.id} className="doctor-request-item">
-                      <div className="appointment-card-head">
-                        <div>
-                          <h3>{appointment.patientName}</h3>
-                          <p>{appointment.patientEmail || appointment.patientPhone}</p>
+                  {delayedQueue.map((appointment) => {
+                    const delayMinutes = getAppointmentVisibilityDelayMinutes(appointment);
+
+                    return (
+                      <article key={appointment.id} className="doctor-request-item">
+                        <div className="appointment-card-head">
+                          <div>
+                            <h3>{appointment.patientName}</h3>
+                            <p>
+                              <a href={`tel:${appointment.patientPhone}`} className="doctor-request-link">
+                                {appointment.patientPhone}
+                              </a>
+                            </p>
+                          </div>
+                          <span className="badge">
+                            {delayMinutes === 0 ? "Darhol" : `${delayMinutes} daqiqalik navbat`}
+                          </span>
                         </div>
-                        <span className="badge">30 daqiqalik navbat</span>
-                      </div>
-                      <div className="appointment-meta-grid">
-                        <div>
-                          <CalendarIcon />
-                          <span>{appointment.date}</span>
+                        <div className="appointment-meta-grid">
+                          <div>
+                            <CalendarIcon />
+                            <span>{appointment.date}</span>
+                          </div>
+                          <div>
+                            <ClockIcon />
+                            <span>{appointment.time}</span>
+                          </div>
+                          <div>
+                            <PhoneIcon />
+                            <span>
+                              <a href={`tel:${appointment.patientPhone}`} className="doctor-request-link">
+                                {appointment.patientPhone}
+                              </a>
+                            </span>
+                          </div>
                         </div>
-                        <div>
-                          <ClockIcon />
-                          <span>{appointment.time}</span>
+                        <div className="appointment-meta-grid">
+                          <div>
+                            <UserGroupIcon />
+                            <span>Kim: {appointment.patientName}</span>
+                          </div>
+                          <div>
+                            <ClockIcon />
+                            <span>Qachon: {formatTimestamp(appointment.createdAt)}</span>
+                          </div>
+                          <div>
+                            <PhoneIcon />
+                            <span>{appointment.patientEmail || appointment.patientPhone}</span>
+                          </div>
                         </div>
-                        <div>
-                          <PhoneIcon />
-                          <span>{appointment.patientPhone}</span>
-                        </div>
-                      </div>
-                    </article>
-                  ))}
+                        <p>
+                          <strong>Nima uchun:</strong> {appointment.notes || "Izoh kiritilmagan"}
+                        </p>
+                      </article>
+                    );
+                  })}
 
                   {delayedQueue.length === 0 && (
                     <div className="empty-state">

@@ -587,6 +587,10 @@ const getDoctorPriceValue = (price: string) => {
   return digits ? Number(digits) : 0;
 };
 
+const getDoctorRequestDelayMinutes = (doctor: Pick<Doctor, "id" | "isOnline">) => {
+  return doctor.isOnline ? 0 : 30;
+};
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const initialLocalEmail =
     typeof window === "undefined" ? "" : window.localStorage.getItem(USER_SESSION_KEY) ?? "";
@@ -850,7 +854,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const slotId = `${doctor.id}_${input.date}_${input.time.replace(":", "-")}`;
       const appointmentRef = doc(db, "appointments", slotId);
       const createdAt = new Date();
-      const requestVisibleAt = new Date(createdAt.getTime() + 30 * 60 * 1000).toISOString();
+      const requestDelayMinutes = getDoctorRequestDelayMinutes(doctor);
+      const requestVisibleAt = new Date(createdAt.getTime() + requestDelayMinutes * 60 * 1000).toISOString();
 
       const payload: Appointment = {
         id: slotId,
@@ -895,7 +900,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       return payload;
     },
-    [doctors],
+    [appointments, doctors],
   );
 
   const updateAppointmentStatusHandler = useCallback(
@@ -1536,6 +1541,16 @@ export const formatCurrency = (value: number) =>
 
 export const getDoctorRequestReady = (appointment: Appointment) =>
   !appointment.requestVisibleAt || appointment.requestVisibleAt <= new Date().toISOString();
+
+export const getAppointmentVisibilityDelayMinutes = (
+  appointment: Pick<Appointment, "createdAt" | "requestVisibleAt">,
+) => {
+  const createdAt = new Date(appointment.createdAt).getTime();
+  const requestVisibleAt = new Date(appointment.requestVisibleAt || appointment.createdAt).getTime();
+  const diffMinutes = Math.max(0, Math.round((requestVisibleAt - createdAt) / 60000));
+
+  return Number.isFinite(diffMinutes) ? diffMinutes : 0;
+};
 
 export const getDoctorBookingRecommendation = (doctor: Doctor, appointments: Appointment[]) => {
   const performance = calculateDoctorPerformance(doctor, appointments);

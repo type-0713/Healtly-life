@@ -92,7 +92,7 @@ export const homeCopy: Record<Language, any> = {
     faqTitle: "Xizmat va bronlash qoidalari bo'yicha muhim savollar",
     faqs: [
       ["Bronlash qachon ishlaydi?", "Platforma 24/7 ishlaydi. Siz istalgan vaqtda buyurtma yuborishingiz mumkin."],
-      ["Doktor so'rovni qachon ko'radi?", "Buyurtma tizimga darhol tushadi, doktor esa uni bron vaqtidan 30 daqiqa o'tgach ko'radi."],
+      ["Doktor so'rovni qachon ko'radi?", "Doktor ishda va bo'sh bo'lsa so'rovni darhol ko'radi. Faol qabul bo'lsa keyingisi 22 daqiqadan keyin, offline holatda esa 30 daqiqadan keyin chiqadi."],
       ["Reytingni kim beradi?", "Doktor reytingi faqat qabul yakunlangach foydalanuvchi bergan baho va izohlar asosida shakllanadi."],
     ],
     startChip: "Boshlash",

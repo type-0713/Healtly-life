@@ -394,8 +394,8 @@ const Home = () => {
                   </article>
                   <article className="metric-card metric-card-accent">
                     <p>{copy.responseTime}</p>
-                    <strong>30 min</strong>
-                    <span>So'rov doktorga 30 daqiqadan keyin ko'rinadi</span>
+                    <strong>0/22/30 min</strong>
+                    <span>Doktor holatiga qarab so'rov darhol, 22 daqiqada yoki 30 daqiqada ko'rinadi</span>
                   </article>
                 </div>
 

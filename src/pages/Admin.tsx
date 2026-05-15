@@ -14,6 +14,7 @@ import {
   UserGroupIcon,
 } from "../components/PremiumIcons";
 import {
+  getAppointmentVisibilityDelayMinutes,
   calculateDoctorPerformance,
   formatCurrency,
   getDoctorBookingRecommendation,
@@ -319,31 +320,35 @@ const Admin = () => {
               </div>
             </div>
             <div className="doctor-request-list">
-              {latestAppointments.map((appointment) => (
-                <article key={appointment.id} className="doctor-request-item">
-                  <div className="appointment-card-head">
-                    <div>
-                      <h3>{appointment.patientName}</h3>
-                      <p>{appointment.doctorName}</p>
+              {latestAppointments.map((appointment) => {
+                const delayMinutes = getAppointmentVisibilityDelayMinutes(appointment);
+
+                return (
+                  <article key={appointment.id} className="doctor-request-item">
+                    <div className="appointment-card-head">
+                      <div>
+                        <h3>{appointment.patientName}</h3>
+                        <p>{appointment.doctorName}</p>
+                      </div>
+                      <span className="badge">{translateStatus(appointment.status)}</span>
                     </div>
-                    <span className="badge">{translateStatus(appointment.status)}</span>
-                  </div>
-                  <div className="appointment-meta-grid">
-                    <div>
-                      <ClockIcon />
-                      <span>{appointment.time}</span>
+                    <div className="appointment-meta-grid">
+                      <div>
+                        <ClockIcon />
+                        <span>{appointment.time}</span>
+                      </div>
+                      <div>
+                        <StethoscopeIcon />
+                        <span>{translateSpecialty(appointment.specialty)}</span>
+                      </div>
+                      <div>
+                        <ShieldIcon />
+                        <span>{delayMinutes === 0 ? "Darhol" : `${delayMinutes} daqiqadan keyin`}</span>
+                      </div>
                     </div>
-                    <div>
-                      <StethoscopeIcon />
-                      <span>{translateSpecialty(appointment.specialty)}</span>
-                    </div>
-                    <div>
-                      <ShieldIcon />
-                      <span>{appointment.requestVisibleAt ? "30 daqiqadan keyin" : "Darhol"}</span>
-                    </div>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           </article>
 
@@ -365,7 +370,7 @@ const Admin = () => {
               </div>
               <div>
                 <CheckIcon />
-                <span>Doktor so'rovlari 30 daqiqa kechikish bilan ko'rinadi</span>
+                <span>Online bo'sh doktorga so'rov darhol, faol qabul bo'lsa 22 daqiqadan keyin ko'rinadi</span>
               </div>
               <div>
                 <CheckIcon />

@@ -58,7 +58,7 @@ const copy = {
     active: "Faol sessiya",
     metrics: [
       ["24/7", "Buyurtma qabul qilish"],
-      ["30 min", "Doktorga kechikib boradigan so'rov"],
+      ["0/22/30 min", "Doktor holatiga mos navbat"],
       ["Alohida login", "Doktor uchun mustaqil kirish"],
     ],
     highlights: [
@@ -72,7 +72,7 @@ const copy = {
       },
       {
         title: "Kechikib yuboriladigan so'rovlar",
-        text: "So'rov doktorga 30 daqiqadan keyin boradi va u uni qabul yoki rad etadi.",
+        text: "Online bo'sh doktorga so'rov darhol boradi, faol qabul bo'lsa keyingi request 22 daqiqadan so'ng tushadi.",
       },
     ],
   },
@@ -160,7 +160,7 @@ const copy = {
     active: "Active session",
     metrics: [
       ["24/7", "Unlimited booking"],
-      ["30 min", "Delayed doctor request"],
+      ["0/22/30 min", "Adaptive doctor queue"],
       ["No Auth", "Separate database login for doctors"],
     ],
     highlights: [
@@ -174,7 +174,7 @@ const copy = {
       },
       {
         title: "24/7 requests",
-        text: "The request reaches the doctor after 30 minutes, and the doctor decides to accept or decline it.",
+        text: "An online available doctor sees incoming requests immediately without queue delay, while offline doctors receive requests with a 30-minute visibility timing.",
       },
     ],
   },

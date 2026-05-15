@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import EmergencyCallButton from "../components/EmergencyCallButton";
 import LanguageSwitcher from "../components/LanguageSwitcher";
@@ -23,6 +23,7 @@ import {
   getDoctorBookingRecommendation,
   useAppContext,
   type Appointment,
+  type Doctor,
 } from "../context/AppContext";
 import { useI18n } from "../context/I18nContext";
 import { getDoctorMapQuery, getMapSearchUrl } from "../lib/maps";
@@ -79,7 +80,10 @@ const User = () => {
   const [reviewTarget, setReviewTarget] = useState<Appointment | null>(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
+  const [doctorInfoTarget, setDoctorInfoTarget] = useState<Doctor | null>(null);
+  const [doctorBookingTarget, setDoctorBookingTarget] = useState<Doctor | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const bookingSectionRef = useRef<HTMLElement | null>(null);
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const requestedDoctorId = searchParams.get("doctor") ?? "";
   const requestedDate = searchParams.get("date") ?? "";
@@ -284,13 +288,22 @@ const User = () => {
         email: activeUserEmail,
       });
 
+      const isImmediatelyVisible =
+        appointment &&
+        new Date(appointment.requestVisibleAt).getTime() - new Date(appointment.createdAt).getTime() < 60 * 1000;
+
       setNotice(
         appointment
-          ? `Buyurtma yaratildi. Doktor bu so'rovni taxminan ${appointment.requestVisibleAt.slice(11, 16)} da ko'radi.`
+          ? isImmediatelyVisible
+            ? "Buyurtma yaratildi. Doktor bu so'rovni hozir ko'rishi mumkin."
+            : `Buyurtma yaratildi. Doktor bu so'rovni taxminan ${appointment.requestVisibleAt.slice(11, 16)} da ko'radi.`
           : "Buyurtma yaratilmadi.",
       );
       setNotes("");
       setActiveTab("appointments");
+      if (doctorBookingTarget) {
+        closeDoctorBookingModal();
+      }
     } catch (bookingError) {
       setError(
         bookingError instanceof Error
@@ -379,8 +392,44 @@ const User = () => {
     setReviewComment("");
   };
 
+  const openDoctorInfoModal = (doctor: Doctor) => {
+    setDoctorInfoTarget(doctor);
+    setError("");
+    setNotice("");
+  };
+
+  const closeDoctorInfoModal = () => setDoctorInfoTarget(null);
+
+  const openDoctorBookingModal = (doctor: Doctor) => {
+    setSelectedDoctorId(doctor.id);
+    if (typeof window !== "undefined" && window.matchMedia("(max-width:760px)").matches) {
+      setDoctorBookingTarget(doctor);
+    } else {
+      focusBookingSectionOnMobile();
+    }
+  };
+
+  const closeDoctorBookingModal = () => setDoctorBookingTarget(null);
+
+  const isDoctorModalOpen = Boolean(doctorInfoTarget || doctorBookingTarget);
+
   const bookingRules = getBookingRulesMessage(language);
   const selectedDoctorMapUrl = getMapSearchUrl(getDoctorMapQuery(selectedDoctor ?? {}));
+  const focusBookingSectionOnMobile = () => {
+    if (typeof window === "undefined" || !window.matchMedia("(max-width: 760px)").matches) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      bookingSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
+  const handleDoctorSelect = (doctorId: string) => {
+    setSelectedDoctorId(doctorId);
+    focusBookingSectionOnMobile();
+  };
+
   const handleUseNearestSlot = () => {
     if (!nearestSlot) {
       setError("Tanlangan doktor uchun hozircha bo'sh vaqt topilmadi.");
@@ -437,8 +486,8 @@ const User = () => {
             <span className="section-chip">Foydalanuvchi bo'limi</span>
             <h1>Doktor tanlang va buyurtma yuboring</h1>
             <p>
-              Platforma 24/7 ishlaydi. Siz tanlagan buyurtma darhol saqlanadi, ammo doktor uni 30
-              daqiqadan keyin ko'radi va qabul qilish yoki rad etishni o'zi hal qiladi.
+              Platforma 24/7 ishlaydi. Doktor ishda va bo'sh bo'lsa so'rovni darhol ko'radi, qabul
+              yuklamasi bor paytda esa keyingi so'rov navbat qoidasi bo'yicha kechikib tushadi.
             </p>
           </div>
           <div className="dashboard-tagline glass-card">
@@ -539,11 +588,18 @@ const User = () => {
                   const bookingRecommendation = getDoctorBookingRecommendation(doctor, appointments);
 
                   return (
-                    <button
+                    <article
                       key={doctor.id}
-                      type="button"
+                      role="button"
+                      tabIndex={0}
                       className={`doctor-select-card ${isSelected ? "doctor-select-card-active" : ""}`}
-                      onClick={() => setSelectedDoctorId(doctor.id)}
+                      onClick={() => handleDoctorSelect(doctor.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          handleDoctorSelect(doctor.id);
+                        }
+                      }}
                     >
                       <div className="doctor-select-head">
                         <div className="doctor-select-identity">
@@ -602,7 +658,30 @@ const User = () => {
                           </span>
                         ))}
                       </div>
-                    </button>
+
+                      <div className="doctor-select-actions">
+                        <button
+                          type="button"
+                          className="button button-secondary"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openDoctorInfoModal(doctor);
+                          }}
+                        >
+                          Ma'lumotlarni ko'rish
+                        </button>
+                        <button
+                          type="button"
+                          className="button button-primary"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openDoctorBookingModal(doctor);
+                          }}
+                        >
+                          Band qilish
+                        </button>
+                      </div>
+                    </article>
                   );
                 })}
 
@@ -615,7 +694,7 @@ const User = () => {
               </div>
             </article>
 
-            <article className="preview-card">
+            <article ref={bookingSectionRef} className="preview-card booking-card-anchor">
               <div className="panel-heading">
                 <div>
                   <span className="section-chip">Buyurtma formasi</span>
@@ -1112,7 +1191,173 @@ const User = () => {
         </div>
       )}
 
-      <EmergencyCallButton />
+      {doctorInfoTarget && (
+        <div className="modal-backdrop" onClick={closeDoctorInfoModal} role="presentation">
+          <div
+            className="modal-card"
+            role="dialog"
+            aria-modal="true"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="panel-heading">
+              <div>
+                <span className="section-chip">Doktor ma'lumotlari</span>
+                <h2>{doctorInfoTarget.name}</h2>
+              </div>
+              <button type="button" className="icon-button" onClick={closeDoctorInfoModal}>
+                <CloseIcon />
+              </button>
+            </div>
+            <div className="info-stack modal-scroll-area">
+              <div>
+                <span>Yo'nalish</span>
+                <strong>{translateSpecialty(doctorInfoTarget.specialty)}</strong>
+              </div>
+              <div>
+                <span>Klinika</span>
+                <strong>{doctorInfoTarget.clinic}</strong>
+              </div>
+              <div>
+                <span>Hudud</span>
+                <strong>{translateRegion(doctorInfoTarget.region)}</strong>
+              </div>
+              <div>
+                <span>Manzil</span>
+                <strong>{doctorInfoTarget.address}</strong>
+              </div>
+              <div>
+                <span>Telefon</span>
+                <strong>{doctorInfoTarget.phone}</strong>
+              </div>
+              <div>
+                <span>Ta'rif</span>
+                <p>{doctorInfoTarget.bio}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {doctorBookingTarget && (
+        <div className="modal-backdrop" onClick={closeDoctorBookingModal} role="presentation">
+          <div
+            className="modal-card"
+            role="dialog"
+            aria-modal="true"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="panel-heading">
+              <div>
+                <span className="section-chip">Band qilish</span>
+                <h2>{doctorBookingTarget.name}</h2>
+              </div>
+              <button type="button" className="icon-button" onClick={closeDoctorBookingModal}>
+                <CloseIcon />
+              </button>
+            </div>
+            <form className="booking-form modal-scroll-area" onSubmit={handleBooking}>
+              <div className="booking-doctor-showcase">
+                <div className="doctor-card-avatar">
+                  <StethoscopeIcon />
+                </div>
+                <div className="booking-doctor-copy">
+                  <div className="doctor-name-scroll doctor-name-scroll-title">
+                    <h3>{doctorBookingTarget.name}</h3>
+                  </div>
+                  <p>{translateSpecialty(doctorBookingTarget.specialty)} | {doctorBookingTarget.clinic}</p>
+                  <span>{translateRegion(doctorBookingTarget.region)} | {doctorBookingTarget.price}</span>
+                  <div className="booking-doctor-pills">
+                    <span className="doctor-slot-chip">{doctorBookingTarget.experience} tajriba</span>
+                    <span className="doctor-slot-chip">{doctorBookingTarget.rating.toFixed(1)} reyting</span>
+                    <span className="doctor-slot-chip">{doctorBookingTarget.isOnline ? "Hozir ishda" : "Hozir offline"}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="booking-quick-actions">
+                <button
+                  type="button"
+                  className="button button-secondary"
+                  onClick={handleUseNearestSlot}
+                  disabled={!nearestSlot}
+                >
+                  Eng yaqin bo'sh vaqt
+                  <ClockIcon />
+                </button>
+                <span className="doctor-slot-hint">{nearestSlotLabel}</span>
+              </div>
+
+              <div className="field-grid">
+                <label className="field">
+                  <span>Ism</span>
+                  <div className="field-box">
+                    <UserGroupIcon />
+                    <input value={patientName} onChange={(event) => setPatientName(event.target.value)} required />
+                  </div>
+                </label>
+                <label className="field">
+                  <span>Telefon</span>
+                  <div className="field-box">
+                    <PhoneIcon />
+                    <input value={patientPhone} onChange={(event) => setPatientPhone(event.target.value)} required />
+                  </div>
+                </label>
+              </div>
+
+              <div className="field-grid">
+                <label className="field">
+                  <span>Sana</span>
+                  <div className="field-box field-box-select">
+                    <CalendarIcon />
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      onChange={(event) => setSelectedDate(event.target.value)}
+                      required
+                    />
+                  </div>
+                </label>
+                <label className="field">
+                  <span>Vaqt</span>
+                  <div className="field-box field-box-select">
+                    <ClockIcon />
+                    <select value={selectedTime} onChange={(event) => setSelectedTime(event.target.value)} required>
+                      {selectableSlots.map((slot) => (
+                        <option key={slot} value={slot}>
+                          {slot}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </label>
+              </div>
+
+              <label className="field">
+                <span>Izoh</span>
+                <div className="field-box">
+                  <textarea
+                    rows={3}
+                    value={notes}
+                    onChange={(event) => setNotes(event.target.value)}
+                    placeholder="Qo'shimcha izoh"
+                  />
+                </div>
+              </label>
+
+              <div className="modal-actions">
+                <button type="button" className="button button-ghost" onClick={closeDoctorBookingModal}>
+                  Bekor qilish
+                </button>
+                <button type="submit" className="button button-primary" disabled={isSubmitting}>
+                  {isSubmitting ? "Yuborilmoqda..." : "Band qilish"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {!isDoctorModalOpen && <EmergencyCallButton />}
     </div>
   );
 };

@@ -3971,6 +3971,16 @@ textarea {
   height: 10px;
 }
 
+.doctor-request-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.doctor-request-link:hover,
+.doctor-request-link:focus {
+  text-decoration: underline;
+}
+
 .doctor-grid::-webkit-scrollbar-thumb,
 .doctor-scroll-grid::-webkit-scrollbar-thumb,
 .doctor-request-list::-webkit-scrollbar-thumb,
@@ -4506,6 +4516,10 @@ textarea {
   }
 }
 
+.doctor-select-actions {
+  display: none;
+}
+
 @media (max-width: 760px) {
   .auth-layout-extended {
     width: min(100% - 20px, 100%);
@@ -4524,11 +4538,11 @@ textarea {
 
   .doctor-select-card,
   .doctor-request-item {
-    padding: 16px;
+    padding: 20px;
   }
 
   .doctor-select-card {
-    min-height: auto;
+    min-height: 360px;
   }
 
   .booking-card-anchor {
@@ -4677,6 +4691,44 @@ textarea {
   .doctor-slot-hint,
   .doctor-form-warning {
     font-size: 0.95rem;
+  }
+
+  .doctor-select-card {
+    min-height: 360px;
+    padding: 20px;
+    cursor: pointer;
+  }
+
+  .doctor-select-card:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .doctor-select-summary,
+  .doctor-select-bio,
+  .doctor-select-metrics,
+  .doctor-select-recommendation,
+  .doctor-slot-list {
+    display: none;
+  }
+
+  .doctor-select-actions {
+    display: grid;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .doctor-select-actions .button {
+    width: 100%;
+  }
+
+  .booking-card-anchor {
+    display: none;
+  }
+
+  .doctor-select-title span {
+    font-size: 0.95rem;
+    color: var(--muted);
   }
 
   .modal-scroll-area .panel-heading {

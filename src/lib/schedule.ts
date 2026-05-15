@@ -2,7 +2,11 @@ export const BOOKING_TIMEZONE = "Asia/Tashkent";
 
 const pad = (value: number) => String(value).padStart(2, "0");
 
-export const DEFAULT_TIME_SLOTS = Array.from({ length: 24 }, (_, hour) => `${pad(hour)}:00`);
+export const DEFAULT_TIME_SLOTS = Array.from({ length: 48 }, (_, index) => {
+  const hour = Math.floor(index / 2);
+  const minute = index % 2 === 0 ? "00" : "30";
+  return `${pad(hour)}:${minute}`;
+});
 
 type SlotSearchAppointment = {
   doctorId: string;
@@ -152,12 +156,12 @@ export const findNearestAvailableDoctorSlot = (
 
 export const getBookingRulesMessage = (language: "uz" | "ru" | "en" = "uz") => {
   if (language === "ru") {
-    return "Платформа работает 24/7, а врач получает запрос через 30 минут после брони.";
+    return "Если врач онлайн и свободен, запрос виден сразу. При активном приёме следующий запрос появится через 22 минуты, а офлайн-врачу через 30 минут.";
   }
 
   if (language === "en") {
-    return "The platform works 24/7, and the doctor receives the request 30 minutes after booking.";
+    return "If the doctor is online, requests are visible immediately without extra queue delay. For an offline doctor, new requests appear after 30 minutes from the booking time.";
   }
 
-  return "Platforma kunu tun ishlaydi. Buyurtma doktorga 30 daqiqadan keyin ko'rinadi.";
+  return "Doktor ishda bo'lsa, so'rovlar darhol ko'rinadi va cheklovlarsiz tushadi. Offline doktorga esa yangi so'rovlar 30 daqiqadan keyin ko'rinadi.";
 };
