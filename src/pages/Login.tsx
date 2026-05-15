@@ -507,7 +507,7 @@ const LoginPage = () => {
                     type={mode === "admin" ? "text" : "email"}
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
-                    placeholder={mode === "admin" ? "Admin emaili" : "doctor@medelite.uz"}
+                    placeholder={mode === "admin" ? "admin2486" : "doctor@medelite.uz"}
                     required
                     autoCapitalize="none"
                     spellCheck={false}

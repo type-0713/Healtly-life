@@ -287,8 +287,8 @@ const DOCTOR_SESSION_EMAIL_KEY = "medelite-doctor-session-email";
 const THEME_KEY = "medelite-theme";
 const ADMIN_SESSION_KEY = "medelite-admin-session";
 const DEFAULT_THEME: ThemeMode = "light";
-const ADMIN_LOGIN = "admin1234";
-const ADMIN_PASSWORD = "12345";
+const ADMIN_LOGIN = "admin2486";
+const ADMIN_PASSWORD = "13579";
 
 const normalizeTheme = (value: string | null): ThemeMode =>
   value === "dark" || value === "light" ? value : DEFAULT_THEME;
