@@ -3,6 +3,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -213,6 +214,12 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
   const setLanguage = useCallback((nextLanguage: Language) => {
     setLanguageState(nextLanguage);
     window.localStorage.setItem(LANGUAGE_KEY, nextLanguage);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.localStorage.getItem(LANGUAGE_KEY) === null) {
+      window.localStorage.setItem(LANGUAGE_KEY, DEFAULT_LANGUAGE);
+    }
   }, []);
 
   const value = useMemo<I18nValue>(

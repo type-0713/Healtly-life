@@ -632,6 +632,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setThemeState] = useState<ThemeMode>(initialTheme);
   const [authLoading, setAuthLoading] = useState(true);
 
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.localStorage.getItem(THEME_KEY) === null) {
+      window.localStorage.setItem(THEME_KEY, DEFAULT_THEME);
+    }
+  }, []);
+
   const doctors = useMemo(
     () =>
       doctorRoster.filter(
