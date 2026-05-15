@@ -3927,6 +3927,10 @@ textarea {
   overflow: hidden;
 }
 
+.booking-card-anchor {
+  scroll-margin-top: 108px;
+}
+
 .doctor-list-toolbar {
   display: flex;
   align-items: center;
@@ -4527,6 +4531,10 @@ textarea {
     min-height: auto;
   }
 
+  .booking-card-anchor {
+    scroll-margin-top: 92px;
+  }
+
   .dashboard-content {
     gap: 20px;
   }
@@ -4563,7 +4571,14 @@ textarea {
     min-height: 48px;
   }
 
-  .doctor-scroll-grid,
+  .doctor-scroll-grid {
+    max-height: min(56vh, 520px);
+    overflow-y: auto;
+    padding-right: 10px;
+    margin-right: 0;
+    padding-left: 0;
+  }
+
   .doctor-request-list,
   .doctor-grid {
     max-height: none;
