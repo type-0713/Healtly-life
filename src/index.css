@@ -4,6 +4,8 @@
   --radius-lg: 28px;
   --radius-md: 22px;
   --radius-sm: 18px;
+  --space-section: clamp(46px, 7vw, 74px);
+  --space-card: clamp(22px, 2.8vw, 30px);
   --shadow: 0 28px 80px rgba(4, 10, 24, 0.28);
   --shadow-soft: 0 18px 40px rgba(15, 23, 42, 0.12);
   --backdrop: saturate(140%) blur(18px);
@@ -602,7 +604,7 @@ textarea {
 }
 
 .hero-section {
-  padding: 118px 0 28px;
+  padding: 126px 0 34px;
 }
 
 .hero-grid,
@@ -621,13 +623,14 @@ textarea {
 .hero-grid {
   grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
   align-items: center;
+  gap: 32px;
 }
 
 .hero-copy {
   display: grid;
   align-content: start;
-  gap: 18px;
-  max-width: 640px;
+  gap: 22px;
+  max-width: 680px;
 }
 
 .hero-copy h1,
@@ -707,6 +710,10 @@ textarea {
   min-height: 100%;
 }
 
+.doctor-card {
+  gap: 16px;
+}
+
 .doctor-card h3,
 .feature-card h3,
 .process-card h3,
@@ -737,7 +744,7 @@ textarea {
 .hero-panel,
 .auth-card,
 .booking-panel {
-  padding: 28px;
+  padding: var(--space-card);
   border-radius: var(--radius-xl);
 }
 
@@ -1222,7 +1229,7 @@ textarea {
 .summary-panel,
 .experience-hero,
 .experience-card {
-  padding: 24px;
+  padding: var(--space-card);
 }
 
 .dashboard-mini-card,
@@ -1439,20 +1446,26 @@ textarea {
 }
 
 .section-block {
-  padding: 44px 0;
+  padding: var(--space-section) 0;
 }
 
 .section-contrast .container,
 .footer-grid {
-  padding: 34px;
+  padding: clamp(24px, 3vw, 36px);
   border-radius: var(--radius-xl);
   background: var(--surface);
   border: 1px solid var(--border);
 }
 
 .section-heading {
+  display: grid;
+  gap: 12px;
   max-width: 760px;
-  margin-bottom: 30px;
+  margin-bottom: 36px;
+}
+
+.section-heading-compact {
+  max-width: 640px;
 }
 
 .section-heading h2,
@@ -1859,7 +1872,7 @@ textarea {
 }
 
 .cta-section {
-  padding: 26px 0 50px;
+  padding: 22px 0 calc(var(--space-section) - 8px);
 }
 
 .cta-card {
@@ -1867,6 +1880,78 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
+}
+
+.hero-panel-simple {
+  gap: 22px;
+}
+
+.hero-guide-copy {
+  display: grid;
+  gap: 10px;
+}
+
+.hero-guide-copy h3 {
+  margin: 0;
+  color: var(--heading);
+  font-size: clamp(1.4rem, 2.4vw, 1.95rem);
+  line-height: 1.1;
+}
+
+.hero-guide-copy p,
+.hero-guide-note {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.68;
+}
+
+.hero-guide-grid,
+.hero-guide-actions {
+  display: grid;
+  gap: 12px;
+}
+
+.hero-guide-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.hero-guide-card {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 92%, transparent);
+}
+
+.hero-guide-step {
+  color: #7baeff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.hero-guide-card strong {
+  color: var(--heading);
+  line-height: 1.35;
+}
+
+.hero-guide-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.58;
+}
+
+.hero-guide-note {
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+}
+
+.hero-guide-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .cta-note {
@@ -3065,6 +3150,7 @@ textarea {
 
   .feature-grid,
   .doctor-grid,
+  .hero-guide-grid,
   .doctor-selector-grid,
   .dashboard-summary-grid,
   .admin-kpi-grid,
@@ -3407,6 +3493,8 @@ textarea {
   .hero-search,
   .feature-grid,
   .doctor-grid,
+  .hero-guide-grid,
+  .hero-guide-actions,
   .testimonial-grid,
   .stat-grid,
   .suite-grid,
@@ -3705,17 +3793,17 @@ textarea {
 .auth-layout-extended {
   width: var(--container);
   margin: 0 auto;
-  padding: 120px 0 56px;
+  padding: 118px 0 48px;
   display: grid;
   grid-template-columns: 1.12fr 0.88fr;
-  gap: 28px;
+  gap: 24px;
   align-items: stretch;
 }
 
 .auth-showcase-revamp {
   display: grid;
-  gap: 24px;
-  padding: 28px;
+  gap: 22px;
+  padding: var(--space-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04)),
@@ -3729,7 +3817,7 @@ textarea {
 }
 
 .auth-card-premium {
-  padding: 28px;
+  padding: var(--space-card);
   border-radius: var(--radius-xl);
   border: 1px solid var(--border);
   background: var(--panel-strong);
