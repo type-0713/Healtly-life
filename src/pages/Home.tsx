@@ -8,6 +8,7 @@ import {
   ArrowRightIcon,
   CalendarIcon,
   ChartIcon,
+  CheckIcon,
   CloseIcon,
   HeartPulseIcon,
   LocationIcon,
@@ -17,6 +18,7 @@ import {
   SparkIcon,
   StarIcon,
   StethoscopeIcon,
+  UserGroupIcon,
 } from "../components/PremiumIcons";
 import { useAppContext } from "../context/AppContext";
 import { useI18n } from "../context/I18nContext";
@@ -86,6 +88,11 @@ const Home = () => {
     [copy.features],
   );
 
+  const serviceSuites = useMemo(
+    () => copy.suites.map(([meta, title, text]: [string, string, string]) => ({ meta, title, text })),
+    [copy.suites],
+  );
+
   const steps = useMemo(
     () => copy.steps.map(([index, title, text]: [string, string, string]) => ({ index, title, text })),
     [copy.steps],
@@ -100,7 +107,6 @@ const Home = () => {
     () => copy.faqs.map(([question, answer]: [string, string]) => ({ question, answer })),
     [copy.faqs],
   );
-
   const seoTitle =
     language === "ru"
       ? "MedElite | Онлайн запись к врачу"
@@ -119,7 +125,6 @@ const Home = () => {
       : language === "en"
         ? "MedElite, doctor booking, clinic, online appointment, healthcare platform"
         : "MedElite, shifokor qabuliga yozilish, online doktor bron qilish, klinika, tibbiy xizmat, O'zbekiston";
-
   const structuredData = useMemo(
     () => ({
       "@context": "https://schema.org",
@@ -189,30 +194,73 @@ const Home = () => {
 
     return `/user?${params.toString()}`;
   };
-
   const highlightedDoctorSlot = highlightedDoctor
     ? findNearestAvailableDoctorSlot(highlightedDoctor, appointments)
     : null;
   const highlightedDoctorAvailability = highlightedDoctorSlot
     ? format(copy.nextSlot, { time: formatDoctorSlotLabel(highlightedDoctorSlot.date, highlightedDoctorSlot.time) })
     : copy.noOpenSlots;
-  const highlightedDoctorMapUrl = highlightedDoctor
-    ? getMapSearchUrl(getDoctorMapQuery(highlightedDoctor))
-    : getMapSearchUrl(getDoctorMapQuery({}));
-  const heroGuideTitle =
-    language === "ru" ? "Как это работает" : language === "en" ? "How it works" : "Qanday ishlaydi";
-  const heroGuideText =
+  const averageRating =
+    doctors.length > 0
+      ? (doctors.reduce((sum, doctor) => sum + doctor.rating, 0) / doctors.length).toFixed(1)
+      : "0.0";
+  const heroCommandTitle =
     language === "ru"
-      ? "Выберите врача, отметьте удобное время и отправьте запись за пару шагов."
+      ? "Цифровой ритм клиники"
       : language === "en"
-        ? "Choose a doctor, pick a time, and send your booking in a few easy steps."
-        : "Shifokorni tanlang, qulay vaqtni belgilang va bir necha qadamda bron qiling.";
-  const heroGuideNote =
+        ? "Digital clinic rhythm"
+        : "Klinikaning raqamli ishlashi";
+  const heroCommandText =
     language === "ru"
-      ? "Статус записи и история всегда доступны в кабинете."
+      ? "Живая витрина слотов, рейтинга и скорости ответа для пациентов премиального уровня."
       : language === "en"
-        ? "Your booking status and history stay available in your account."
-        : "Qabul holati va tarix kabinet ichida har doim ko'rinadi.";
+        ? "A live showcase of slot readiness, doctor trust, and premium response speed."
+        : "Bu bo'limda bo'sh vaqtlar, doktorlar reytingi va buyurtmalar holati bir joyda ko'rsatiladi.";
+  const heroCommandMetrics = [
+    {
+      label: language === "ru" ? "Готовые врачи" : language === "en" ? "Ready doctors" : "Tayyor doktorlar",
+      value: doctors.length.toString(),
+    },
+    {
+      label: language === "ru" ? "Живые записи" : language === "en" ? "Live bookings" : "Jonli bronlar",
+      value: appointments.length.toString(),
+    },
+    {
+      label: language === "ru" ? "Средний рейтинг" : language === "en" ? "Avg rating" : "O'rtacha reyting",
+      value: `${averageRating}/5`,
+    },
+  ];
+  const heroOverlayTitle =
+    language === "ru" ? "Синхронная работа" : language === "en" ? "Synchronized service" : "Mos ishlash";
+  const heroOverlayText =
+    language === "ru"
+      ? "Маршрут пациента, подтверждение и карта врача синхронизированы."
+      : language === "en"
+        ? "Patient path, approval, and doctor location are synchronized."
+        : "Bemor tanlovi, buyurtma holati va doktor manzili bir-biriga bog'langan.";
+  const heroOverlayFoot =
+    language === "ru"
+      ? "Обновление в реальном времени"
+      : language === "en"
+        ? "Realtime refreshed"
+        : "Ma'lumotlar yangilanib turadi";
+  const signatureTitle =
+    language === "ru"
+      ? "Поток сервиса, который ощущается как продукт класса люкс"
+      : language === "en"
+        ? "A care flow that feels like a luxury product"
+        : "Qulay va tushunarli tibbiy xizmat jarayoni";
+  const signatureText =
+    language === "ru"
+      ? "Каждый экран показывает уверенность, скорость и контроль: от поиска врача до подтверждённого визита."
+      : language === "en"
+        ? "Every screen projects confidence, speed, and control from doctor discovery to confirmed visit."
+        : "Har bir ekran doktordan qabulgacha bo'lgan jarayonni sodda va tushunarli qiladi.";
+  const signaturePillars = [
+    language === "ru" ? "Премиальная навигация" : language === "en" ? "Clear navigation" : "Tushunarli navigatsiya",
+    language === "ru" ? "Читаемый статус визита" : language === "en" ? "Readable visit status" : "Tushunarli qabul statusi",
+    language === "ru" ? "Единый стиль доверия" : language === "en" ? "Unified trust language" : "Yagona ishonch uslubi",
+  ];
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -371,10 +419,36 @@ const Home = () => {
                   <span>{copy.quick[2]}</span>
                 </div>
               </div>
+
+              <div className="hero-command-strip">
+                <div className="hero-command-copy">
+                  <span className="section-chip">{heroCommandTitle}</span>
+                  <strong>{heroCommandText}</strong>
+                </div>
+
+                <div className="hero-command-metrics">
+                  {heroCommandMetrics.map((item) => (
+                    <div key={item.label} className="hero-command-metric">
+                      <span>{item.label}</span>
+                      <strong>{item.value}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div className="hero-visual">
-              <div className="hero-panel glass-card hero-panel-simple">
+              <div className="hero-floating-card hero-floating-top">
+                <span>{heroOverlayTitle}</span>
+                <strong>{highlightedDoctorAvailability}</strong>
+                <p>{heroOverlayText}</p>
+                <Link to={buildDoctorBookingTarget(highlightedDoctor)} className="button button-secondary button-block">
+                  Eng yaqin vaqtni ochish
+                  <ArrowRightIcon />
+                </Link>
+              </div>
+
+              <div className="hero-panel glass-card">
                 <div className="hero-panel-header">
                   <span className="badge badge-gold">
                     <SparkIcon />
@@ -383,19 +457,17 @@ const Home = () => {
                   <span className="status-dot">{copy.statusActive}</span>
                 </div>
 
-                <div className="hero-guide-copy">
-                  <h3>{heroGuideTitle}</h3>
-                  <p>{heroGuideText}</p>
-                </div>
-
-                <div className="hero-guide-grid">
-                  {steps.map((step: { index: string; title: string; text: string }) => (
-                    <article key={step.index} className="hero-guide-card">
-                      <span className="hero-guide-step">{step.index}</span>
-                      <strong>{step.title}</strong>
-                      <p>{step.text}</p>
-                    </article>
-                  ))}
+                <div className="hero-panel-grid">
+                  <article className="metric-card">
+                    <p>{copy.workingHours}</p>
+                    <strong>24/7</strong>
+                    <span>{bookingRules}</span>
+                  </article>
+                  <article className="metric-card metric-card-accent">
+                    <p>{copy.responseTime}</p>
+                    <strong>0/22/30 min</strong>
+                    <span>Doktor holatiga qarab so'rov darhol, 22 daqiqada yoki 30 daqiqada ko'rinadi</span>
+                  </article>
                 </div>
 
                 <div className="doctor-spotlight">
@@ -428,27 +500,24 @@ const Home = () => {
                     <strong>{highlightedDoctor ? highlightedDoctor.rating.toFixed(1) : "5.0"}</strong>
                   </div>
                   <div>
-                    <span>{copy.responseTime}</span>
-                    <strong>0/22/30 min</strong>
+                    <span>{copy.flow}</span>
+                    <strong>{copy.history}</strong>
                   </div>
                 </div>
 
-                <p className="hero-guide-note">
-                  {heroGuideNote}
-                  {" "}
-                  {bookingRules}
-                </p>
-
-                <div className="hero-guide-actions">
-                  <a href={highlightedDoctorMapUrl} target="_blank" rel="noreferrer" className="button button-secondary button-block">
-                    {copy.viewMap}
-                    <ArrowRightIcon />
-                  </a>
-                  <Link to={buildDoctorBookingTarget(highlightedDoctor)} className="button button-primary button-block">
-                    {copy.bookVisit}
-                    <ArrowRightIcon />
-                  </Link>
+                <div className="care-ribbon">
+                  <div>
+                    <span>{copy.userFlow}</span>
+                    <strong>{copy.userFlowText}</strong>
+                  </div>
+                  <span className="badge">{copy.premiumUx}</span>
                 </div>
+              </div>
+
+              <div className="hero-floating-card hero-floating-bottom">
+                <span>{heroOverlayFoot}</span>
+                <strong>{averageRating}/5</strong>
+                <p>{highlightedDoctor?.name ?? copy.fallbackDoctor}</p>
               </div>
             </div>
           </div>
@@ -465,9 +534,28 @@ const Home = () => {
           </div>
         </section>
 
+        <section className="section-block signature-section">
+          <div className="container signature-panel">
+            <div className="signature-copy">
+              <span className="section-chip">{copy.care}</span>
+              <h2>{signatureTitle}</h2>
+              <p>{signatureText}</p>
+            </div>
+
+            <div className="signature-pillars">
+              {signaturePillars.map((pillar) => (
+                <div key={pillar} className="signature-pillar">
+                  <CheckIcon />
+                  <span>{pillar}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section id="advantages" className="section-block">
           <div className="container">
-            <div className="section-heading section-heading-compact">
+            <div className="section-heading">
               <span className="section-chip">{copy.advantagesChip}</span>
               <h2>{copy.advantagesTitle}</h2>
               <p>{copy.advantagesText}</p>
@@ -479,6 +567,35 @@ const Home = () => {
                   <div className="icon-shell">{feature.icon}</div>
                   <h3>{feature.title}</h3>
                   <p>{feature.text}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="section-block">
+          <div className="container">
+            <div className="section-heading section-heading-inline">
+              <div>
+                <span className="section-chip">{copy.suitesChip}</span>
+                <h2>{copy.suitesTitle}</h2>
+              </div>
+              <span className="badge badge-gold">
+                <SparkIcon />
+                {copy.suitesBadge}
+              </span>
+            </div>
+
+            <div className="suite-grid">
+              {serviceSuites.map((suite: { meta: string; title: string; text: string }) => (
+                <article key={suite.title} className="suite-card">
+                  <span className="suite-meta">{suite.meta}</span>
+                  <h3>{suite.title}</h3>
+                  <p>{suite.text}</p>
+                  <Link to="/user" className="suite-link">
+                    {copy.details}
+                    <ArrowRightIcon />
+                  </Link>
                 </article>
               ))}
             </div>
@@ -545,6 +662,16 @@ const Home = () => {
                     </Link>
                   </div>
 
+                  <div className="doctor-confidence">
+                    <div className="doctor-confidence-head">
+                      <span>{language === "ru" ? "Индекс доверия" : language === "en" ? "Trust index" : "Ishonch indeksi"}</span>
+                      <strong>{Math.round((doctor.rating / 5) * 100)}%</strong>
+                    </div>
+                    <div className="doctor-confidence-bar">
+                      <span style={{ width: `${Math.max(22, Math.round((doctor.rating / 5) * 100))}%` }} />
+                    </div>
+                  </div>
+
                   <div className="doctor-meta">
                     <span>{format(copy.reviews, { count: doctor.reviewCount })}</span>
                     <span>{doctor.experience}</span>
@@ -585,7 +712,7 @@ const Home = () => {
 
         <section id="journey" className="section-block">
           <div className="container process-layout">
-            <div className="section-heading section-heading-compact">
+            <div className="section-heading">
               <span className="section-chip">{copy.journeyChip}</span>
               <h2>{copy.journeyTitle}</h2>
               <p>{copy.journeyText}</p>
@@ -603,12 +730,59 @@ const Home = () => {
           </div>
         </section>
 
-        <section className="section-block testimonial-section">
-          <div className="container">
-            <div className="section-heading section-heading-compact">
-              <span className="section-chip">{copy.satisfaction}</span>
-              <h2>{copy.satisfaction}</h2>
-              <p>{copy.satisfactionText}</p>
+        <section className="section-block">
+          <div className="container experience-grid">
+            <article className="experience-hero">
+              <span className="section-chip">{copy.expChip}</span>
+              <h2>{copy.expTitle}</h2>
+              <p>{copy.expText}</p>
+
+              <div className="experience-metrics">
+                <div>
+                  <strong>12+</strong>
+                  <span>{copy.expMetric1}</span>
+                </div>
+                <div>
+                  <strong>3x</strong>
+                  <span>{copy.expMetric2}</span>
+                </div>
+              </div>
+            </article>
+
+            <div className="experience-stack">
+              {copy.expPoints.map((point: string) => (
+                <article key={point} className="experience-card">
+                  <div className="icon-shell">
+                    <CheckIcon />
+                  </div>
+                  <p>{point}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="section-block">
+          <div className="container testimonial-layout">
+            <div className="summary-panel glass-card">
+              <div className="summary-panel-header">
+                <div className="icon-shell">
+                  <UserGroupIcon />
+                </div>
+                <div>
+                  <h3>{copy.satisfaction}</h3>
+                  <p>{copy.satisfactionText}</p>
+                </div>
+              </div>
+
+              <div className="summary-checks">
+                {copy.satisfactionChecks.map((item: string) => (
+                  <div key={item}>
+                    <CheckIcon />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="testimonial-grid">
@@ -632,7 +806,7 @@ const Home = () => {
 
         <section className="section-block">
           <div className="container">
-            <div className="section-heading section-heading-compact">
+            <div className="section-heading">
               <span className="section-chip">{copy.faqChip}</span>
               <h2>{copy.faqTitle}</h2>
             </div>

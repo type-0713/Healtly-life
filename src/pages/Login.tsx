@@ -27,17 +27,17 @@ type Action = "login" | "register";
 
 const copy = {
   uz: {
-    title: "Kabinetga oson kirish",
-    text: "Bemor, doktor yoki admin sifatida tizimga kiring. Har bir bo'lim oddiy va tushunarli tarzda ishlaydi.",
+    title: "Tibbiy platformaga kirish",
+    text: "Foydalanuvchi, doktor va admin uchun alohida kirish tartibi mavjud. Doktor kirishi alohida ma'lumotlar bazasi orqali ishlaydi.",
     modes: { user: "Bemor", doctor: "Doktor", admin: "Admin" },
     actions: { login: "Kirish", register: "Ro'yxatdan o'tish" },
     userTitle: "Bemor kabineti",
     doctorTitle: "Doktor ro'yxatdan o'tishi",
     adminTitle: "Admin nazorati",
-    userText: "Shifokor topish, bron qilish va qabul tarixini ko'rish uchun kiring.",
+    userText: "Shifokor toping, buyurtma bering va qabul tarixini kuzating.",
     doctorText:
-      "Doktor sifatida ariza yuboring yoki kabinetga kiring. Admin tasdiqlagach qolgan ma'lumotlar to'ldiriladi.",
-    adminText: "Doktorlarni tasdiqlash va buyurtmalarni boshqarish uchun kiring.",
+      "Doktor uchun birinchi bosqichda faqat email, ism, familya va telefon olinadi. Admin tasdiqlagach qolgan ish ma'lumotlari so'raladi.",
+    adminText: "Doktorlarni tasdiqlang, navbatni kuzating va buyurtmalarni boshqaring.",
     email: "Email",
     firstName: "Ism",
     lastName: "Familya",
@@ -58,22 +58,22 @@ const copy = {
     logout: "Chiqish",
     active: "Faol sessiya",
     metrics: [
-      ["24/7", "So'rov yuborish"],
-      ["Tez kirish", "Email va parol bilan"],
-      ["Bir joyda", "Status va tarix"],
+      ["24/7", "Buyurtma qabul qilish"],
+      ["0/22/30 min", "Doktor holatiga mos navbat"],
+      ["Alohida login", "Doktor uchun mustaqil kirish"],
     ],
     highlights: [
       {
-        title: "Bemor uchun qulay",
-        text: "Kabinetga kirgach, doktor topish va bron qilish oson bo'ladi.",
+        title: "Doktor arizasi",
+        text: "Dastlab faqat asosiy shaxsiy ma'lumotlar olinadi.",
       },
       {
-        title: "Doktor uchun sodda",
-        text: "Ariza topshirish va keyingi bosqichlarni kuzatish bitta sahifada ishlaydi.",
+        title: "Admin tasdig'i",
+        text: "Tasdiqlangandan keyin keyingi ma'lumotlar bosqichi ochiladi.",
       },
       {
-        title: "Admin uchun nazorat",
-        text: "Tasdiqlash va boshqaruv jarayoni tartibli va tushunarli ko'rinishda berilgan.",
+        title: "Kechikib yuboriladigan so'rovlar",
+        text: "Online bo'sh doktorga so'rov darhol boradi, faol qabul bo'lsa keyingi request 22 daqiqadan so'ng tushadi.",
       },
     ],
   },
@@ -129,17 +129,17 @@ const copy = {
     ],
   },
   en: {
-    title: "Easy account access",
-    text: "Sign in as a patient, doctor, or admin. Each area is designed to be simple and easy to understand.",
+    title: "Access the realtime medical platform",
+    text: "User, doctor, and admin flows are managed in one place. Doctor sign-in now uses a separate database flow instead of Firebase Auth.",
     modes: { user: "User", doctor: "Doctor", admin: "Admin" },
     actions: { login: "Sign in", register: "Register" },
     userTitle: "Patient workspace",
     doctorTitle: "Doctor onboarding",
     adminTitle: "Admin control",
-    userText: "Sign in to find doctors, book a visit, and check appointment history.",
+    userText: "Find doctors, place 24/7 requests, and manage appointment history.",
     doctorText:
-      "Apply or sign in as a doctor. After admin approval, the remaining profile details can be completed.",
-    adminText: "Sign in to approve doctors and manage bookings.",
+      "At the first step, the doctor provides only email, first name, last name, and phone. The next professional step opens after admin approval.",
+    adminText: "Approve doctors, watch the flow, and manage the realtime queue.",
     email: "Email",
     firstName: "First name",
     lastName: "Last name",
@@ -160,22 +160,22 @@ const copy = {
     logout: "Logout",
     active: "Active session",
     metrics: [
-      ["24/7", "Request sending"],
-      ["Fast access", "Email and password"],
-      ["One place", "Status and history"],
+      ["24/7", "Unlimited booking"],
+      ["0/22/30 min", "Adaptive doctor queue"],
+      ["No Auth", "Separate database login for doctors"],
     ],
     highlights: [
       {
-        title: "Easy for patients",
-        text: "After sign in, doctor search and booking become quick and clear.",
+        title: "Doctor request",
+        text: "Only the core personal details are collected on the first step.",
       },
       {
-        title: "Simple for doctors",
-        text: "Application and next steps are handled on one page.",
+        title: "Admin approval",
+        text: "The next professional step opens only after approval.",
       },
       {
-        title: "Clear for admins",
-        text: "Approval and management tools are shown in an organized way.",
+        title: "24/7 requests",
+        text: "An online available doctor sees incoming requests immediately without queue delay, while offline doctors receive requests with a 30-minute visibility timing.",
       },
     ],
   },
@@ -412,7 +412,7 @@ const LoginPage = () => {
 
           <span className="badge badge-gold">
             <SparkIcon />
-            {text.actions.login}
+            Tizimga kirish
           </span>
           <h1>{text.title}</h1>
           <p>{text.text}</p>
