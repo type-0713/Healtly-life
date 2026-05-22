@@ -4345,6 +4345,15 @@ textarea {
   backdrop-filter: blur(10px);
 }
 
+.info-modal-actions {
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.info-modal-actions .button {
+  flex: 1 1 220px;
+}
+
 .doctor-table-wrap {
   max-height: 520px;
   overflow: auto;

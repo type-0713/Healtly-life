@@ -413,6 +413,19 @@ const User = () => {
 
   const closeDoctorInfoModal = () => setDoctorInfoTarget(null);
 
+  const openDoctorBookingFromInfoModal = (doctor: Doctor) => {
+    closeDoctorInfoModal();
+
+    if (typeof window !== "undefined") {
+      window.requestAnimationFrame(() => {
+        openDoctorBookingModal(doctor);
+      });
+      return;
+    }
+
+    openDoctorBookingModal(doctor);
+  };
+
   const openDoctorBookingModal = (doctor: Doctor) => {
     setSelectedDoctorId(doctor.id);
     if (typeof window !== "undefined" && window.matchMedia("(max-width:760px)").matches) {
@@ -464,6 +477,11 @@ const User = () => {
 
   const bookingRules = getBookingRulesMessage(language);
   const selectedDoctorMapUrl = getMapSearchUrl(getDoctorMapQuery(selectedDoctor ?? {}));
+  const doctorInfoMapUrl = doctorInfoTarget ? getMapSearchUrl(getDoctorMapQuery(doctorInfoTarget)) : "";
+  const doctorInfoMapLabel =
+    language === "ru" ? "Открыть на карте" : language === "en" ? "View on map" : "Xaritadan ko'rish";
+  const doctorInfoBookLabel =
+    language === "ru" ? "Записаться" : language === "en" ? "Book appointment" : "Band qilish";
   const focusBookingSectionOnMobile = () => {
     if (typeof window === "undefined" || !window.matchMedia("(max-width: 760px)").matches) {
       return;
@@ -1283,6 +1301,26 @@ const User = () => {
               <div>
                 <span>Ta'rif</span>
                 <p>{doctorInfoTarget.bio}</p>
+              </div>
+
+              <div className="modal-actions info-modal-actions">
+                <a
+                  href={doctorInfoMapUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="button button-secondary"
+                >
+                  {doctorInfoMapLabel}
+                  <ArrowRightIcon />
+                </a>
+                <button
+                  type="button"
+                  className="button button-primary"
+                  onClick={() => openDoctorBookingFromInfoModal(doctorInfoTarget)}
+                >
+                  {doctorInfoBookLabel}
+                  <ArrowRightIcon />
+                </button>
               </div>
             </div>
           </div>
