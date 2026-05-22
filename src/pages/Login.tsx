@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import EmergencyCallButton from "../components/EmergencyCallButton";
 import LanguageSwitcher from "../components/LanguageSwitcher";
+import Seo from "../components/Seo";
 import ThemeToggle from "../components/ThemeToggle";
 import {
   ArrowRightIcon,
@@ -206,6 +207,18 @@ const LoginPage = () => {
   } = useAppContext();
   const { language, translateError } = useI18n();
   const text = copy[language];
+  const seoTitle =
+    language === "ru"
+      ? "MedElite | Вход в систему"
+      : language === "en"
+        ? "MedElite | Sign in"
+        : "MedElite | Tizimga kirish";
+  const seoDescription =
+    language === "ru"
+      ? "Авторизация для пациентов, врачей и администратора MedElite."
+      : language === "en"
+        ? "Secure sign in for MedElite patients, doctors, and administrators."
+        : "MedElite foydalanuvchilari, doktorlari va adminlari uchun xavfsiz kirish sahifasi.";
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState(profile.email || localUserEmail);
   const [password, setPassword] = useState("");
@@ -375,6 +388,7 @@ const LoginPage = () => {
 
   return (
     <div className="auth-page">
+      <Seo title={seoTitle} description={seoDescription} path="/login" noIndex />
       <span className="site-orb site-orb-one" />
       <span className="site-orb site-orb-two" />
       <span className="site-orb site-orb-three" />

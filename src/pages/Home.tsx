@@ -1,6 +1,7 @@
 import { useDeferredValue, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LanguageSwitcher from "../components/LanguageSwitcher";
+import Seo, { SITE_URL } from "../components/Seo";
 import ThemeToggle from "../components/ThemeToggle";
 import EmergencyCallButton from "../components/EmergencyCallButton";
 import {
@@ -105,6 +106,69 @@ const Home = () => {
   const faqs = useMemo(
     () => copy.faqs.map(([question, answer]: [string, string]) => ({ question, answer })),
     [copy.faqs],
+  );
+  const seoTitle =
+    language === "ru"
+      ? "MedElite | Онлайн запись к врачу"
+      : language === "en"
+        ? "MedElite | Online doctor booking"
+        : "MedElite | Shifokor qabuliga online yozilish";
+  const seoDescription =
+    language === "ru"
+      ? "Найдите врача, посмотрите свободное время и запишитесь на прием через MedElite."
+      : language === "en"
+        ? "Find a doctor, check open slots, and book your appointment online with MedElite."
+        : "MedElite orqali shifokor toping, bo'sh vaqtlarni ko'ring va qabulga online yoziling.";
+  const seoKeywords =
+    language === "ru"
+      ? "MedElite, запись к врачу, клиника, врач, онлайн прием, медицинская платформа"
+      : language === "en"
+        ? "MedElite, doctor booking, clinic, online appointment, healthcare platform"
+        : "MedElite, shifokor qabuliga yozilish, online doktor bron qilish, klinika, tibbiy xizmat, O'zbekiston";
+  const structuredData = useMemo(
+    () => ({
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "MedicalOrganization",
+          "@id": `${SITE_URL}/#organization`,
+          name: "MedElite",
+          url: `${SITE_URL}/`,
+          logo: `${SITE_URL}/medelite-favicon.svg`,
+          image: `${SITE_URL}/medelite-favicon.svg`,
+          description: seoDescription,
+          areaServed: {
+            "@type": "Country",
+            name: "Uzbekistan",
+          },
+          availableLanguage: ["uz", "ru", "en"],
+        },
+        {
+          "@type": "WebSite",
+          "@id": `${SITE_URL}/#website`,
+          url: `${SITE_URL}/`,
+          name: "MedElite",
+          description: seoDescription,
+          inLanguage: language,
+          publisher: {
+            "@id": `${SITE_URL}/#organization`,
+          },
+        },
+        {
+          "@type": "FAQPage",
+          "@id": `${SITE_URL}/#faq`,
+          mainEntity: faqs.map((faq: { question: string; answer: string }) => ({
+            "@type": "Question",
+            name: faq.question,
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: faq.answer,
+            },
+          })),
+        },
+      ],
+    }),
+    [faqs, language, seoDescription],
   );
 
   const closeMenu = () => setMenuOpen(false);
@@ -228,6 +292,13 @@ const Home = () => {
 
   return (
     <div className="page-shell">
+      <Seo
+        title={seoTitle}
+        description={seoDescription}
+        path="/"
+        keywords={seoKeywords}
+        structuredData={structuredData}
+      />
       <div className="site-orb site-orb-one" />
       <div className="site-orb site-orb-two" />
 

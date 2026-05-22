@@ -2,6 +2,7 @@ import type { FormEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import LanguageSwitcher from "../components/LanguageSwitcher";
+import Seo from "../components/Seo";
 import ThemeToggle from "../components/ThemeToggle";
 import {
   ArrowRightIcon,
@@ -86,7 +87,7 @@ const playDoctorAlert = () => {
 };
 
 const Doctor = () => {
-  const { translateError, translateStatus, translateRegion, translateSpecialty } = useI18n();
+  const { language, translateError, translateStatus, translateRegion, translateSpecialty } = useI18n();
   const {
     appointments,
     currentDoctor,
@@ -104,6 +105,18 @@ const Doctor = () => {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const readyRequestIds = useRef<string[]>([]);
+  const seoTitle =
+    language === "ru"
+      ? "MedElite | Кабинет врача"
+      : language === "en"
+        ? "MedElite | Doctor dashboard"
+        : "MedElite | Doktor kabineti";
+  const seoDescription =
+    language === "ru"
+      ? "Приватная рабочая панель врача MedElite."
+      : language === "en"
+        ? "Private MedElite doctor workspace."
+        : "MedElite doktorlari uchun yopiq ish paneli.";
 
   const formatTimestamp = (timestamp?: string) =>
     timestamp ? String(timestamp).slice(0, 16).replace("T", " ") : "-";
@@ -198,6 +211,27 @@ const Doctor = () => {
     readyRequestIds.current = nextReadyIds;
   }, [requestQueue]);
 
+  useEffect(() => {
+    if (typeof window === "undefined" || !showProfileModal) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowProfileModal(false);
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [showProfileModal]);
+
   const handleDoctorAction = async (
     appointmentId: string,
     status: "Tasdiqlandi" | "Rad etildi" | "Yakunlandi",
@@ -249,6 +283,7 @@ const Doctor = () => {
   if (!currentDoctor) {
     return (
       <div className="dashboard-page doctor-page">
+        <Seo title={seoTitle} description={seoDescription} path="/doctor" noIndex />
         <main className="container dashboard-content">
           <section className="preview-card doctor-waiting-card">
             <div className="panel-heading">
@@ -285,6 +320,7 @@ const Doctor = () => {
 
   return (
     <div className="dashboard-page doctor-page">
+      <Seo title={seoTitle} description={seoDescription} path="/doctor" noIndex />
       <header className="dashboard-topbar">
         <div className="container dashboard-topbar-inner">
           <Link to="/" className="brand" onClick={() => setMenuOpen(false)}>

@@ -3,6 +3,7 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import EmergencyCallButton from "../components/EmergencyCallButton";
 import LanguageSwitcher from "../components/LanguageSwitcher";
+import Seo from "../components/Seo";
 import ThemeToggle from "../components/ThemeToggle";
 import {
   ArrowRightIcon,
@@ -82,6 +83,18 @@ const User = () => {
   const [reviewComment, setReviewComment] = useState("");
   const [doctorInfoTarget, setDoctorInfoTarget] = useState<Doctor | null>(null);
   const [doctorBookingTarget, setDoctorBookingTarget] = useState<Doctor | null>(null);
+  const seoTitle =
+    language === "ru"
+      ? "MedElite | Кабинет пациента"
+      : language === "en"
+        ? "MedElite | Patient dashboard"
+        : "MedElite | Bemor kabineti";
+  const seoDescription =
+    language === "ru"
+      ? "Личный кабинет пациента MedElite."
+      : language === "en"
+        ? "Private patient dashboard for MedElite."
+        : "MedElite foydalanuvchisi uchun shaxsiy kabinet.";
   const [searchParams, setSearchParams] = useSearchParams();
   const bookingSectionRef = useRef<HTMLElement | null>(null);
   const deferredSearchTerm = useDeferredValue(searchTerm);
@@ -412,6 +425,42 @@ const User = () => {
   const closeDoctorBookingModal = () => setDoctorBookingTarget(null);
 
   const isDoctorModalOpen = Boolean(doctorInfoTarget || doctorBookingTarget);
+  const isAnyModalOpen = Boolean(reviewTarget || isDoctorModalOpen);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !isAnyModalOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      if (reviewTarget) {
+        closeReviewModal();
+        return;
+      }
+
+      if (doctorBookingTarget) {
+        closeDoctorBookingModal();
+        return;
+      }
+
+      if (doctorInfoTarget) {
+        closeDoctorInfoModal();
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [doctorBookingTarget, doctorInfoTarget, isAnyModalOpen, reviewTarget]);
 
   const bookingRules = getBookingRulesMessage(language);
   const selectedDoctorMapUrl = getMapSearchUrl(getDoctorMapQuery(selectedDoctor ?? {}));
@@ -445,6 +494,7 @@ const User = () => {
 
   return (
     <div className="dashboard-page">
+      <Seo title={seoTitle} description={seoDescription} path="/user" noIndex />
       <header className="dashboard-topbar">
         <div className="container dashboard-topbar-inner">
           <Link to="/" className="brand" onClick={() => setMenuOpen(false)}>
@@ -1194,17 +1244,18 @@ const User = () => {
       {doctorInfoTarget && (
         <div className="modal-backdrop" onClick={closeDoctorInfoModal} role="presentation">
           <div
-            className="modal-card"
+            className="modal-card modal-card-wide"
             role="dialog"
             aria-modal="true"
+            aria-labelledby="doctor-info-title"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="panel-heading">
               <div>
                 <span className="section-chip">Doktor ma'lumotlari</span>
-                <h2>{doctorInfoTarget.name}</h2>
+                <h2 id="doctor-info-title">{doctorInfoTarget.name}</h2>
               </div>
-              <button type="button" className="icon-button" onClick={closeDoctorInfoModal}>
+              <button type="button" className="icon-button" onClick={closeDoctorInfoModal} aria-label="Modalni yopish">
                 <CloseIcon />
               </button>
             </div>
@@ -1241,17 +1292,23 @@ const User = () => {
       {doctorBookingTarget && (
         <div className="modal-backdrop" onClick={closeDoctorBookingModal} role="presentation">
           <div
-            className="modal-card"
+            className="modal-card modal-card-wide"
             role="dialog"
             aria-modal="true"
+            aria-labelledby="doctor-booking-title"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="panel-heading">
               <div>
                 <span className="section-chip">Band qilish</span>
-                <h2>{doctorBookingTarget.name}</h2>
+                <h2 id="doctor-booking-title">{doctorBookingTarget.name}</h2>
               </div>
-              <button type="button" className="icon-button" onClick={closeDoctorBookingModal}>
+              <button
+                type="button"
+                className="icon-button"
+                onClick={closeDoctorBookingModal}
+                aria-label="Modalni yopish"
+              >
                 <CloseIcon />
               </button>
             </div>

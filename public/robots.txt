@@ -1,4 +1,8 @@
 User-agent: *
 Allow: /
+Disallow: /login
+Disallow: /user
+Disallow: /doctor
+Disallow: /admin
 
 Sitemap: https://med-liteuz.vercel.app/sitemap.xml

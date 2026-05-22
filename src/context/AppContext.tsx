@@ -906,7 +906,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       return payload;
     },
-    [appointments, doctors],
+    [doctors],
   );
 
   const updateAppointmentStatusHandler = useCallback(

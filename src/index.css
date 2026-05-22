@@ -2693,6 +2693,7 @@ textarea {
   display: grid;
   place-items: center;
   padding: clamp(16px, 2.8vw, 28px);
+  overscroll-behavior: contain;
   background:
     radial-gradient(circle at top, rgba(118, 169, 255, 0.18), transparent 28%),
     radial-gradient(circle at bottom right, rgba(255, 122, 122, 0.14), transparent 28%),
@@ -2715,6 +2716,10 @@ textarea {
     inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
+.modal-card-wide {
+  width: min(100%, 760px);
+}
+
 .modal-card::before {
   content: "";
   position: absolute;
@@ -2726,6 +2731,20 @@ textarea {
 
 .review-modal-card {
   padding: 0;
+}
+
+.modal-card > .panel-heading {
+  margin: 0;
+  padding: clamp(20px, 2.6vw, 28px) clamp(20px, 2.6vw, 30px) 18px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel-strong) 96%, transparent), color-mix(in srgb, var(--panel-strong) 84%, transparent)),
+    transparent;
+  backdrop-filter: blur(14px);
+}
+
+.modal-card > .info-stack.modal-scroll-area {
+  padding-top: 18px;
 }
 
 .booking-success-modal {
@@ -4315,6 +4334,17 @@ textarea {
   backdrop-filter: blur(14px);
 }
 
+.modal-scroll-area .modal-actions {
+  position: sticky;
+  bottom: 0;
+  margin-top: 8px;
+  padding-top: 14px;
+  padding-bottom: max(2px, env(safe-area-inset-bottom));
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0), color-mix(in srgb, var(--panel-strong) 94%, transparent) 32%);
+  backdrop-filter: blur(10px);
+}
+
 .doctor-table-wrap {
   max-height: 520px;
   overflow: auto;
@@ -4532,7 +4562,8 @@ textarea {
   }
 
   .doctor-profile-modal,
-  .review-modal-card {
+  .review-modal-card,
+  .modal-card-wide {
     width: min(100% - 16px, 100%);
   }
 
@@ -4733,5 +4764,24 @@ textarea {
 
   .modal-scroll-area .panel-heading {
     margin-bottom: 14px;
+  }
+
+  .modal-card {
+    border-radius: 26px;
+  }
+
+  .modal-card > .panel-heading {
+    padding: 18px 18px 14px;
+  }
+
+  .modal-scroll-area {
+    max-height: min(80vh, 900px);
+    padding: 18px;
+    padding-right: 12px;
+  }
+
+  .modal-scroll-area .modal-actions {
+    gap: 10px;
+    padding-top: 12px;
   }
 }

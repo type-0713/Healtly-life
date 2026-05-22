@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import LanguageSwitcher from "../components/LanguageSwitcher";
+import Seo from "../components/Seo";
 import ThemeToggle from "../components/ThemeToggle";
 import {
   CheckIcon,
@@ -35,6 +36,8 @@ const Admin = () => {
   const [busyKey, setBusyKey] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const seoTitle = "MedElite | Admin panel";
+  const seoDescription = "Private administrative workspace for MedElite.";
 
   const pendingDoctors = useMemo(
     () => doctorRoster.filter((doctor) => doctor.approvalStatus === "pending"),
@@ -94,6 +97,7 @@ const Admin = () => {
 
   return (
     <div className="dashboard-page admin-page">
+      <Seo title={seoTitle} description={seoDescription} path="/admin" noIndex />
       <header className="dashboard-topbar">
         <div className="container dashboard-topbar-inner">
           <Link to="/" className="brand" onClick={() => setMenuOpen(false)}>
