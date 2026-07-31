@@ -321,8 +321,14 @@ const Home = () => {
               <a href="#specialists" onClick={closeMenu}>
                 {copy.nav[1]}
               </a>
-              <a href="#journey" onClick={closeMenu}>
+              <Link to="/ai-assistant" onClick={closeMenu}>
                 {copy.nav[2]}
+              </Link>
+              <Link to="/services" onClick={closeMenu}>
+                {copy.nav[3]}
+              </Link>
+              <a href="#journey" onClick={closeMenu}>
+                {copy.nav[4]}
               </a>
             </nav>
 
@@ -549,6 +555,37 @@ const Home = () => {
                   <span>{pillar}</span>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="section-block">
+          <div className="container">
+            <div className="ai-hero-banner">
+              <div className="ai-hero-banner-copy">
+                <span className="section-chip">
+                  <SparkIcon />
+                  {language === "ru" ? "AI медицинский помощник" : language === "en" ? "AI medical assistant" : "AI tibbiy yordamchi"}
+                </span>
+                <h2>
+                  {language === "ru"
+                    ? "Симптомы → специалист → ближайший врач"
+                    : language === "en"
+                      ? "Symptoms → specialty → nearest doctor"
+                      : "Simptom → mutaxassis → eng yaqin shifokor"}
+                </h2>
+                <p>
+                  {language === "ru"
+                    ? "Gemini AI анализирует симптомы, рекомендует врача и находит ближайшую клинику по геолокации."
+                    : language === "en"
+                      ? "Gemini AI analyzes symptoms, recommends a doctor, and finds the nearest clinic via geolocation."
+                      : "Gemini AI simptomlaringizni tahlil qiladi, shifokor tavsiya qiladi va geolokatsiya bo'yicha eng yaqin klinikani topadi."}
+                </p>
+              </div>
+              <Link to="/ai-assistant" className="button button-primary button-large">
+                {language === "ru" ? "Открыть AI" : language === "en" ? "Open AI" : "AI ni ochish"}
+                <SparkIcon />
+              </Link>
             </div>
           </div>
         </section>
@@ -857,9 +894,12 @@ const Home = () => {
 
           <div>
             <h4>{copy.platform}</h4>
+            <Link to="/ai-assistant">{copy.nav[2]}</Link>
+            <Link to="/services">{copy.nav[3]}</Link>
+            <Link to="/about">{language === "ru" ? "О нас" : language === "en" ? "About" : "Biz haqimizda"}</Link>
+            <Link to="/health-guide">{language === "ru" ? "Справочник" : language === "en" ? "Health guide" : "Sog'liq qo'llanmasi"}</Link>
             <a href="#advantages">{copy.nav[0]}</a>
             <a href="#specialists">{copy.nav[1]}</a>
-            <a href="#journey">{copy.nav[2]}</a>
           </div>
 
           <div>
@@ -873,7 +913,7 @@ const Home = () => {
             <h4>{copy.contact}</h4>
             <p><a href="tel:+998978040728">+998978040728</a></p>
             <p>Buxoro viloyati</p>
-            <p><a href="https://t.me/jasur_07282012" target="_blank" rel="noreferrer">Telegram</a></p>
+            <p><a href="https://t.me/StarwHatLufy1" target="_blank" rel="noreferrer">Telegram</a></p>
           </div>
         </div>
       </footer>

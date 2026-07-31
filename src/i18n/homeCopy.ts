@@ -3,7 +3,7 @@ import type { Language } from "../context/I18nContext";
 
 export const homeCopy: Record<Language, any> = {
   uz: {
-    nav: ["Afzalliklar", "Shifokorlar", "Jarayon"],
+    nav: ["Afzalliklar", "Shifokorlar", "AI Yordamchi", "Xizmatlar", "Jarayon"],
     heroChip: "Qulay raqamli klinika xizmati",
     heroTitle: "Sog'liq xizmatini",
     heroAccent: "bir joydan boshqaring",
@@ -107,7 +107,7 @@ export const homeCopy: Record<Language, any> = {
     fields: ["Kardiologiya", "Terapiya", "Ortopediya"],
   },
   ru: {
-    nav: ["Преимущества", "Врачи", "Процесс"],
+    nav: ["Преимущества", "Врачи", "AI Помощник", "Услуги", "Процесс"],
     heroChip: "Премиальная цифровая клиническая экосистема",
     heroTitle: "Преобразите медицинский сервис",
     heroAccent: "в премиальный опыт",

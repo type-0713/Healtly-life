@@ -1,6 +1,7 @@
 import type { FormEvent } from "react";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import AiChatWidget from "../components/AiChatWidget";
 import EmergencyCallButton from "../components/EmergencyCallButton";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import Seo from "../components/Seo";
@@ -27,6 +28,7 @@ import {
   type Doctor,
 } from "../context/AppContext";
 import { useI18n } from "../context/I18nContext";
+import { aiAssistantCopy } from "../i18n/aiAssistantCopy";
 import { getDoctorMapQuery, getMapSearchUrl } from "../lib/maps";
 import { ALL_REGIONS_OPTION, UZBEKISTAN_REGIONS } from "../lib/regions";
 import {
@@ -37,7 +39,7 @@ import {
   isPastTimeSlotForDate,
 } from "../lib/schedule";
 
-type TabId = "booking" | "appointments" | "profile";
+type TabId = "booking" | "appointments" | "profile" | "ai";
 
 const canReviewAppointment = (appointment: Appointment) =>
   (appointment.status === "Tasdiqlandi" || appointment.status === "Yakunlandi") &&
@@ -49,6 +51,7 @@ const canCancelAppointment = (appointment: Appointment) =>
 
 const User = () => {
   const { language, translateError, translateRegion, translateSpecialty, translateStatus } = useI18n();
+  const aiCopy = aiAssistantCopy[language];
   const {
     appointments,
     bookAppointment,
@@ -528,6 +531,14 @@ const User = () => {
             <div className="dashboard-actions">
               <LanguageSwitcher compact />
               <ThemeToggle compact />
+              <Link
+                to="/ai-assistant"
+                className="button button-primary dashboard-ai-button"
+                onClick={() => setMenuOpen(false)}
+              >
+                <SparkIcon />
+                AI
+              </Link>
               <Link to="/doctor" className="button button-secondary" onClick={() => setMenuOpen(false)}>
                 Doktor bo'limi
               </Link>
@@ -586,6 +597,7 @@ const User = () => {
         <div className="workspace-tabs">
           {([
             ["booking", "Bron qilish"],
+            ["ai", "AI yordamchi"],
             ["appointments", "Buyurtmalarim"],
             ["profile", "Profil"],
           ] as Array<[TabId, string]>).map(([tabId, label]) => (
@@ -1071,6 +1083,28 @@ const User = () => {
           </section>
         )}
 
+        {activeTab === "ai" && (
+          <section className="user-ai-section">
+            <article className="preview-card preview-highlight user-ai-card">
+              <div className="panel-heading">
+                <div>
+                  <span className="section-chip">
+                    <SparkIcon />
+                    {aiCopy.chip}
+                  </span>
+                  <h2>{aiCopy.title}</h2>
+                  <p className="preview-subtext">{aiCopy.heroText}</p>
+                </div>
+                <Link to="/ai-assistant" className="button button-secondary">
+                  {language === "ru" ? "To'liq ekran" : language === "en" ? "Full screen" : "To'liq ekran"}
+                  <ArrowRightIcon />
+                </Link>
+              </div>
+              <AiChatWidget compact showModeSelector />
+            </article>
+          </section>
+        )}
+
         {activeTab === "profile" && (
           <section className="user-workspace-grid user-workspace-grid-full">
             <article className="preview-card">
@@ -1198,17 +1232,16 @@ const User = () => {
             aria-modal="true"
             aria-labelledby="review-title"
           >
-            <form className="review-form modal-scroll-area" onSubmit={handleReviewSubmit}>
-              <div className="panel-heading">
-                <div>
-                  <span className="section-chip">Baho</span>
-                  <h2 id="review-title">{reviewTarget.doctorName} uchun baho</h2>
-                </div>
-                <button type="button" className="icon-button" onClick={closeReviewModal}>
-                  <CloseIcon />
-                </button>
+            <div className="panel-heading">
+              <div>
+                <span className="section-chip">Baho</span>
+                <h2 id="review-title">{reviewTarget.doctorName} uchun baho</h2>
               </div>
-
+              <button type="button" className="icon-button" onClick={closeReviewModal}>
+                <CloseIcon />
+              </button>
+            </div>
+            <form className="review-form modal-scroll-area" onSubmit={handleReviewSubmit}>
               <p className="review-modal-copy">
                 Qabul sifati bo'yicha qisqa va aniq sharh yozing. Bu baho doktor reytingiga qo'shiladi.
               </p>
@@ -1407,6 +1440,7 @@ const User = () => {
                     <input
                       type="date"
                       value={selectedDate}
+                      min={getTodayInTashkent()}
                       onChange={(event) => setSelectedDate(event.target.value)}
                       required
                     />
@@ -1452,7 +1486,7 @@ const User = () => {
         </div>
       )}
 
-      {!isDoctorModalOpen && <EmergencyCallButton />}
+      {!isAnyModalOpen && <EmergencyCallButton />}
     </div>
   );
 };

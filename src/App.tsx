@@ -9,6 +9,10 @@ const LoginPage = lazy(() => import("./pages/Login"));
 const User = lazy(() => import("./pages/User"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Doctor = lazy(() => import("./pages/Doctor"));
+const AiAssistant = lazy(() => import("./pages/AiAssistant"));
+const Services = lazy(() => import("./pages/Services"));
+const About = lazy(() => import("./pages/About"));
+const HealthGuide = lazy(() => import("./pages/HealthGuide"));
 
 const loadingCopy = {
   uz: {
@@ -103,6 +107,10 @@ const App = () => {
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/ai-assistant" element={<AiAssistant />} />
+        <Route path="/services" element={<Services />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/health-guide" element={<HealthGuide />} />
         <Route path="/login" element={<LoginPage />} />
         <Route
           path="/user"
