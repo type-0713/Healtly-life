@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import Seo, { SITE_URL } from "../components/Seo";
@@ -37,8 +37,48 @@ const Home = () => {
   const [locationTerm, setLocationTerm] = useState("");
   const [regionFilter, setRegionFilter] = useState(ALL_REGIONS_OPTION);
   const [menuOpen, setMenuOpen] = useState(false);
+  const cursorFollowerRef = useRef<HTMLDivElement>(null);
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const deferredLocationTerm = useDeferredValue(locationTerm);
+
+  useEffect(() => {
+    let animationFrameId: number;
+    const handleMouseMove = (e: MouseEvent) => {
+      animationFrameId = requestAnimationFrame(() => {
+        if (cursorFollowerRef.current) {
+          cursorFollowerRef.current.style.transform = `translate3d(${e.clientX - 160}px, ${e.clientY - 160}px, 0)`;
+        }
+      });
+    };
+    window.addEventListener("mousemove", handleMouseMove, { passive: true });
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
+
+  const realHighRatingReviews = useMemo(() => {
+    return appointments
+      .filter((app) => typeof app.reviewRating === "number" && app.reviewRating >= 4 && app.reviewComment)
+      .map((app) => ({
+        name: app.patientName || "Bemor",
+        role: `Shifokor: ${app.doctorName}`,
+        quote: app.reviewComment || "",
+        rating: app.reviewRating || 5,
+      }));
+  }, [appointments]);
+
+  const displayTestimonials = useMemo(() => {
+    if (realHighRatingReviews.length > 0) {
+      return realHighRatingReviews;
+    }
+    return copy.testimonials.map(([name, role, quote]: [string, string, string]) => ({
+      name,
+      role,
+      quote,
+      rating: 5,
+    }));
+  }, [copy.testimonials, realHighRatingReviews]);
 
   const filteredDoctors = useMemo(() => {
     return doctors.filter((doctor) => {
@@ -98,10 +138,7 @@ const Home = () => {
     [copy.steps],
   );
 
-  const testimonials = useMemo(
-    () => copy.testimonials.map(([name, role, quote]: [string, string, string]) => ({ name, role, quote })),
-    [copy.testimonials],
-  );
+
 
   const faqs = useMemo(
     () => copy.faqs.map(([question, answer]: [string, string]) => ({ question, answer })),
@@ -301,6 +338,7 @@ const Home = () => {
       />
       <div className="site-orb site-orb-one" />
       <div className="site-orb site-orb-two" />
+      <div ref={cursorFollowerRef} className="cursor-glow-follower" />
 
       <header className="topbar">
         <div className="container topbar-inner">
@@ -315,21 +353,27 @@ const Home = () => {
 
           <div className={`nav-cluster ${menuOpen ? "nav-cluster-open" : ""}`}>
             <nav className="nav-links">
-              <a href="#advantages" onClick={closeMenu}>
-                {copy.nav[0]}
-              </a>
-              <a href="#specialists" onClick={closeMenu}>
-                {copy.nav[1]}
-              </a>
               <Link to="/ai-assistant" onClick={closeMenu}>
-                {copy.nav[2]}
+                AI
               </Link>
-              <Link to="/services" onClick={closeMenu}>
-                {copy.nav[3]}
+              <Link to="/chat" onClick={closeMenu}>
+                Chat
               </Link>
-              <a href="#journey" onClick={closeMenu}>
-                {copy.nav[4]}
-              </a>
+              <Link to="/medical-records" onClick={closeMenu}>
+                EMR
+              </Link>
+              <Link to="/body-map" onClick={closeMenu}>
+                Tana Xaritasi
+              </Link>
+              <Link to="/telemedicine" onClick={closeMenu}>
+                Telemeditsina
+              </Link>
+              <Link to="/calculators" onClick={closeMenu}>
+                Kalkulyator
+              </Link>
+              <Link to="/emergency" onClick={closeMenu}>
+                103 Yordam
+              </Link>
             </nav>
 
             <div className="nav-actions">
@@ -823,14 +867,12 @@ const Home = () => {
             </div>
 
             <div className="testimonial-grid">
-              {testimonials.map((item: { name: string; role: string; quote: string }) => (
-                <article key={item.name} className="testimonial-card">
+              {displayTestimonials.map((item: { name: string; role: string; quote: string; rating?: number }, idx: number) => (
+                <article key={`${item.name}-${idx}`} className="testimonial-card">
                   <div className="testimonial-stars">
-                    <StarIcon />
-                    <StarIcon />
-                    <StarIcon />
-                    <StarIcon />
-                    <StarIcon />
+                    {Array.from({ length: item.rating || 5 }).map((_, i) => (
+                      <StarIcon key={i} />
+                    ))}
                   </div>
                   <p>"{item.quote}"</p>
                   <strong>{item.name}</strong>

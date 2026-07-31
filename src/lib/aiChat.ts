@@ -148,19 +148,17 @@ export const sendAiMessage = async ({
   mode?: AiMode;
 }): Promise<AiReplyResult> => {
   const historyPayload = history.map(({ role, content }) => ({ role, content }));
-  const geminiKey = import.meta.env.VITE_GEMINI_API_KEY?.trim();
-  const openAiKey = import.meta.env.VITE_OPENAI_API_KEY?.trim();
+  const groqKey = import.meta.env.VITE_GROQ_API_KEY?.trim();
 
   try {
-    if (geminiKey || openAiKey) {
+    if (groqKey) {
       return await generateAiReply({
         mode,
         history: historyPayload,
         userMessage,
         doctors: toDoctorContext(doctors),
         language,
-        geminiKey,
-        openAiKey,
+        groqKey,
       });
     }
 

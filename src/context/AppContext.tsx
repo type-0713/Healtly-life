@@ -993,6 +993,29 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             doctorAssignedAt: new Date().toISOString(),
             rejectedReason: "",
           });
+
+          // Auto-reject any other pending request for the same slot
+          const sameSlotQuery = query(
+            appointmentCollection,
+            orderBy("createdAt", "desc"),
+          );
+          const sameSlotSnap = await getDocs(sameSlotQuery);
+          sameSlotSnap.docs.forEach((docSnap) => {
+            const data = docSnap.data();
+            if (
+              docSnap.id !== appointmentId &&
+              data.doctorId === currentDoctor.id &&
+              data.date === appointmentData.date &&
+              data.time === appointmentData.time &&
+              data.status === "Kutilmoqda"
+            ) {
+              transaction.update(docSnap.ref, {
+                status: "Rad etildi",
+                handledAt: new Date().toISOString(),
+                rejectedReason: "Ushbu vaqt oralig'i boshqa bemor tomonidan tasdiqlandi.",
+              });
+            }
+          });
           return;
         }
 

@@ -113,8 +113,17 @@ const Admin = () => {
             <div className="dashboard-actions">
               <LanguageSwitcher compact />
               <ThemeToggle compact />
-              <Link to="/doctor" className="button button-secondary" onClick={() => setMenuOpen(false)}>
-                Doktor bo'limi
+              <Link to="/chat" className="button button-primary" onClick={() => setMenuOpen(false)}>
+                Realtime Chat
+              </Link>
+              <Link to="/medical-records" className="button button-secondary" onClick={() => setMenuOpen(false)}>
+                EMR
+              </Link>
+              <Link to="/telemedicine" className="button button-secondary" onClick={() => setMenuOpen(false)}>
+                Telemeditsina
+              </Link>
+              <Link to="/emergency" className="button button-danger" onClick={() => setMenuOpen(false)}>
+                103 Yordam
               </Link>
               <button type="button" className="button button-ghost" onClick={() => void signOutUser()}>
                 Chiqish

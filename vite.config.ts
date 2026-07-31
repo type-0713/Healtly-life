@@ -6,7 +6,7 @@ import {
   type HistoryMessage,
 } from "./src/lib/aiCore";
 
-const devChatApiPlugin = (geminiKey: string, openAiKey: string): Plugin => ({
+const devChatApiPlugin = (groqKey: string): Plugin => ({
   name: "dev-chat-api",
   configureServer(server) {
     server.middlewares.use("/api/chat", async (req, res, next) => {
@@ -15,10 +15,10 @@ const devChatApiPlugin = (geminiKey: string, openAiKey: string): Plugin => ({
         return;
       }
 
-      if (!geminiKey && !openAiKey) {
+      if (!groqKey) {
         res.statusCode = 503;
         res.setHeader("Content-Type", "application/json");
-        res.end(JSON.stringify({ error: "GEMINI_API_KEY yoki OPENAI_API_KEY sozlanmagan" }));
+        res.end(JSON.stringify({ error: "Groq API kaliti sozlanmagan. VITE_GROQ_API_KEY ni qo'shing." }));
         return;
       }
 
@@ -55,8 +55,7 @@ const devChatApiPlugin = (geminiKey: string, openAiKey: string): Plugin => ({
             userMessage,
             doctors,
             language,
-            geminiKey: geminiKey || undefined,
-            openAiKey: openAiKey || undefined,
+            groqKey: groqKey || undefined,
           });
 
           res.statusCode = 200;
@@ -79,12 +78,11 @@ const devChatApiPlugin = (geminiKey: string, openAiKey: string): Plugin => ({
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
-  const geminiKey = env.GEMINI_API_KEY || env.VITE_GEMINI_API_KEY || "";
-  const openAiKey = env.OPENAI_API_KEY || env.VITE_OPENAI_API_KEY || "";
+  const groqKey = env.GROQ_API_KEY || env.VITE_GROQ_API_KEY || "";
 
   return {
     base: "./",
-    plugins: [react(), devChatApiPlugin(geminiKey, openAiKey)],
+    plugins: [react(), devChatApiPlugin(groqKey)],
     build: {
       chunkSizeWarningLimit: 750,
       rollupOptions: {

@@ -30,7 +30,7 @@ const servicesCopy = {
       {
         icon: "spark",
         title: "AI Simptom Tahlili",
-        text: "Gemini AI yordamida simptomlaringizni tahlil qiling va mos mutaxassislikni toping.",
+        text: "Groq AI yordamida simptomlaringizni tahlil qiling va mos mutaxassislikni toping.",
         link: "/ai-assistant",
         cta: "AI bilan boshlash",
       },
@@ -89,7 +89,7 @@ const servicesCopy = {
       {
         icon: "spark",
         title: "AI Анализ симптомов",
-        text: "Проанализируйте симптомы с Gemini AI и найдите нужного специалиста.",
+        text: "Проанализируйте симптомы с Groq AI и найдите нужного специалиста.",
         link: "/ai-assistant",
         cta: "Начать с AI",
       },
@@ -148,7 +148,7 @@ const servicesCopy = {
       {
         icon: "spark",
         title: "AI Symptom Analysis",
-        text: "Analyze symptoms with Gemini AI and find the right specialty.",
+        text: "Analyze symptoms with Groq AI and find the right specialty.",
         link: "/ai-assistant",
         cta: "Start with AI",
       },

@@ -184,3 +184,127 @@ export const CloseIcon = ({ className }: IconProps) => (
     <path d="M6 6 18 18M18 6 6 18" />
   </IconBase>
 );
+
+export const ChatIcon = ({ className }: IconProps) => (
+  <IconBase className={className}>
+    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+  </IconBase>
+);
+
+export const SendIcon = ({ className }: IconProps) => (
+  <IconBase className={className}>
+    <path d="m22 2-7 20-4-9-9-4Z" />
+    <path d="M22 2 11 13" />
+  </IconBase>
+);
+
+export const PaperclipIcon = ({ className }: IconProps) => (
+  <IconBase className={className}>
+    <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+  </IconBase>
+);
+
+export const PillIcon = ({ className }: IconProps) => (
+  <IconBase className={className}>
+    <path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z" />
+    <path d="m8.5 8.5 7 7" />
+  </IconBase>
+);
+
+export const FileTextIcon = ({ className }: IconProps) => (
+  <IconBase className={className}>
+    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="16" y1="13" x2="8" y2="13" />
+    <line x1="16" y1="17" x2="8" y2="17" />
+    <line x1="10" y1="9" x2="8" y2="9" />
+  </IconBase>
+);
+
+export const ActivityIcon = ({ className }: IconProps) => (
+  <IconBase className={className}>
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+  </IconBase>
+);
+
+export const AmbulanceIcon = ({ className }: IconProps) => (
+  <IconBase className={className}>
+    <rect x="1" y="6" width="15" height="11" rx="2" />
+    <path d="M16 8h4l3 3v6h-7V8z" />
+    <circle cx="5.5" cy="18.5" r="2.5" />
+    <circle cx="18.5" cy="18.5" r="2.5" />
+    <path d="M8 9.5v5M5.5 12h5" />
+  </IconBase>
+);
+
+export const DownloadIcon = ({ className }: IconProps) => (
+  <IconBase className={className}>
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="7 10 12 15 17 10" />
+    <line x1="12" y1="15" x2="12" y2="3" />
+  </IconBase>
+);
+
+export const FilterIcon = ({ className }: IconProps) => (
+  <IconBase className={className}>
+    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+  </IconBase>
+);
+
+export const TrashIcon = ({ className }: IconProps) => (
+  <IconBase className={className}>
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+  </IconBase>
+);
+
+export const EditIcon = ({ className }: IconProps) => (
+  <IconBase className={className}>
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+  </IconBase>
+);
+
+export const CheckCircleIcon = ({ className }: IconProps) => (
+  <IconBase className={className}>
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+    <polyline points="22 4 12 14.01 9 11.01" />
+  </IconBase>
+);
+
+export const AlertCircleIcon = ({ className }: IconProps) => (
+  <IconBase className={className}>
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="8" x2="12" y2="12" />
+    <line x1="12" y1="16" x2="12.01" y2="16" />
+  </IconBase>
+);
+
+export const VideoIcon = ({ className }: IconProps) => (
+  <IconBase className={className}>
+    <polygon points="23 7 16 12 23 17 23 7" />
+    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+  </IconBase>
+);
+
+export const ChevronRightIcon = ({ className }: IconProps) => (
+  <IconBase className={className}>
+    <polyline points="9 18 15 12 9 6" />
+  </IconBase>
+);
+
+export const ChevronDownIcon = ({ className }: IconProps) => (
+  <IconBase className={className}>
+    <polyline points="6 9 12 15 18 9" />
+  </IconBase>
+);
+
+export const MicIcon = ({ className }: IconProps) => (
+  <IconBase className={className}>
+    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+    <line x1="12" y1="19" x2="12" y2="23" />
+    <line x1="8" y1="23" x2="16" y2="23" />
+  </IconBase>
+);
+
