@@ -68,10 +68,13 @@ ${doctorList || "- Hozircha shifokorlar ro'yxati yuklanmagan"}`;
 
 const buildGroqMessages = (systemPrompt: string, history: HistoryMessage[], userMessage: string): GroqMessage[] => [
   { role: "system", content: systemPrompt },
-  ...history.map((message) => ({
-    role: message.role === "user" ? "user" : "assistant",
-    content: message.content,
-  })),
+  ...history.map((message): GroqMessage => {
+    const role: GroqMessage["role"] = message.role === "user" ? "user" : "assistant";
+    return {
+      role,
+      content: message.content,
+    };
+  }),
   { role: "user", content: userMessage },
 ];
 
