@@ -167,13 +167,11 @@ const AiChatWidget = ({
           <div>
             <strong>{activeModeCopy.title}</strong>
             <span>
-              {lastProvider === "gemini"
-                ? "Gemini AI"
-                : lastProvider === "openai"
-                  ? "GPT AI"
-                  : lastProvider === "fallback"
-                    ? copy.offlineMode
-                    : copy.aiPowered}
+              {lastProvider === "groq"
+                ? "Groq AI"
+                : lastProvider === "fallback"
+                  ? copy.offlineMode
+                  : copy.aiPowered}
             </span>
           </div>
           {!compact && (

@@ -6,11 +6,9 @@ import LanguageSwitcher from "../components/LanguageSwitcher";
 import Seo from "../components/Seo";
 import ThemeToggle from "../components/ThemeToggle";
 import {
-  CheckIcon,
   CloseIcon,
   HeartPulseIcon,
   MenuIcon,
-  SparkIcon,
 } from "../components/PremiumIcons";
 import { useI18n } from "../context/I18nContext";
 import { aiAssistantCopy } from "../i18n/aiAssistantCopy";
@@ -90,37 +88,10 @@ const AiAssistant = () => {
         </div>
       </header>
 
-      <main className="ai-main">
-        <div className="container ai-layout">
-          <aside className="ai-sidebar glass-card">
-            <span className="section-chip">
-              <SparkIcon />
-              {copy.chip}
-            </span>
-            <h1>
-              {copy.heroTitle}
-              <span>{copy.heroAccent}</span>
-            </h1>
-            <p>{copy.heroText}</p>
-
-            <div className="ai-sidebar-features">
-              {copy.features.map((feature) => (
-                <div key={feature} className="ai-feature-item">
-                  <CheckIcon />
-                  <span>{feature}</span>
-                </div>
-              ))}
-            </div>
-
-            <p className="ai-disclaimer">{copy.disclaimer}</p>
-            <p className="ai-emergency">{copy.emergency}</p>
-            <span className="badge badge-gold">{copy.aiPowered}</span>
-          </aside>
-
-          <section className="ai-chat-panel glass-card">
-            <AiChatWidget initialMode={initialMode} showModeSelector />
-          </section>
-        </div>
+      <main className="ai-main container">
+        <section className="ai-chat-panel glass-card">
+          <AiChatWidget initialMode={initialMode} showModeSelector />
+        </section>
       </main>
 
       <EmergencyCallButton />

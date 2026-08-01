@@ -14,8 +14,7 @@ export type DoctorContext = {
   rating: number;
 };
 
-type GeminiPart = { text: string };
-type GeminiContent = { role: string; parts: GeminiPart[] };
+type GroqMessage = { role: "system" | "user" | "assistant"; content: string };
 
 const languageHint = (language: string) => {
   if (language === "ru") {
@@ -67,100 +66,77 @@ Mavjud shifokorlar:
 ${doctorList || "- Hozircha shifokorlar ro'yxati yuklanmagan"}`;
 };
 
-export const buildGeminiContents = (
-  systemPrompt: string,
-  history: HistoryMessage[],
-  userMessage: string,
-): GeminiContent[] => [
-  { role: "user", parts: [{ text: systemPrompt }] },
-  {
-    role: "model",
-    parts: [{ text: "Tushundim. MedElite AI yordamchisi sifatida xavfsiz va foydali maslahat beraman." }],
-  },
-  ...history.map((message) => ({
-    role: message.role === "user" ? "user" : "model",
-    parts: [{ text: message.content }],
-  })),
-  { role: "user", parts: [{ text: userMessage }] },
+const buildGroqMessages = (systemPrompt: string, history: HistoryMessage[], userMessage: string): GroqMessage[] => [
+  { role: "system", content: systemPrompt },
+  ...history.map((message): GroqMessage => {
+    const role: GroqMessage["role"] = message.role === "user" ? "user" : "assistant";
+    return {
+      role,
+      content: message.content,
+    };
+  }),
+  { role: "user", content: userMessage },
 ];
 
-export const callGeminiApi = async (apiKey: string, contents: GeminiContent[]) => {
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents,
-        generationConfig: { temperature: 0.65, maxOutputTokens: 900 },
-      }),
-    },
-  );
+export const callGroqApi = async (apiKey: string, systemPrompt: string, history: HistoryMessage[], userMessage: string, retries = 2): Promise<string> => {
+  const messages = buildGroqMessages(systemPrompt, history, userMessage);
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Gemini API xatolik: ${response.status} ${errorText.slice(0, 120)}`);
+  for (let attempt = 0; attempt < retries; attempt += 1) {
+    try {
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "llama-3.1-8b-instant",
+          messages,
+          temperature: 0.65,
+          max_tokens: 900,
+        }),
+      });
+
+      if (response.status === 429 && attempt < retries - 1) {
+        await new Promise((r) => setTimeout(r, 1500));
+        continue;
+      }
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Groq API error [${response.status}]: ${errorText.slice(0, 120)}`);
+      }
+
+      const data = (await response.json()) as {
+        choices?: Array<{ message?: { content?: string } }>;
+      };
+
+      const text = data.choices?.[0]?.message?.content?.trim();
+      if (!text) {
+        throw new Error("Groq bo'sh javob qaytardi");
+      }
+
+      return text;
+    } catch (err) {
+      if (attempt === retries - 1) throw err;
+    }
   }
 
-  const data = (await response.json()) as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-  };
-
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-  if (!text) {
-    throw new Error("Gemini bo'sh javob qaytardi");
-  }
-
-  return text;
+  throw new Error("Groq API qayta ulanish chegarasi tugadi");
 };
 
-export const callOpenAiApi = async (
-  apiKey: string,
-  systemPrompt: string,
-  history: HistoryMessage[],
-  userMessage: string,
-) => {
-  const messages = [
-    { role: "system" as const, content: systemPrompt },
-    ...history.map((message) => ({
-      role: message.role === "user" ? ("user" as const) : ("assistant" as const),
-      content: message.content,
-    })),
-    { role: "user" as const, content: userMessage },
-  ];
+export type AiProvider = "groq" | "fallback";
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      messages,
-      temperature: 0.65,
-      max_tokens: 900,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenAI API xatolik: ${response.status} ${errorText.slice(0, 120)}`);
+const generateMedicalFallbackReply = (userMessage: string, doctors: DoctorContext[], language: string) => {
+  const doc = doctors[0] || { name: "Dr. Alisher Karimov", specialty: "Terapevt" };
+  if (language === "ru") {
+    return `[MedElite AI Консультант]\nПо вашему запросу "${userMessage}":\nРекомендуется пройти первичный осмотр у специалиста (${doc.specialty} — ${doc.name}). При наличии острой боли или высокой температуры немедленно обратитесь в службу 103.`;
   }
-
-  const data = (await response.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
-  };
-
-  const text = data.choices?.[0]?.message?.content?.trim();
-  if (!text) {
-    throw new Error("OpenAI bo'sh javob qaytardi");
+  if (language === "en") {
+    return `[MedElite AI Assistant]\nRegarding your query "${userMessage}":\nWe recommend a clinical evaluation with our specialist (${doc.specialty} — ${doc.name}). If you experience severe pain, shortness of breath, or emergency symptoms, please call 103 immediately.`;
   }
-
-  return text;
+  return `[MedElite AI Tibbiy Maslahatchi]\n"${userMessage}" bo'yicha tibbiy tavsiya:\nKo'rsatilgan belgilar bo'yicha ${doc.specialty} (${doc.name}) ko'rigidan o'tishingiz tavsiya etiladi. Og'ir og'riq yoki shoshilinch holatlarda darhol 103 tibbiy xizmatiga murojaat qiling.`;
 };
-
-export type AiProvider = "gemini" | "openai" | "fallback";
 
 export const generateAiReply = async ({
   mode,
@@ -168,37 +144,31 @@ export const generateAiReply = async ({
   userMessage,
   doctors,
   language,
-  geminiKey,
-  openAiKey,
+  groqKey,
 }: {
   mode: AiMode;
   history: HistoryMessage[];
   userMessage: string;
   doctors: DoctorContext[];
   language: string;
-  geminiKey?: string;
-  openAiKey?: string;
+  groqKey?: string;
 }): Promise<{ reply: string; provider: AiProvider }> => {
   const systemPrompt = buildSystemPrompt(mode, doctors, language);
-  const contents = buildGeminiContents(systemPrompt, history, userMessage);
 
-  if (geminiKey) {
+  if (groqKey) {
     try {
-      const reply = await callGeminiApi(geminiKey, contents);
-      return { reply, provider: "gemini" };
-    } catch (geminiError) {
-      if (openAiKey) {
-        const reply = await callOpenAiApi(openAiKey, systemPrompt, history, userMessage);
-        return { reply, provider: "openai" };
-      }
-      throw geminiError;
+      const reply = await callGroqApi(groqKey, systemPrompt, history, userMessage);
+      return { reply, provider: "groq" };
+    } catch {
+      return {
+        reply: generateMedicalFallbackReply(userMessage, doctors, language),
+        provider: "fallback",
+      };
     }
   }
 
-  if (openAiKey) {
-    const reply = await callOpenAiApi(openAiKey, systemPrompt, history, userMessage);
-    return { reply, provider: "openai" };
-  }
-
-  throw new Error("AI kalitlari sozlanmagan");
+  return {
+    reply: generateMedicalFallbackReply(userMessage, doctors, language),
+    provider: "fallback",
+  };
 };

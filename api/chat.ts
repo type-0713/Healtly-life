@@ -1,3 +1,7 @@
+declare const process: {
+  env: Record<string, string | undefined>;
+};
+
 import {
   generateAiReply,
   type AiMode,
@@ -22,11 +26,9 @@ export default async function handler(
     return;
   }
 
-  const geminiKey = process.env.GEMINI_API_KEY?.trim();
-  const openAiKey = process.env.OPENAI_API_KEY?.trim();
-
-  if (!geminiKey && !openAiKey) {
-    res.status(503).json({ error: "GEMINI_API_KEY yoki OPENAI_API_KEY sozlanmagan" });
+  const groqKey = (process.env.GROQ_API_KEY || process.env.VITE_GROQ_API_KEY)?.trim();
+  if (!groqKey) {
+    res.status(503).json({ error: "Groq API kaliti sozlanmagan. .env.local fayliga VITE_GROQ_API_KEY ni joylashtiring." });
     return;
   }
 
@@ -50,8 +52,7 @@ export default async function handler(
       userMessage,
       doctors,
       language,
-      geminiKey,
-      openAiKey,
+      groqKey,
     });
     res.status(200).json({ reply, provider });
   } catch (error) {

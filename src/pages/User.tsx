@@ -539,8 +539,23 @@ const User = () => {
                 <SparkIcon />
                 AI
               </Link>
-              <Link to="/doctor" className="button button-secondary" onClick={() => setMenuOpen(false)}>
-                Doktor bo'limi
+              <Link to="/chat" className="button button-secondary" onClick={() => setMenuOpen(false)}>
+                Chat
+              </Link>
+              <Link to="/medical-records" className="button button-secondary" onClick={() => setMenuOpen(false)}>
+                EMR
+              </Link>
+              <Link to="/body-map" className="button button-secondary" onClick={() => setMenuOpen(false)}>
+                Tana Xaritasi
+              </Link>
+              <Link to="/telemedicine" className="button button-secondary" onClick={() => setMenuOpen(false)}>
+                Telemeditsina
+              </Link>
+              <Link to="/calculators" className="button button-secondary" onClick={() => setMenuOpen(false)}>
+                Kalkulyator
+              </Link>
+              <Link to="/emergency" className="button button-danger" onClick={() => setMenuOpen(false)}>
+                103 Yordam
               </Link>
               <button type="button" className="button button-ghost" onClick={() => void signOutUser()}>
                 Chiqish
