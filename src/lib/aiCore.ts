@@ -66,14 +66,15 @@ Mavjud shifokorlar:
 ${doctorList || "- Hozircha shifokorlar ro'yxati yuklanmagan"}`;
 };
 
-const buildGroqMessages = (systemPrompt: string, history: HistoryMessage[], userMessage: string): GroqMessage[] => [
-  { role: "system", content: systemPrompt },
-  ...history.map((message) => ({
+const buildGroqMessages = (systemPrompt: string, history: HistoryMessage[], userMessage: string): GroqMessage[] => {
+  const sysMsg: GroqMessage = { role: "system", content: systemPrompt };
+  const userMsg: GroqMessage = { role: "user", content: userMessage };
+  const historyMsgs: GroqMessage[] = history.map((message): GroqMessage => ({
     role: message.role === "user" ? "user" : "assistant",
     content: message.content,
-  })),
-  { role: "user", content: userMessage },
-];
+  }));
+  return [sysMsg, ...historyMsgs, userMsg];
+};
 
 export const callGroqApi = async (apiKey: string, systemPrompt: string, history: HistoryMessage[], userMessage: string, retries = 2): Promise<string> => {
   const messages = buildGroqMessages(systemPrompt, history, userMessage);
