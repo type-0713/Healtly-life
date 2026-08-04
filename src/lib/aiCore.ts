@@ -14,15 +14,13 @@ export type DoctorContext = {
   rating: number;
 };
 
-type GroqMessage = { role: "system" | "user" | "assistant"; content: string };
+// Strict literal union type — required by Groq API schema
+type GroqRole = "system" | "user" | "assistant";
+type GroqMessage = { role: GroqRole; content: string };
 
-const languageHint = (language: string) => {
-  if (language === "ru") {
-    return "Javoblarni rus tilida bering.";
-  }
-  if (language === "en") {
-    return "Respond in English.";
-  }
+const languageHint = (language: string): string => {
+  if (language === "ru") return "Javoblarni rus tilida bering.";
+  if (language === "en") return "Respond in English.";
   return "Javoblarni o'zbek tilida bering.";
 };
 
@@ -43,7 +41,7 @@ export const buildSystemPrompt = (
   mode: AiMode,
   doctors: DoctorContext[],
   language: string,
-) => {
+): string => {
   const doctorList = doctors
     .slice(0, 12)
     .map(
@@ -66,17 +64,30 @@ Mavjud shifokorlar:
 ${doctorList || "- Hozircha shifokorlar ro'yxati yuklanmagan"}`;
 };
 
-const buildGroqMessages = (systemPrompt: string, history: HistoryMessage[], userMessage: string): GroqMessage[] => {
-  const sysMsg: GroqMessage = { role: "system", content: systemPrompt };
-  const userMsg: GroqMessage = { role: "user", content: userMessage };
-  const historyMsgs: GroqMessage[] = history.map((message): GroqMessage => ({
-    role: message.role === "user" ? "user" : "assistant",
-    content: message.content,
-  }));
+// Explicitly typed builder — avoids TS2322 "string not assignable to literal union"
+const buildGroqMessages = (
+  systemPrompt: string,
+  history: HistoryMessage[],
+  userMessage: string,
+): GroqMessage[] => {
+  const sysMsg: GroqMessage = { role: "system" as GroqRole, content: systemPrompt };
+  const userMsg: GroqMessage = { role: "user" as GroqRole, content: userMessage };
+  const historyMsgs: GroqMessage[] = history.map(
+    (msg): GroqMessage => ({
+      role: (msg.role === "user" ? "user" : "assistant") as GroqRole,
+      content: msg.content,
+    }),
+  );
   return [sysMsg, ...historyMsgs, userMsg];
 };
 
-export const callGroqApi = async (apiKey: string, systemPrompt: string, history: HistoryMessage[], userMessage: string, retries = 2): Promise<string> => {
+export const callGroqApi = async (
+  apiKey: string,
+  systemPrompt: string,
+  history: HistoryMessage[],
+  userMessage: string,
+  retries = 2,
+): Promise<string> => {
   const messages = buildGroqMessages(systemPrompt, history, userMessage);
 
   for (let attempt = 0; attempt < retries; attempt += 1) {
@@ -125,7 +136,11 @@ export const callGroqApi = async (apiKey: string, systemPrompt: string, history:
 
 export type AiProvider = "groq" | "fallback";
 
-const generateMedicalFallbackReply = (userMessage: string, doctors: DoctorContext[], language: string) => {
+const generateMedicalFallbackReply = (
+  userMessage: string,
+  doctors: DoctorContext[],
+  language: string,
+): string => {
   const doc = doctors[0] || { name: "Dr. Alisher Karimov", specialty: "Terapevt" };
   if (language === "ru") {
     return `[MedElite AI Консультант]\nПо вашему запросу "${userMessage}":\nРекомендуется пройти первичный осмотр у специалиста (${doc.specialty} — ${doc.name}). При наличии острой боли или высокой температуры немедленно обратитесь в службу 103.`;
