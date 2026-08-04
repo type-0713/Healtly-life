@@ -148,10 +148,15 @@ export const sendAiMessage = async ({
   mode?: AiMode;
 }): Promise<AiReplyResult> => {
   const historyPayload = history.map(({ role, content }) => ({ role, content }));
+
+  // In local development, use direct Groq key from .env.local for speed
+  // In production (Vercel), always use /api/chat serverless function (key stays server-side)
+  const isDev = import.meta.env.DEV;
   const groqKey = import.meta.env.VITE_GROQ_API_KEY?.trim();
 
   try {
-    if (groqKey) {
+    if (isDev && groqKey) {
+      // Local dev only: call Groq directly (key is only in .env.local, not exposed)
       return await generateAiReply({
         mode,
         history: historyPayload,
@@ -162,6 +167,7 @@ export const sendAiMessage = async ({
       });
     }
 
+    // Production: always route through /api/chat (key stays on server)
     return await callAiViaApi(historyPayload, userMessage, doctors, language, mode);
   } catch {
     return {
