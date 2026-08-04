@@ -32,6 +32,7 @@ const toDoctorContext = (doctors: Doctor[]) =>
     rating: doctor.rating,
   }));
 
+// Serverless API orqali chaqirish (production)
 const callAiViaApi = async (
   history: HistoryMessage[],
   userMessage: string,
@@ -42,10 +43,20 @@ const callAiViaApi = async (
   const response = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ history, userMessage, doctors: toDoctorContext(doctors), language, mode }),
+    body: JSON.stringify({
+      history,
+      userMessage,
+      doctors: toDoctorContext(doctors),
+      language,
+      mode,
+    }),
   });
 
-  const data = (await response.json()) as { reply?: string; provider?: AiProvider; error?: string };
+  const data = (await response.json()) as {
+    reply?: string;
+    provider?: AiProvider;
+    error?: string;
+  };
 
   if (!response.ok) {
     throw new Error(data.error ?? `API xatolik: ${response.status}`);
@@ -55,7 +66,7 @@ const callAiViaApi = async (
     throw new Error("API javob qaytarmadi");
   }
 
-  return { reply: data.reply, provider: data.provider ?? ("gemini" as AiProvider) };
+  return { reply: data.reply, provider: data.provider ?? ("groq" as AiProvider) };
 };
 
 const buildFallbackReply = (
@@ -149,14 +160,13 @@ export const sendAiMessage = async ({
 }): Promise<AiReplyResult> => {
   const historyPayload = history.map(({ role, content }) => ({ role, content }));
 
-  // In local development, use direct Groq key from .env.local for speed
-  // In production (Vercel), always use /api/chat serverless function (key stays server-side)
-  const isDev = import.meta.env.DEV;
+  // Groq API kaliti (VITE_ prefiksi bilan — Vite build vaqtida kiritadi)
   const groqKey = import.meta.env.VITE_GROQ_API_KEY?.trim();
 
   try {
-    if (isDev && groqKey) {
-      // Local dev only: call Groq directly (key is only in .env.local, not exposed)
+    // Agar VITE_GROQ_API_KEY mavjud bo'lsa — to'g'ridan-to'g'ri Groq API'ga murojaat
+    // Bu ham local'da ham production'da ishlaydi (agar Vercel'da VITE_GROQ_API_KEY set qilingan bo'lsa)
+    if (groqKey) {
       return await generateAiReply({
         mode,
         history: historyPayload,
@@ -167,9 +177,10 @@ export const sendAiMessage = async ({
       });
     }
 
-    // Production: always route through /api/chat (key stays on server)
+    // Groq key yo'q bo'lsa — /api/chat serverless function orqali (server-side GROQ_API_KEY)
     return await callAiViaApi(historyPayload, userMessage, doctors, language, mode);
-  } catch {
+  } catch (error) {
+    console.error("[AI] Error:", error);
     return {
       reply: buildFallbackReply(userMessage, rankedDoctors, language, mode),
       provider: "fallback",
