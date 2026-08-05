@@ -225,6 +225,10 @@ const Services = () => {
             <span className="brand-mark"><HeartPulseIcon /></span>
             <span>Med<span className="brand-accent">Elite</span></span>
           </Link>
+          {/* Mobile nav backdrop */}
+          {menuOpen && (
+            <div className="nav-cluster-backdrop nav-cluster-backdrop-open" onClick={closeMenu} aria-hidden="true" />
+          )}
           <div className={`nav-cluster ${menuOpen ? "nav-cluster-open" : ""}`}>
             <nav className="nav-links">
               <Link to="/ai-assistant" onClick={closeMenu}>AI</Link>
@@ -232,6 +236,8 @@ const Services = () => {
               <Link to="/about" onClick={closeMenu}>
                 {language === "ru" ? "О нас" : language === "en" ? "About" : "Biz haqimizda"}
               </Link>
+              <Link to="/chat" onClick={closeMenu}>Chat</Link>
+              <Link to="/medical-records" onClick={closeMenu}>EMR</Link>
             </nav>
             <div className="nav-actions">
               <LanguageSwitcher compact />

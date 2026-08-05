@@ -53,20 +53,23 @@ const AiAssistant = () => {
             </span>
           </Link>
 
+          {/* Mobile nav backdrop */}
+          {menuOpen && (
+            <div
+              className="nav-cluster-backdrop nav-cluster-backdrop-open"
+              onClick={closeMenu}
+              aria-hidden="true"
+            />
+          )}
+
           <div className={`nav-cluster ${menuOpen ? "nav-cluster-open" : ""}`}>
             <nav className="nav-links">
-              <Link to="/ai-assistant" onClick={closeMenu}>
-                AI
-              </Link>
-              <Link to="/services" onClick={closeMenu}>
-                {navServices}
-              </Link>
-              <Link to="/health-guide" onClick={closeMenu}>
-                {navGuide}
-              </Link>
-              <Link to="/user" onClick={closeMenu}>
-                {navBooking}
-              </Link>
+              <Link to="/ai-assistant" onClick={closeMenu}>AI</Link>
+              <Link to="/services" onClick={closeMenu}>{navServices}</Link>
+              <Link to="/health-guide" onClick={closeMenu}>{navGuide}</Link>
+              <Link to="/chat" onClick={closeMenu}>Chat</Link>
+              <Link to="/medical-records" onClick={closeMenu}>EMR</Link>
+              <Link to="/user" onClick={closeMenu}>{navBooking}</Link>
             </nav>
             <div className="nav-actions">
               <LanguageSwitcher compact />

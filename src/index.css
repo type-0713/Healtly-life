@@ -3132,7 +3132,44 @@ textarea {
 
 }
 
-@media (max-width: 760px) {
+/* ── Topbar compact navbar styles for desktop ── */
+.topbar .nav-cluster {
+  gap: 12px;
+}
+
+.topbar .nav-links {
+  gap: 2px;
+}
+
+.topbar .nav-links a {
+  font-size: 0.85rem;
+  padding: 5px 8px;
+}
+
+.topbar .nav-actions {
+  gap: 8px;
+}
+
+.topbar .nav-actions .button {
+  min-height: 38px;
+  padding: 0 14px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.topbar .language-switch-compact .language-pill {
+  min-width: 36px;
+  min-height: 28px;
+  padding: 0 6px;
+  font-size: 0.78rem;
+}
+
+.topbar .theme-toggle-compact {
+  min-height: 38px;
+  padding: 0 10px;
+}
+
+@media (max-width: 1180px) {
   :root {
     --container: min(100% - 28px, 1180px);
   }

@@ -150,6 +150,7 @@ const HealthGuide = () => {
   const { language } = useI18n();
   const copy = healthGuideCopy[language];
   const [menuOpen, setMenuOpen] = useState(false);
+  const closeMenu = () => setMenuOpen(false);
 
   return (
     <div className="page-shell">
@@ -159,21 +160,30 @@ const HealthGuide = () => {
 
       <header className="topbar">
         <div className="container topbar-inner">
-          <Link to="/" className="brand">
+          <Link to="/" className="brand" onClick={closeMenu}>
             <span className="brand-mark"><HeartPulseIcon /></span>
             <span>Med<span className="brand-accent">Elite</span></span>
           </Link>
+          {/* Mobile nav backdrop */}
+          {menuOpen && (
+            <div className="nav-cluster-backdrop nav-cluster-backdrop-open" onClick={closeMenu} aria-hidden="true" />
+          )}
           <div className={`nav-cluster ${menuOpen ? "nav-cluster-open" : ""}`}>
             <nav className="nav-links">
-              <Link to="/ai-assistant">AI</Link>
-              <Link to="/health-guide">{copy.chip}</Link>
-              <Link to="/services">
+              <Link to="/ai-assistant" onClick={closeMenu}>AI</Link>
+              <Link to="/health-guide" onClick={closeMenu}>{copy.chip}</Link>
+              <Link to="/services" onClick={closeMenu}>
                 {language === "ru" ? "Услуги" : language === "en" ? "Services" : "Xizmatlar"}
               </Link>
+              <Link to="/chat" onClick={closeMenu}>Chat</Link>
+              <Link to="/medical-records" onClick={closeMenu}>EMR</Link>
             </nav>
             <div className="nav-actions">
               <LanguageSwitcher compact />
               <ThemeToggle compact />
+              <Link to="/user" className="button button-primary" onClick={closeMenu}>
+                {language === "ru" ? "Запись" : language === "en" ? "Book" : "Band qilish"}
+              </Link>
             </div>
           </div>
           <button type="button" className="mobile-menu-button" onClick={() => setMenuOpen((c) => !c)}>
