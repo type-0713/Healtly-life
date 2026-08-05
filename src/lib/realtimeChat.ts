@@ -6,6 +6,7 @@ import {
   off,
   get,
   serverTimestamp,
+  type DataSnapshot,
 } from "firebase/database";
 import { realtimeDb } from "./firebase";
 
@@ -215,7 +216,7 @@ export const subscribeToChatMessages = (
   const initialLocal = getLocalMessages(chatId);
   onUpdate(initialLocal);
 
-  const handleValue = (snapshot: any) => {
+  const handleValue = (snapshot: DataSnapshot) => {
     if (snapshot.exists()) {
       const data = snapshot.val();
       const items: ChatMessageItem[] = Object.values(data);
@@ -255,7 +256,7 @@ export const subscribeToUserChatChannels = (
 
   onUpdate(filterChannels(getLocalChannels()));
 
-  const handleValue = (snapshot: any) => {
+  const handleValue = (snapshot: DataSnapshot) => {
     if (snapshot.exists()) {
       const data = snapshot.val();
       const allChannels: ChatChannel[] = Object.values(data);

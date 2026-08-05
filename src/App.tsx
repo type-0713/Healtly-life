@@ -19,6 +19,7 @@ const EmergencyPage = lazy(() => import("./pages/EmergencyPage"));
 const InteractiveBodyMap = lazy(() => import("./pages/InteractiveBodyMap"));
 const TelemedicineRoom = lazy(() => import("./pages/TelemedicineRoom"));
 const HealthCalculators = lazy(() => import("./pages/HealthCalculators"));
+const Pharmacy = lazy(() => import("./pages/Pharmacy"));
 
 const loadingCopy = {
   uz: {
@@ -124,6 +125,7 @@ const App = () => {
         <Route path="/telemedicine" element={<TelemedicineRoom />} />
         <Route path="/calculators" element={<HealthCalculators />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/pharmacy" element={<Pharmacy />} />
         <Route
           path="/user"
           element={

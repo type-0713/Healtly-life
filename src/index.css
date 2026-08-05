@@ -42,6 +42,7 @@
   --orb-two: rgba(0, 214, 255, 0.16);
   --orb-three: rgba(255, 204, 115, 0.18);
   --card-bg: rgba(255, 255, 255, 0.05);
+  --panel: rgba(10, 22, 41, 0.78); /* alias for --panel-bg for compatibility */
   font-family: "Segoe UI", Aptos, "Trebuchet MS", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -7421,5 +7422,318 @@ svg {
   }
   .ai-prompt-grid {
     grid-template-columns: 1fr !important;
+  }
+}
+
+/* ==========================================================================
+   MISSING UTILITY CLASSES — GLOBAL PATCHES
+   ========================================================================== */
+
+/* chat-brand-label: hidden on very small screens */
+.chat-brand-label {
+  display: inline;
+}
+@media (max-width: 420px) {
+  .chat-brand-label {
+    display: none;
+  }
+}
+
+/* Modal close button */
+.modal-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.modal-card-head h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: var(--heading);
+}
+.modal-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.modal-close-btn:hover {
+  background: var(--surface-hover);
+  color: var(--danger);
+}
+.modal-close-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* EMR tab action bar */
+.emr-tab-action-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+  gap: 10px;
+}
+
+/* EMR patient strip */
+.emr-patient-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin-top: 12px;
+}
+.emr-patient-strip span {
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+.emr-patient-strip strong {
+  color: var(--text);
+}
+
+/* Status dot */
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Light theme --panel alias */
+[data-theme="light"] {
+  --panel: rgba(255, 255, 255, 0.85);
+}
+
+/* Pharmacy page link from services */
+.pharmacy-link-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+.pharmacy-link-card:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  transform: translateY(-2px);
+}
+
+/* PDF print styles */
+@media print {
+  .topbar, .site-orb, .nav-actions, .emr-hero-actions,
+  .emr-tab-action-bar, .emr-tabs, button, footer {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .glass-card {
+    border: 1px solid #ccc !important;
+    background: white !important;
+    box-shadow: none !important;
+  }
+}
+
+/* Vitals form stack */
+.vital-form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* field label */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.field > span {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* modal actions row */
+.modal-actions-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+/* EMR stack */
+.emr-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* EMR add prescription bar */
+.emr-add-presc-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+}
+
+/* EMR prescription card */
+.emr-prescription-card {
+  padding: clamp(20px, 3vw, 28px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.prescription-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.prescription-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--heading);
+}
+.prescription-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  background: var(--surface);
+  padding: 14px;
+  border-radius: var(--radius-sm);
+}
+.prescription-details-grid div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.prescription-details-grid span {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.prescription-details-grid strong {
+  font-size: 0.9rem;
+  color: var(--text);
+}
+.prescription-notes {
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.55;
+  margin: 0;
+  padding: 10px 14px;
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+/* EMR lab card */
+.emr-lab-card {
+  padding: clamp(20px, 3vw, 28px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.lab-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.lab-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--heading);
+}
+.lab-sub {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 3px 0 0;
+}
+.lab-summary {
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* EMR vital card extras */
+.vital-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.vital-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.vital-body {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.vital-body strong {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--heading);
+  line-height: 1;
+}
+.vital-unit {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.vital-date {
+  font-size: 0.78rem;
+  color: var(--muted);
+  opacity: 0.75;
+}
+
+/* Mobile EMR fixes */
+@media (max-width: 768px) {
+  .emr-hero-banner {
+    flex-direction: column !important;
+    gap: 20px !important;
+  }
+  .emr-hero-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .emr-tabs {
+    gap: 8px !important;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+  }
+  .emr-tab-btn {
+    white-space: nowrap;
+    padding: 10px 16px !important;
+    font-size: 0.85rem !important;
+    flex-shrink: 0;
+  }
+  .emr-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)) !important;
+  }
+  .prescription-header {
+    flex-direction: column;
+  }
+  .modal-card {
+    width: calc(100vw - 32px) !important;
+    max-height: 88dvh !important;
+    overflow-y: auto !important;
   }
 }
