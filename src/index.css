@@ -3132,46 +3132,46 @@ textarea {
 
 }
 
-/* ── Topbar compact navbar styles for desktop ── */
+/* ── Topbar navbar styles for desktop ── */
 .topbar .nav-cluster {
-  gap: 12px;
+  gap: 14px;
 }
 
 .topbar .nav-links {
-  gap: 2px;
+  gap: 4px;
 }
 
 .topbar .nav-links a {
-  font-size: 0.85rem;
-  padding: 5px 8px;
+  font-size: 0.88rem;
+  padding: 6px 10px;
 }
 
 .topbar .nav-actions {
-  gap: 8px;
+  gap: 10px;
 }
 
 .topbar .nav-actions .button {
-  min-height: 38px;
-  padding: 0 14px;
-  font-size: 0.82rem;
+  min-height: 42px;
+  padding: 0 18px;
+  font-size: 0.86rem;
   white-space: nowrap;
 }
 
 .topbar .language-switch-compact .language-pill {
-  min-width: 36px;
-  min-height: 28px;
-  padding: 0 6px;
-  font-size: 0.78rem;
+  min-width: 40px;
+  min-height: 32px;
+  padding: 0 8px;
+  font-size: 0.8rem;
 }
 
 .topbar .theme-toggle-compact {
-  min-height: 38px;
-  padding: 0 10px;
+  min-height: 42px;
+  padding: 0 12px;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1240px) {
   :root {
-    --container: min(100% - 28px, 1180px);
+    --container: min(100% - 28px, 1240px);
   }
 
   /* ── Mobile menu button ── */
