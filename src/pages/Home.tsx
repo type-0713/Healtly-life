@@ -351,29 +351,25 @@ const Home = () => {
             </span>
           </Link>
 
+          {/* Mobile nav backdrop */}
+          {menuOpen && (
+            <div
+              className="nav-cluster-backdrop nav-cluster-backdrop-open"
+              onClick={closeMenu}
+              aria-hidden="true"
+            />
+          )}
+
           <div className={`nav-cluster ${menuOpen ? "nav-cluster-open" : ""}`}>
             <nav className="nav-links">
-              <Link to="/ai-assistant" onClick={closeMenu}>
-                AI
-              </Link>
-              <Link to="/chat" onClick={closeMenu}>
-                Chat
-              </Link>
-              <Link to="/medical-records" onClick={closeMenu}>
-                EMR
-              </Link>
-              <Link to="/body-map" onClick={closeMenu}>
-                Tana Xaritasi
-              </Link>
-              <Link to="/telemedicine" onClick={closeMenu}>
-                Telemeditsina
-              </Link>
-              <Link to="/calculators" onClick={closeMenu}>
-                Kalkulyator
-              </Link>
-              <Link to="/emergency" onClick={closeMenu}>
-                103 Yordam
-              </Link>
+              <Link to="/ai-assistant" onClick={closeMenu}>AI</Link>
+              <Link to="/chat" onClick={closeMenu}>Chat</Link>
+              <Link to="/medical-records" onClick={closeMenu}>EMR</Link>
+              <Link to="/body-map" onClick={closeMenu}>Tana Xaritasi</Link>
+              <Link to="/telemedicine" onClick={closeMenu}>Telemeditsina</Link>
+              <Link to="/calculators" onClick={closeMenu}>Kalkulyator</Link>
+              <Link to="/pharmacy" onClick={closeMenu}>Dorixona</Link>
+              <Link to="/emergency" onClick={closeMenu}>103 Yordam</Link>
             </nav>
 
             <div className="nav-actions">
