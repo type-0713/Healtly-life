@@ -41,6 +41,7 @@
   --orb-one: rgba(78, 135, 255, 0.3);
   --orb-two: rgba(0, 214, 255, 0.16);
   --orb-three: rgba(255, 204, 115, 0.18);
+  --card-bg: rgba(255, 255, 255, 0.05);
   font-family: "Segoe UI", Aptos, "Trebuchet MS", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -79,6 +80,7 @@
   --orb-one: rgba(103, 131, 255, 0.18);
   --orb-two: rgba(88, 225, 232, 0.16);
   --orb-three: rgba(255, 204, 115, 0.18);
+  --card-bg: rgba(255, 255, 255, 0.7);
 }
 
 * {
@@ -6719,3 +6721,232 @@ svg {
   }
 }
 
+/* ==========================================================================
+   GLOBAL MOBILE RESPONSIVE FIXES (max-width: 768px)
+   ========================================================================== */
+@media (max-width: 768px) {
+  :root {
+    --container: min(100%, calc(100% - 24px));
+  }
+
+  /* Topbar mobile */
+  .topbar-inner,
+  .dashboard-topbar-inner {
+    padding: 10px 0;
+    flex-wrap: nowrap;
+  }
+
+  /* Page headers */
+  .page-header h1,
+  .section-title,
+  .hero-title {
+    font-size: clamp(1.5rem, 5vw, 2.4rem) !important;
+  }
+
+  /* Glass cards */
+  .glass-card,
+  .glass-panel {
+    padding: 20px 16px !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  /* Grids → single column */
+  .services-grid,
+  .features-grid,
+  .stats-grid,
+  .doctors-grid,
+  .body-map-grid,
+  .telemed-layout,
+  .matching-doctor-cards,
+  .calc-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  /* Chat layout */
+  .chat-layout-card {
+    flex-direction: column !important;
+  }
+  .chat-sidebar {
+    width: 100% !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border) !important;
+    padding-right: 0 !important;
+    padding-bottom: 16px !important;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+
+  /* Telemedicine */
+  .telemed-video-area {
+    height: 220px !important;
+    min-height: 180px !important;
+  }
+  .telemed-controls {
+    gap: 10px !important;
+    flex-wrap: wrap !important;
+  }
+
+  /* Emergency page */
+  .emergency-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .emergency-hospitals-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Body map */
+  .body-part-details {
+    padding: 20px 16px !important;
+  }
+  .part-btn {
+    padding: 12px 14px !important;
+    font-size: 0.9rem !important;
+  }
+
+  /* Medical records */
+  .records-tabs {
+    gap: 6px !important;
+    flex-wrap: wrap !important;
+  }
+  .records-tab {
+    padding: 8px 12px !important;
+    font-size: 0.82rem !important;
+  }
+
+  /* Calculators */
+  .calc-card-head {
+    gap: 10px !important;
+  }
+  .bmi-display {
+    font-size: 2.4rem !important;
+  }
+
+  /* AI Widget */
+  .ai-mode-tabs {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+  .ai-mode-tab {
+    flex: 1 1 auto !important;
+    min-width: calc(50% - 6px) !important;
+    font-size: 0.8rem !important;
+    padding: 8px 10px !important;
+  }
+  .ai-chat-messages {
+    min-height: 220px !important;
+    max-height: 340px !important;
+  }
+  .ai-doctor-cards {
+    flex-direction: column !important;
+  }
+  .ai-doctor-card {
+    min-width: unset !important;
+    width: 100% !important;
+  }
+
+  /* Buttons */
+  .button {
+    padding: 10px 16px !important;
+    font-size: 0.88rem !important;
+  }
+
+  /* User page tabs */
+  .user-tabs,
+  .doctor-tabs {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    gap: 4px !important;
+  }
+  .user-tab,
+  .doctor-tab {
+    white-space: nowrap !important;
+    font-size: 0.82rem !important;
+    padding: 8px 12px !important;
+  }
+
+  /* Doctor/appointment cards */
+  .doctor-card,
+  .appointment-card {
+    padding: 16px !important;
+  }
+
+  /* Health guide */
+  .guide-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Modals */
+  .modal-overlay .glass-card,
+  .modal-box {
+    width: calc(100vw - 24px) !important;
+    max-width: 100% !important;
+    margin: 12px auto !important;
+    max-height: 88vh !important;
+    overflow-y: auto !important;
+  }
+
+  /* About page */
+  .about-team-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Services */
+  .services-list {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Navigation cluster */
+  .nav-cluster {
+    position: fixed !important;
+    inset: 0 !important;
+    background: var(--topbar-bg) !important;
+    backdrop-filter: var(--backdrop) !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 32px !important;
+    z-index: 200 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: opacity 0.25s ease !important;
+  }
+  .nav-cluster-open {
+    opacity: 1 !important;
+    pointer-events: all !important;
+  }
+  .nav-links {
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 24px !important;
+    font-size: 1.2rem !important;
+  }
+  .nav-actions {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 12px !important;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+  .about-team-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .hero-actions {
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+  .hero-actions .button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  .ai-prompt-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
