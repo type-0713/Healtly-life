@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRightIcon, LocationIcon, SparkIcon, StethoscopeIcon } from "./PremiumIcons";
+import { ArrowRightIcon, LocationIcon, SendIcon, SparkIcon, StethoscopeIcon } from "./PremiumIcons";
 import { useAppContext } from "../context/AppContext";
 import { useI18n } from "../context/I18nContext";
 import { aiAssistantCopy } from "../i18n/aiAssistantCopy";
@@ -67,13 +67,9 @@ const AiChatWidget = ({
 
   const buildBookingLink = (doctorId: string) => {
     const doctor = doctors.find((entry) => entry.id === doctorId);
-    if (!doctor) {
-      return `/user?doctor=${encodeURIComponent(doctorId)}`;
-    }
+    if (!doctor) return `/user?doctor=${encodeURIComponent(doctorId)}`;
     const slot = findNearestAvailableDoctorSlot(doctor, appointments);
-    if (!slot) {
-      return `/user?doctor=${encodeURIComponent(doctorId)}`;
-    }
+    if (!slot) return `/user?doctor=${encodeURIComponent(doctorId)}`;
     const params = new URLSearchParams({ doctor: doctorId, date: slot.date, time: slot.time });
     return `/user?${params.toString()}`;
   };
@@ -87,9 +83,7 @@ const AiChatWidget = ({
 
   const handleSend = async (text: string) => {
     const trimmed = text.trim();
-    if (!trimmed || isLoading) {
-      return;
-    }
+    if (!trimmed || isLoading) return;
 
     const userMsg = createChatMessage("user", trimmed);
     const nextHistory = [...messages, userMsg];
@@ -164,7 +158,7 @@ const AiChatWidget = ({
           <div className="ai-chat-avatar">
             <SparkIcon />
           </div>
-          <div>
+          <div className="ai-chat-header-info">
             <strong>{activeModeCopy.title}</strong>
             <span>
               {lastProvider === "groq"
@@ -174,20 +168,27 @@ const AiChatWidget = ({
                   : copy.aiPowered}
             </span>
           </div>
-          {!compact && (
-            <button
-              type="button"
-              className={`button button-small ${locationStatus === "active" ? "button-primary" : "button-secondary"}`}
-              onClick={() => void detectLocation()}
-            >
-              <LocationIcon />
+          <button
+            type="button"
+            className={`button button-small ai-location-btn ${locationStatus === "active" ? "button-primary" : "button-secondary"}`}
+            onClick={() => void detectLocation()}
+            title={
+              locationStatus === "active"
+                ? copy.locationActive
+                : locationStatus === "error"
+                  ? copy.locationError
+                  : copy.location
+            }
+          >
+            <LocationIcon />
+            <span className="ai-location-label">
               {locationStatus === "active"
                 ? copy.locationActive
                 : locationStatus === "error"
                   ? copy.locationError
                   : copy.location}
-            </button>
-          )}
+            </span>
+          </button>
         </div>
 
         <p className="ai-mode-description">{activeModeCopy.description}</p>
@@ -309,7 +310,7 @@ const AiChatWidget = ({
         <form className="ai-chat-input-row" onSubmit={onSubmit}>
           <textarea
             ref={inputRef}
-            rows={compact ? 2 : 2}
+            rows={2}
             value={input}
             onChange={(event) => setInput(event.target.value)}
             placeholder={activeModeCopy.placeholder}
@@ -321,9 +322,9 @@ const AiChatWidget = ({
               }
             }}
           />
-          <button type="submit" className="button button-primary" disabled={isLoading || !input.trim()}>
-            {copy.send}
-            <ArrowRightIcon />
+          <button type="submit" className="button button-primary ai-send-btn" disabled={isLoading || !input.trim()}>
+            <span className="ai-send-text">{copy.send}</span>
+            <SendIcon />
           </button>
         </form>
 

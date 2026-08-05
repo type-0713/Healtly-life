@@ -9,7 +9,8 @@ import {
   ChatIcon,
   CheckCircleIcon,
   HeartPulseIcon,
-  PaperclipIcon,
+  MenuIcon,
+  CloseIcon,
   PhoneIcon,
   SendIcon,
   StethoscopeIcon,
@@ -52,10 +53,18 @@ const DoctorPatientChatPage = () => {
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
   const [inputText, setInputText] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Initialize or handle direct query parameter for doctor
+  // On mobile: when channel selected, hide sidebar
+  const handleChannelSelect = (channelId: string) => {
+    setActiveChannelId(channelId);
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  };
+
   useEffect(() => {
     if (!isDoctor && targetDoctorId && doctors.length > 0) {
       const selectedDoctor = doctors.find((d) => d.id === targetDoctorId) || doctors[0];
@@ -69,12 +78,12 @@ const DoctorPatientChatPage = () => {
           patientEmail: profile.email || "patient@medelite.uz",
         }).then((chan) => {
           setActiveChannelId(chan.id);
+          if (window.innerWidth < 768) setSidebarOpen(false);
         });
       }
     }
   }, [targetDoctorId, doctors, isDoctor, currentUserKey, currentUserName, profile.email]);
 
-  // Subscribe to channel list
   useEffect(() => {
     if (!currentUserKey) return;
     const unsub = subscribeToUserChatChannels(
@@ -84,13 +93,13 @@ const DoctorPatientChatPage = () => {
         setChannels(chans);
         if (!activeChannelId && chans.length > 0) {
           setActiveChannelId(chans[0].id);
+          if (window.innerWidth < 768) setSidebarOpen(false);
         }
       },
     );
     return unsub;
   }, [currentUserKey, isDoctor, activeChannelId]);
 
-  // Subscribe to active channel messages
   useEffect(() => {
     if (!activeChannelId) return;
     markChatAsRead(activeChannelId, isDoctor ? "doctor" : "patient");
@@ -100,7 +109,6 @@ const DoctorPatientChatPage = () => {
     return unsub;
   }, [activeChannelId, isDoctor]);
 
-  // Scroll to bottom on new message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -119,7 +127,10 @@ const DoctorPatientChatPage = () => {
       patientKey: currentUserKey,
       patientName: currentUserName,
       patientEmail: profile.email || "patient@medelite.uz",
-    }).then((c) => setActiveChannelId(c.id));
+    }).then((c) => {
+      setActiveChannelId(c.id);
+      if (window.innerWidth < 768) setSidebarOpen(false);
+    });
   };
 
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -143,58 +154,57 @@ const DoctorPatientChatPage = () => {
     }
   };
 
-  const handleQuickPrompt = (promptText: string) => {
-    setInputText(promptText);
-  };
-
   const copy = {
     uz: {
       title: "Realtime Shifokor va Bemor Maslahat Chati",
       subtitle: "Tezkor va xavfsiz tibbiy onlayn muloqot",
       activeChats: "Muloqotlar",
-      allDoctors: "Shifokorlar ro'yxati (Chat)",
-      noChats: "Muloqotni boshlash uchun shifokorni tanlang",
-      typePlaceholder: "Xabaringizni yozing...",
+      allDoctors: "Shifokorlar (Chat)",
+      noChats: "Shifokorni tanlang",
+      typePlaceholder: "Xabar yozing...",
       send: "Yuborish",
-      quickPrompts: "Tezkor savollar:",
-      p1: "Salom doktor, simptomlarim haqida so'ramoqchi edim",
-      p2: "Retsept va dori dozasini aniqlashtirsak bo'ladimi?",
+      quickPrompts: "Tezkor:",
+      p1: "Simptomlarim haqida so'ramoqchi edim",
+      p2: "Retsept va dori dozasini aniqlashtirsak?",
       p3: "Qabul vaqtimni tasdiqlash imkoni bormi?",
-      backHome: "Bosh sahifaga qaytish",
-      leaveChat: "Chatdan chiqish",
-      onlineStatus: "Onlayn aloqada",
+      backHome: "Orqaga",
+      leaveChat: "Chiqish",
+      onlineStatus: "Onlayn",
+      chats: "Chatlar",
     },
     ru: {
-      title: "Чат консультации Врач — Пациент в реальном времени",
+      title: "Чат врач — пациент",
       subtitle: "Быстрое и безопасное медицинское общение",
       activeChats: "Диалоги",
-      allDoctors: "Список врачей (Чат)",
-      noChats: "Выберите врача для начала диалога",
-      typePlaceholder: "Введите ваше сообщение...",
+      allDoctors: "Врачи (Чат)",
+      noChats: "Выберите врача",
+      typePlaceholder: "Введите сообщение...",
       send: "Отправить",
-      quickPrompts: "Быстрые вопросы:",
-      p1: "Здравствуйте, доктор, хочу проконсультироваться",
-      p2: "Можно уточнить рецепт и дозировку лекарств?",
+      quickPrompts: "Быстро:",
+      p1: "Хочу проконсультироваться",
+      p2: "Уточнить рецепт и дозировку?",
       p3: "Подтверждаем время визита?",
-      backHome: "На главную",
-      leaveChat: "Выйти из чата",
+      backHome: "Назад",
+      leaveChat: "Выйти",
       onlineStatus: "В сети",
+      chats: "Чаты",
     },
     en: {
-      title: "Realtime Doctor — Patient Consultation Chat",
+      title: "Doctor — Patient Chat",
       subtitle: "Instant & secure medical consultation",
       activeChats: "Chats",
-      allDoctors: "Doctor Directory (Chat)",
-      noChats: "Select a doctor to begin consultation",
-      typePlaceholder: "Type your message...",
+      allDoctors: "Doctors (Chat)",
+      noChats: "Select a doctor",
+      typePlaceholder: "Type a message...",
       send: "Send",
-      quickPrompts: "Quick suggestions:",
-      p1: "Hello Doctor, I'd like to consult about my symptoms",
-      p2: "Could we confirm the prescription dosage?",
-      p3: "Is my appointment slot confirmed?",
-      backHome: "Back to Home",
-      leaveChat: "Close Chat",
-      onlineStatus: "Online now",
+      quickPrompts: "Quick:",
+      p1: "I'd like to consult about my symptoms",
+      p2: "Could we confirm the prescription?",
+      p3: "Is my appointment confirmed?",
+      backHome: "Back",
+      leaveChat: "Close",
+      onlineStatus: "Online",
+      chats: "Chats",
     },
   }[language];
 
@@ -211,24 +221,45 @@ const DoctorPatientChatPage = () => {
               <HeartPulseIcon />
             </span>
             <span>
-              Med<span className="brand-accent">Elite</span> Chat
+              Med<span className="brand-accent">Elite</span>
+              <span className="chat-brand-label"> Chat</span>
             </span>
           </Link>
 
           <div className="nav-actions">
             <LanguageSwitcher compact />
             <ThemeToggle compact />
-            <Link to={isDoctor ? "/doctor" : isUserAuthenticated ? "/user" : "/"} className="button button-ghost">
+            <Link
+              to={isDoctor ? "/doctor" : isUserAuthenticated ? "/user" : "/"}
+              className="button button-ghost button-small"
+            >
               {copy.backHome}
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="container section-block">
-        <div className="chat-layout-card glass-card">
+      <main className="container chat-page-main">
+        <div className="chat-layout-card">
+          {/* Mobile sidebar toggle bar */}
+          <div className="chat-mobile-bar">
+            <button
+              type="button"
+              className="chat-mobile-toggle"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+            >
+              {sidebarOpen ? <CloseIcon /> : <MenuIcon />}
+              <span>{sidebarOpen ? copy.leaveChat : copy.chats}</span>
+            </button>
+            {activeChannel && !sidebarOpen && (
+              <span className="chat-mobile-peer-name">
+                {isDoctor ? activeChannel.patientName : activeChannel.doctorName}
+              </span>
+            )}
+          </div>
+
           {/* Left Sidebar */}
-          <aside className="chat-sidebar">
+          <aside className={`chat-sidebar ${sidebarOpen ? "chat-sidebar-open" : "chat-sidebar-hidden"}`}>
             <div className="chat-sidebar-header">
               <span className="section-chip">
                 <ChatIcon />
@@ -236,7 +267,6 @@ const DoctorPatientChatPage = () => {
               </span>
             </div>
 
-            {/* Active Channels List */}
             <div className="chat-channel-list">
               {channels.map((chan) => {
                 const isActive = chan.id === activeChannelId;
@@ -251,7 +281,7 @@ const DoctorPatientChatPage = () => {
                     key={chan.id}
                     type="button"
                     className={`chat-channel-item ${isActive ? "chat-channel-active" : ""}`}
-                    onClick={() => setActiveChannelId(chan.id)}
+                    onClick={() => handleChannelSelect(chan.id)}
                   >
                     <div className="chat-avatar">
                       {isDoctor ? <HeartPulseIcon /> : <StethoscopeIcon />}
@@ -262,19 +292,20 @@ const DoctorPatientChatPage = () => {
                         {unreadCount > 0 && <span className="chat-unread-badge">{unreadCount}</span>}
                       </div>
                       <p>{peerSub}</p>
-                      <span className="chat-last-msg">{chan.lastMessage}</span>
+                      {chan.lastMessage && (
+                        <span className="chat-last-msg">{chan.lastMessage}</span>
+                      )}
                     </div>
                   </button>
                 );
               })}
             </div>
 
-            {/* Always Available Doctors Selector for Patients */}
             {!isDoctor && doctors.length > 0 && (
               <div className="quick-doctor-pick">
                 <p className="pick-label">{copy.allDoctors}:</p>
                 <div className="doctor-pick-stack">
-                  {doctors.map((doc) => (
+                  {doctors.slice(0, 8).map((doc) => (
                     <button
                       key={doc.id}
                       type="button"
@@ -292,22 +323,26 @@ const DoctorPatientChatPage = () => {
           </aside>
 
           {/* Main Chat Window */}
-          <section className="chat-main">
+          <section className={`chat-main ${sidebarOpen ? "chat-main-hidden-mobile" : ""}`}>
             {activeChannel ? (
               <>
+                {/* Chat Header */}
                 <div className="chat-header">
                   <div className="chat-peer-details">
                     <div className="chat-avatar avatar-large">
                       {isDoctor ? <HeartPulseIcon /> : <StethoscopeIcon />}
                     </div>
-                    <div>
+                    <div className="chat-peer-info">
                       <h2>{isDoctor ? activeChannel.patientName : activeChannel.doctorName}</h2>
                       <p className="online-badge">
                         <span className="status-dot green" />
-                        {isDoctor
-                          ? activeChannel.patientEmail
-                          : translateSpecialty(activeChannel.doctorSpecialty || "Shifokor")}
-                        {" • " + copy.onlineStatus}
+                        <span className="chat-peer-sub">
+                          {isDoctor
+                            ? activeChannel.patientEmail
+                            : translateSpecialty(activeChannel.doctorSpecialty || "Shifokor")}
+                        </span>
+                        {" · "}
+                        {copy.onlineStatus}
                       </p>
                     </div>
                   </div>
@@ -315,32 +350,41 @@ const DoctorPatientChatPage = () => {
                   <div className="chat-header-actions">
                     <a
                       href={`tel:${doctorPhone}`}
-                      className="button button-secondary button-small"
-                      title={`Shifokorga qo'ng'iroq qilish: ${doctorPhone}`}
+                      className="button button-secondary button-small chat-action-btn"
+                      title={doctorPhone}
                     >
                       <PhoneIcon />
-                      {doctorPhone}
+                      <span className="chat-phone-text">{doctorPhone}</span>
                     </a>
                     <Link
                       to="/telemedicine"
-                      className="button button-secondary button-small"
-                      title="HD Telemeditsina Video Call"
+                      className="button button-secondary button-small chat-action-btn"
+                      title="Video Call"
                     >
                       <VideoIcon />
                     </Link>
                     <button
                       type="button"
                       className="button button-ghost button-small"
-                      onClick={() => setActiveChannelId("")}
-                      title={copy.leaveChat}
+                      onClick={() => {
+                        setActiveChannelId("");
+                        if (window.innerWidth < 768) setSidebarOpen(true);
+                      }}
                     >
-                      {copy.leaveChat}
+                      <span className="chat-leave-text">{copy.leaveChat}</span>
+                      <CloseIcon />
                     </button>
                   </div>
                 </div>
 
-                {/* Messages Body */}
+                {/* Messages */}
                 <div className="chat-messages-container">
+                  {messages.length === 0 && (
+                    <div className="chat-messages-empty">
+                      <ChatIcon />
+                      <p>{copy.noChats}</p>
+                    </div>
+                  )}
                   {messages.map((msg) => {
                     const isMe = msg.senderId === currentUserKey;
                     return (
@@ -368,28 +412,19 @@ const DoctorPatientChatPage = () => {
                 {/* Quick Prompts */}
                 <div className="chat-quick-prompts">
                   <span>{copy.quickPrompts}</span>
-                  <button type="button" onClick={() => handleQuickPrompt(copy.p1)}>
+                  <button type="button" onClick={() => setInputText(copy.p1)}>
                     {copy.p1}
                   </button>
-                  <button type="button" onClick={() => handleQuickPrompt(copy.p2)}>
+                  <button type="button" onClick={() => setInputText(copy.p2)}>
                     {copy.p2}
                   </button>
-                  <button type="button" onClick={() => handleQuickPrompt(copy.p3)}>
+                  <button type="button" onClick={() => setInputText(copy.p3)}>
                     {copy.p3}
                   </button>
                 </div>
 
-                {/* Input Area */}
+                {/* Input */}
                 <form className="chat-input-bar" onSubmit={handleSendMessage}>
-                  <button
-                    type="button"
-                    className="chat-icon-btn"
-                    onClick={() => alert("Fayl biriktirish xizmati faollashtirildi.")}
-                    title="Attach file"
-                  >
-                    <PaperclipIcon />
-                  </button>
-
                   <input
                     type="text"
                     value={inputText}
@@ -397,13 +432,13 @@ const DoctorPatientChatPage = () => {
                     placeholder={copy.typePlaceholder}
                     className="chat-input"
                   />
-
                   <button
                     type="submit"
                     disabled={!inputText.trim() || isSending}
                     className="button button-primary chat-send-btn"
+                    aria-label={copy.send}
                   >
-                    {copy.send}
+                    <span className="chat-send-text">{copy.send}</span>
                     <SendIcon />
                   </button>
                 </form>
@@ -415,14 +450,14 @@ const DoctorPatientChatPage = () => {
                 <p>{copy.noChats}</p>
                 {!isDoctor && doctors.length > 0 && (
                   <div className="empty-chat-doctor-grid">
-                    {doctors.map((doc) => (
+                    {doctors.slice(0, 6).map((doc) => (
                       <button
                         key={doc.id}
                         type="button"
                         className="button button-primary button-small"
                         onClick={() => handleSelectDoctorForChat(doc)}
                       >
-                        <StethoscopeIcon /> {doc.name} bilan muloqot boshlash
+                        <StethoscopeIcon /> {doc.name}
                       </button>
                     ))}
                   </div>
