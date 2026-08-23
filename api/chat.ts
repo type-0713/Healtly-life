@@ -1,8 +1,7 @@
 // Vercel Node.js Serverless Function
 // Set GROQ_API_KEY in: Vercel Dashboard -> Project Settings -> Environment Variables
-
-import { GROQ_CHAT_MODEL } from "../src/lib/aiConfig";
-
+// Default verified against this project's Groq account. It can be overridden with GROQ_CHAT_MODEL environment variable.
+const GROQ_CHAT_MODEL = "openai/gpt-oss-20b";
 type GroqRole = "system" | "user" | "assistant";
 type GroqMessage = { role: GroqRole; content: string };
 type AiMode = "symptoms" | "doctor" | "drugs" | "risk" | "imaging";
