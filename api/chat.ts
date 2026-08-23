@@ -1,6 +1,8 @@
 // Vercel Node.js Serverless Function
 // Set GROQ_API_KEY in: Vercel Dashboard -> Project Settings -> Environment Variables
 
+import { GROQ_CHAT_MODEL } from "../src/lib/aiConfig";
+
 type GroqRole = "system" | "user" | "assistant";
 type GroqMessage = { role: GroqRole; content: string };
 type AiMode = "symptoms" | "doctor" | "drugs" | "risk" | "imaging";
@@ -79,7 +81,7 @@ function buildMessages(
   ];
 }
 
-async function callGroq(apiKey: string, messages: GroqMessage[]): Promise<string> {
+async function callGroq(apiKey: string, messages: GroqMessage[], model: string): Promise<string> {
   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -87,7 +89,7 @@ async function callGroq(apiKey: string, messages: GroqMessage[]): Promise<string
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "llama-3.1-8b-instant",
+      model,
       messages,
       temperature: 0.6,
       max_tokens: 800,
@@ -96,7 +98,11 @@ async function callGroq(apiKey: string, messages: GroqMessage[]): Promise<string
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`Groq API ${response.status}: ${text.slice(0, 200)}`);
+    const hint =
+      response.status === 401
+        ? "Groq kaliti noto'g'ri yoki muddati tugagan. GROQ_API_KEY ni yangilang."
+        : "Groq servisi vaqtincha javob bermadi.";
+    throw new Error(`${hint} Groq API ${response.status}: ${text.slice(0, 200)}`);
   }
 
   const data = (await response.json()) as {
@@ -126,10 +132,8 @@ export default async function handler(req: any, res: any) {
   }
 
   // API key — set in Vercel Environment Variables dashboard
-  const groqKey = (
-    (process.env.GROQ_API_KEY || "") ||
-    (process.env.VITE_GROQ_API_KEY || "")
-  ).trim();
+  const groqKey = (process.env.GROQ_API_KEY || "").trim();
+  const groqModel = (process.env.GROQ_CHAT_MODEL || GROQ_CHAT_MODEL).trim() || GROQ_CHAT_MODEL;
 
   if (!groqKey) {
     res.status(503).json({
@@ -169,13 +173,12 @@ export default async function handler(req: any, res: any) {
   try {
     const systemPrompt = buildSystemPrompt(safeMode, Array.isArray(doctors) ? doctors : [], String(language));
     const messages = buildMessages(systemPrompt, Array.isArray(history) ? history : [], String(userMessage));
-    const reply = await callGroq(groqKey, messages);
+    const reply = await callGroq(groqKey, messages, groqModel);
     res.status(200).json({ reply, provider: "groq" });
   } catch (error) {
     console.error("[api/chat] error:", error);
     res.status(502).json({
-      error: "AI service error",
-      details: error instanceof Error ? error.message : "Unknown error",
+      error: "AI xizmati hozircha javob bermayapti. Keyinroq qayta urinib ko'ring.",
     });
   }
 }

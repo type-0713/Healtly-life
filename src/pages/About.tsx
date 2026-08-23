@@ -1,14 +1,9 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import EmergencyCallButton from "../components/EmergencyCallButton";
-import LanguageSwitcher from "../components/LanguageSwitcher";
+import Navbar from "../components/Navbar";
 import Seo from "../components/Seo";
-import ThemeToggle from "../components/ThemeToggle";
 import {
   CheckIcon,
-  CloseIcon,
-  HeartPulseIcon,
-  MenuIcon,
   ShieldIcon,
   SparkIcon,
   UserGroupIcon,
@@ -62,8 +57,6 @@ const About = () => {
   const { language } = useI18n();
   const copy = aboutCopy[language];
   const { appointments, doctors } = useAppContext();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const closeMenu = () => setMenuOpen(false);
 
   const stats = [
     { value: `${doctors.length}+`, label: copy.stats[0] },
@@ -81,39 +74,7 @@ const About = () => {
       <div className="site-orb site-orb-one" />
       <div className="site-orb site-orb-two" />
 
-      <header className="topbar">
-        <div className="container topbar-inner">
-          <Link to="/" className="brand" onClick={closeMenu}>
-            <span className="brand-mark"><HeartPulseIcon /></span>
-            <span>Med<span className="brand-accent">Elite</span></span>
-          </Link>
-          {/* Mobile nav backdrop */}
-          {menuOpen && (
-            <div className="nav-cluster-backdrop nav-cluster-backdrop-open" onClick={closeMenu} aria-hidden="true" />
-          )}
-          <div className={`nav-cluster ${menuOpen ? "nav-cluster-open" : ""}`}>
-            <nav className="nav-links">
-              <Link to="/ai-assistant" onClick={closeMenu}>AI</Link>
-              <Link to="/services" onClick={closeMenu}>
-                {language === "ru" ? "Услуги" : language === "en" ? "Services" : "Xizmatlar"}
-              </Link>
-              <Link to="/about" onClick={closeMenu}>{copy.chip}</Link>
-              <Link to="/chat" onClick={closeMenu}>Chat</Link>
-              <Link to="/medical-records" onClick={closeMenu}>EMR</Link>
-            </nav>
-            <div className="nav-actions">
-              <LanguageSwitcher compact />
-              <ThemeToggle compact />
-              <Link to="/user" className="button button-primary" onClick={closeMenu}>
-                {language === "ru" ? "Запись" : language === "en" ? "Book" : "Band qilish"}
-              </Link>
-            </div>
-          </div>
-          <button type="button" className="mobile-menu-button" onClick={() => setMenuOpen((c) => !c)}>
-            {menuOpen ? <CloseIcon /> : <MenuIcon />}
-          </button>
-        </div>
-      </header>
+      <Navbar />
 
       <main>
         <section className="section-block">

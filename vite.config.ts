@@ -1,12 +1,17 @@
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import {
-  generateAiReply,
+  buildSystemPrompt,
+  callGroqApi,
   type AiMode,
+  type DoctorContext,
   type HistoryMessage,
 } from "./src/lib/aiCore";
+import { GROQ_CHAT_MODEL } from "./src/lib/aiConfig";
 
-const devChatApiPlugin = (groqKey: string): Plugin => ({
+const VALID_AI_MODES: AiMode[] = ["symptoms", "doctor", "drugs", "risk", "imaging"];
+
+const devChatApiPlugin = (groqKey: string, groqModel: string): Plugin => ({
   name: "dev-chat-api",
   configureServer(server) {
     server.middlewares.use("/api/chat", async (req, res, next) => {
@@ -18,7 +23,7 @@ const devChatApiPlugin = (groqKey: string): Plugin => ({
       if (!groqKey) {
         res.statusCode = 503;
         res.setHeader("Content-Type", "application/json");
-        res.end(JSON.stringify({ error: "Groq API kaliti sozlanmagan. VITE_GROQ_API_KEY ni qo'shing." }));
+        res.end(JSON.stringify({ error: "Groq API kaliti sozlanmagan. GROQ_API_KEY ni qo'shing." }));
         return;
       }
 
@@ -29,38 +34,36 @@ const devChatApiPlugin = (groqKey: string): Plugin => ({
           const body = JSON.parse(Buffer.concat(chunks).toString()) as {
             history?: HistoryMessage[];
             userMessage?: string;
-            doctors?: Array<{
-              name: string;
-              specialty: string;
-              region: string;
-              clinic: string;
-              address: string;
-              rating: number;
-            }>;
+            doctors?: DoctorContext[];
             language?: string;
             mode?: AiMode;
           };
 
-          const {
-            history = [],
-            userMessage = "",
-            doctors = [],
-            language = "uz",
-            mode = "symptoms",
-          } = body;
+          const history = Array.isArray(body.history) ? body.history : [];
+          const doctors = Array.isArray(body.doctors) ? body.doctors : [];
+          const userMessage = typeof body.userMessage === "string" ? body.userMessage.trim() : "";
+          const language = typeof body.language === "string" ? body.language : "uz";
+          const mode = VALID_AI_MODES.includes(body.mode as AiMode) ? (body.mode as AiMode) : "symptoms";
 
-          const { reply, provider } = await generateAiReply({
-            mode,
+          if (!userMessage) {
+            res.statusCode = 400;
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify({ error: "userMessage is required" }));
+            return;
+          }
+
+          const reply = await callGroqApi(
+            groqKey,
+            buildSystemPrompt(mode, doctors, language),
             history,
             userMessage,
-            doctors,
-            language,
-            groqKey: groqKey || undefined,
-          });
+            2,
+            groqModel,
+          );
 
           res.statusCode = 200;
           res.setHeader("Content-Type", "application/json");
-          res.end(JSON.stringify({ reply, provider }));
+          res.end(JSON.stringify({ reply, provider: "groq" }));
         } catch (error) {
           res.statusCode = 502;
           res.setHeader("Content-Type", "application/json");
@@ -78,11 +81,12 @@ const devChatApiPlugin = (groqKey: string): Plugin => ({
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
-  const groqKey = env.GROQ_API_KEY || env.VITE_GROQ_API_KEY || "";
+  const groqKey = env.GROQ_API_KEY || "";
+  const groqModel = env.GROQ_CHAT_MODEL?.trim() || GROQ_CHAT_MODEL;
 
   return {
     base: "./",
-    plugins: [react(), devChatApiPlugin(groqKey)],
+    plugins: [react(), devChatApiPlugin(groqKey, groqModel)],
     build: {
       chunkSizeWarningLimit: 750,
       rollupOptions: {

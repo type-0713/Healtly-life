@@ -52,11 +52,17 @@ const callAiViaApi = async (
     }),
   });
 
-  const data = (await response.json()) as {
+  let data: {
     reply?: string;
     provider?: AiProvider;
     error?: string;
-  };
+  } = {};
+
+  try {
+    data = (await response.json()) as typeof data;
+  } catch {
+    // A proxy or deployment error can return non-JSON. The fallback below handles it.
+  }
 
   if (!response.ok) {
     throw new Error(data.error ?? `API xatolik: ${response.status}`);
@@ -66,7 +72,8 @@ const callAiViaApi = async (
     throw new Error("API javob qaytarmadi");
   }
 
-  return { reply: data.reply, provider: data.provider ?? ("groq" as AiProvider) };
+  const provider: AiProvider = data.provider === "fallback" ? "fallback" : "groq";
+  return { reply: data.reply, provider };
 };
 
 const buildFallbackReply = (
@@ -161,28 +168,20 @@ export const sendAiMessage = async ({
   const historyPayload = history.map(({ role, content }) => ({ role, content }));
 
   // Groq API kaliti (VITE_ prefiksi bilan — Vite build vaqtida kiritadi)
-  const groqKey = import.meta.env.VITE_GROQ_API_KEY?.trim();
-
   try {
-    // Agar VITE_GROQ_API_KEY mavjud bo'lsa — to'g'ridan-to'g'ri Groq API'ga murojaat
-    // Bu ham local'da ham production'da ishlaydi (agar Vercel'da VITE_GROQ_API_KEY set qilingan bo'lsa)
-    if (groqKey) {
-      return await generateAiReply({
-        mode,
-        history: historyPayload,
-        userMessage,
-        doctors: toDoctorContext(doctors),
-        language,
-        groqKey,
-      });
-    }
-
-    // Groq key yo'q bo'lsa — /api/chat serverless function orqali (server-side GROQ_API_KEY)
     return await callAiViaApi(historyPayload, userMessage, doctors, language, mode);
   } catch (error) {
-    console.error("[AI] Error:", error);
+    console.warn("[AI] Server API unavailable, using local fallback:", error);
+    const localFallback = await generateAiReply({
+      mode,
+      history: historyPayload,
+      userMessage,
+      doctors: toDoctorContext(doctors),
+      language,
+    });
+
     return {
-      reply: buildFallbackReply(userMessage, rankedDoctors, language, mode),
+      reply: localFallback.reply || buildFallbackReply(userMessage, rankedDoctors, language, mode),
       provider: "fallback",
     };
   }

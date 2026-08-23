@@ -11,9 +11,11 @@ import {
   EyeIcon,
   EyeOffIcon,
   HeartPulseIcon,
+  LocationIcon,
   LockIcon,
   MailIcon,
   PhoneIcon,
+  PillIcon,
   ShieldIcon,
   SparkIcon,
   StethoscopeIcon,
@@ -22,26 +24,35 @@ import {
 import { useAppContext } from "../context/AppContext";
 import { useI18n } from "../context/I18nContext";
 
-type Mode = "user" | "doctor" | "admin";
+type Mode = "user" | "doctor" | "pharmacy" | "hospital" | "admin";
 type Action = "login" | "register";
 
 const copy = {
   uz: {
     title: "Tibbiy platformaga kirish",
-    text: "Foydalanuvchi, doktor va admin uchun alohida kirish tartibi mavjud. Doktor kirishi alohida ma'lumotlar bazasi orqali ishlaydi.",
-    modes: { user: "Bemor", doctor: "Doktor", admin: "Admin" },
+    text: "Bemor, doktor, dorixona, shifoxona va admin uchun alohida kirish tartibi mavjud.",
+    modes: { user: "Bemor", doctor: "Doktor", pharmacy: "Dorixona", hospital: "Shifoxona", admin: "Admin" },
     actions: { login: "Kirish", register: "Ro'yxatdan o'tish" },
     userTitle: "Bemor kabineti",
     doctorTitle: "Doktor ro'yxatdan o'tishi",
+    pharmacyTitle: "Dorixona ro'yxatdan o'tishi",
+    hospitalTitle: "Shifoxona ro'yxatdan o'tishi",
     adminTitle: "Admin nazorati",
     userText: "Shifokor toping, buyurtma bering va qabul tarixini kuzating.",
     doctorText:
       "Doktor uchun birinchi bosqichda faqat email, ism, familya va telefon olinadi. Admin tasdiqlagach qolgan ish ma'lumotlari so'raladi.",
+    pharmacyText:
+      "Dorixona ariza yuboradi. Admin tasdiqlagach dorilarini qo'shadi va yetkazib berish buyurtmalarini oladi.",
+    hospitalText:
+      "Shifoxona ariza yuboradi. Admin tasdiqlagach xonalar, narxlar va doktorlar ro'yxatini kiritadi.",
     adminText: "Doktorlarni tasdiqlang, navbatni kuzating va buyurtmalarni boshqaring.",
     email: "Email",
     firstName: "Ism",
     lastName: "Familya",
     phone: "Telefon",
+    organizationName: "Tashkilot nomi",
+    address: "Manzil",
+    license: "Litsenziya yoki STIR",
     password: "Parol",
     confirmPassword: "Parolni tasdiqlang",
     adminLogin: "Admin login",
@@ -49,6 +60,10 @@ const copy = {
     userRegister: "Kabinet yaratish",
     doctorLogin: "Doktor sifatida kirish",
     doctorRegister: "Doktor arizasini yuborish",
+    pharmacyLogin: "Dorixona sifatida kirish",
+    pharmacyRegister: "Dorixona arizasini yuborish",
+    hospitalLogin: "Shifoxona sifatida kirish",
+    hospitalRegister: "Shifoxona arizasini yuborish",
     adminSubmit: "Admin panelga kirish",
     waiting:
       "Admin tasdiqlagach, doktor kabinetiga kirganda qolgan ma'lumotlarni to'ldirish oynasi ochiladi.",
@@ -60,7 +75,7 @@ const copy = {
     metrics: [
       ["24/7", "Buyurtma qabul qilish"],
       ["0/22/30 min", "Doktor holatiga mos navbat"],
-      ["Alohida login", "Doktor uchun mustaqil kirish"],
+      ["Alohida login", "Doktor, dorixona va shifoxona uchun"],
     ],
     highlights: [
       {
@@ -181,24 +196,78 @@ const copy = {
   },
 } as const;
 
+const authCopyExtensions = {
+  uz: {
+    modes: { user: "Bemor", doctor: "Doktor", pharmacy: "Dorixona", hospital: "Shifoxona", admin: "Admin" },
+    pharmacyTitle: "Dorixona ro'yxatdan o'tishi",
+    hospitalTitle: "Shifoxona ro'yxatdan o'tishi",
+    pharmacyText:
+      "Dorixona ariza yuboradi. Admin tasdiqlagach dorilarini qo'shadi va yetkazib berish buyurtmalarini oladi.",
+    hospitalText:
+      "Shifoxona ariza yuboradi. Admin tasdiqlagach xonalar, narxlar va doktorlar ro'yxatini kiritadi.",
+    organizationName: "Tashkilot nomi",
+    address: "Manzil",
+    license: "Litsenziya yoki STIR",
+    pharmacyLogin: "Dorixona sifatida kirish",
+    pharmacyRegister: "Dorixona arizasini yuborish",
+    hospitalLogin: "Shifoxona sifatida kirish",
+    hospitalRegister: "Shifoxona arizasini yuborish",
+  },
+  ru: {
+    modes: { user: "User", doctor: "Doctor", pharmacy: "Pharmacy", hospital: "Hospital", admin: "Admin" },
+    pharmacyTitle: "Dorixona arizasi",
+    hospitalTitle: "Shifoxona arizasi",
+    pharmacyText: "Dorixona admin tasdig'idan keyin dorilar va buyurtmalarni boshqaradi.",
+    hospitalText: "Shifoxona admin tasdig'idan keyin xonalar, narxlar va doktorlarni boshqaradi.",
+    organizationName: "Tashkilot nomi",
+    address: "Manzil",
+    license: "Litsenziya yoki STIR",
+    pharmacyLogin: "Dorixona sifatida kirish",
+    pharmacyRegister: "Dorixona arizasini yuborish",
+    hospitalLogin: "Shifoxona sifatida kirish",
+    hospitalRegister: "Shifoxona arizasini yuborish",
+  },
+  en: {
+    modes: { user: "User", doctor: "Doctor", pharmacy: "Pharmacy", hospital: "Hospital", admin: "Admin" },
+    pharmacyTitle: "Pharmacy onboarding",
+    hospitalTitle: "Hospital onboarding",
+    pharmacyText:
+      "Pharmacies register first, then after admin approval add their own medicines and receive delivery orders.",
+    hospitalText:
+      "Hospitals register first, then after admin approval publish rooms, prices, and doctors.",
+    organizationName: "Organization name",
+    address: "Address",
+    license: "License or tax ID",
+    pharmacyLogin: "Sign in as pharmacy",
+    pharmacyRegister: "Submit pharmacy request",
+    hospitalLogin: "Sign in as hospital",
+    hospitalRegister: "Submit hospital request",
+  },
+} as const;
+
 const LoginPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const {
     accountRole,
+    authLoading,
     currentDoctor,
     currentUser,
     doctorApprovalStatus,
     doctorSessionEmail,
     isAdminAuthenticated,
     isDoctorAuthenticated,
+    isHospitalAuthenticated,
+    isPharmacyAuthenticated,
     isUserAuthenticated,
     localUserEmail,
     profile,
     registerDoctorWithCredentials,
+    registerPartnerWithCredentials,
     registerWithCredentials,
     signInAsAdmin,
     signInDoctorWithCredentials,
+    signInPartnerWithCredentials,
     signInWithApple,
     signInWithCredentials,
     signInWithGoogle,
@@ -206,7 +275,7 @@ const LoginPage = () => {
     signOutUser,
   } = useAppContext();
   const { language, translateError } = useI18n();
-  const text = copy[language];
+  const text = { ...copy[language], ...authCopyExtensions[language] };
   const seoTitle =
     language === "ru"
       ? "MedElite | Вход в систему"
@@ -226,11 +295,18 @@ const LoginPage = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
+  const [organizationName, setOrganizationName] = useState("");
+  const [address, setAddress] = useState("");
+  const [license, setLicense] = useState("");
   const [authMessage, setAuthMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const mode = (searchParams.get("mode") === "doctor"
     ? "doctor"
+    : searchParams.get("mode") === "pharmacy"
+      ? "pharmacy"
+      : searchParams.get("mode") === "hospital"
+        ? "hospital"
     : searchParams.get("mode") === "admin"
       ? "admin"
       : "user") as Mode;
@@ -239,10 +315,21 @@ const LoginPage = () => {
     : searchParams.get("action") === "register"
       ? "register"
       : "login") as Action;
-  const nextPath = searchParams.get("next") ?? "/user";
+  const requestedNextPath = searchParams.get("next");
+  const nextPath =
+    requestedNextPath?.startsWith("/") &&
+    !requestedNextPath.startsWith("//") &&
+    !requestedNextPath.startsWith("/\\")
+      ? requestedNextPath
+      : "/user";
   const isDoctorRegister = mode === "doctor" && action === "register";
+  const isPartnerRegister = (mode === "pharmacy" || mode === "hospital") && action === "register";
 
   useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
     if (isAdminAuthenticated) {
       navigate("/admin", { replace: true });
       return;
@@ -253,13 +340,26 @@ const LoginPage = () => {
       return;
     }
 
+    if (isPharmacyAuthenticated || accountRole === "pharmacy") {
+      navigate("/pharmacy-dashboard", { replace: true });
+      return;
+    }
+
+    if (isHospitalAuthenticated || accountRole === "hospital") {
+      navigate("/hospital-dashboard", { replace: true });
+      return;
+    }
+
     if (isUserAuthenticated) {
       navigate(nextPath, { replace: true });
     }
   }, [
     accountRole,
+    authLoading,
     isAdminAuthenticated,
     isDoctorAuthenticated,
+    isHospitalAuthenticated,
+    isPharmacyAuthenticated,
     isUserAuthenticated,
     navigate,
     nextPath,
@@ -272,6 +372,9 @@ const LoginPage = () => {
     setFirstName("");
     setLastName("");
     setPhone("");
+    setOrganizationName("");
+    setAddress("");
+    setLicense("");
   }, [mode, action]);
 
   const buildLink = (nextMode: Mode, nextAction: Action = action) => {
@@ -282,8 +385,8 @@ const LoginPage = () => {
       params.set("action", "register");
     }
 
-    if (nextMode === "user" && searchParams.get("next")) {
-      params.set("next", searchParams.get("next") ?? "");
+    if (nextMode === "user" && nextPath !== "/user") {
+      params.set("next", nextPath);
     }
 
     return `/login?${params.toString()}`;
@@ -294,12 +397,32 @@ const LoginPage = () => {
       return { title: text.doctorTitle, body: text.doctorText };
     }
 
+    if (mode === "pharmacy") {
+      return { title: text.pharmacyTitle, body: text.pharmacyText };
+    }
+
+    if (mode === "hospital") {
+      return { title: text.hospitalTitle, body: text.hospitalText };
+    }
+
     if (mode === "admin") {
       return { title: text.adminTitle, body: text.adminText };
     }
 
     return { title: text.userTitle, body: text.userText };
-  }, [mode, text.adminText, text.adminTitle, text.doctorText, text.doctorTitle, text.userText, text.userTitle]);
+  }, [
+    mode,
+    text.adminText,
+    text.adminTitle,
+    text.doctorText,
+    text.doctorTitle,
+    text.hospitalText,
+    text.hospitalTitle,
+    text.pharmacyText,
+    text.pharmacyTitle,
+    text.userText,
+    text.userTitle,
+  ]);
 
   const submitLabel =
     mode === "admin"
@@ -308,9 +431,17 @@ const LoginPage = () => {
         ? action === "register"
           ? text.doctorRegister
           : text.doctorLogin
-        : action === "register"
-          ? text.userRegister
-          : text.userLogin;
+        : mode === "pharmacy"
+          ? action === "register"
+            ? text.pharmacyRegister
+            : text.pharmacyLogin
+          : mode === "hospital"
+            ? action === "register"
+              ? text.hospitalRegister
+              : text.hospitalLogin
+            : action === "register"
+              ? text.userRegister
+              : text.userLogin;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -345,6 +476,25 @@ const LoginPage = () => {
         return;
       }
 
+      if (mode === "pharmacy" || mode === "hospital") {
+        if (action === "register") {
+          await registerPartnerWithCredentials({
+            role: mode,
+            email,
+            password,
+            name: organizationName,
+            phone,
+            address,
+            license,
+          });
+        } else {
+          await signInPartnerWithCredentials(mode, email, password);
+        }
+
+        navigate(mode === "pharmacy" ? "/pharmacy-dashboard" : "/hospital-dashboard");
+        return;
+      }
+
       if (action === "register") {
         await registerWithCredentials(email, password);
       } else {
@@ -368,7 +518,7 @@ const LoginPage = () => {
       setIsSubmitting(true);
       setAuthMessage("");
       await providerAction();
-      navigate("/user");
+      navigate(nextPath);
     } catch (error) {
       setAuthMessage(
         error instanceof Error
@@ -445,7 +595,15 @@ const LoginPage = () => {
           <div className="auth-card auth-card-premium">
             <div className="auth-card-head">
               <span className="badge">
-                {mode === "doctor" ? <StethoscopeIcon /> : mode === "admin" ? <ShieldIcon /> : <UserGroupIcon />}
+                {mode === "doctor" ? (
+                  <StethoscopeIcon />
+                ) : mode === "pharmacy" ? (
+                  <PillIcon />
+                ) : mode === "admin" || mode === "hospital" ? (
+                  <ShieldIcon />
+                ) : (
+                  <UserGroupIcon />
+                )}
                 {headerContent.title}
               </span>
               <h2>{headerContent.title}</h2>
@@ -453,7 +611,7 @@ const LoginPage = () => {
             </div>
 
             <div className="auth-mode-switch auth-mode-switch-three">
-              {(["user", "doctor", "admin"] as Mode[]).map((item) => (
+              {(["user", "doctor", "pharmacy", "hospital", "admin"] as Mode[]).map((item) => (
                 <Link
                   key={item}
                   to={buildLink(item, item === "admin" ? "login" : action)}
@@ -508,6 +666,52 @@ const LoginPage = () => {
                         placeholder="+998 90 123 45 67"
                         required
                       />
+                    </div>
+                  </label>
+                </>
+              )}
+
+              {isPartnerRegister && (
+                <>
+                  <label className="field">
+                    <span>{text.organizationName}</span>
+                    <div className="field-box">
+                      {mode === "pharmacy" ? <PillIcon /> : <ShieldIcon />}
+                      <input
+                        value={organizationName}
+                        onChange={(event) => setOrganizationName(event.target.value)}
+                        required
+                      />
+                    </div>
+                  </label>
+
+                  <label className="field">
+                    <span>{text.phone}</span>
+                    <div className="field-box">
+                      <PhoneIcon />
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(event) => setPhone(event.target.value)}
+                        placeholder="+998 90 123 45 67"
+                        required
+                      />
+                    </div>
+                  </label>
+
+                  <label className="field">
+                    <span>{text.address}</span>
+                    <div className="field-box">
+                      <LocationIcon />
+                      <input value={address} onChange={(event) => setAddress(event.target.value)} required />
+                    </div>
+                  </label>
+
+                  <label className="field">
+                    <span>{text.license}</span>
+                    <div className="field-box">
+                      <ShieldIcon />
+                      <input value={license} onChange={(event) => setLicense(event.target.value)} required />
                     </div>
                   </label>
                 </>
@@ -569,7 +773,7 @@ const LoginPage = () => {
                 </label>
               )}
 
-              {mode === "doctor" && <p className="field-note">{text.waiting}</p>}
+              {(mode === "doctor" || isPartnerRegister) && <p className="field-note">{text.waiting}</p>}
 
               <div className="auth-meta">
                 <label className="checkbox-line">

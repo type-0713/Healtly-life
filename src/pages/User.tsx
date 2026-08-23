@@ -3,9 +3,8 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import AiChatWidget from "../components/AiChatWidget";
 import EmergencyCallButton from "../components/EmergencyCallButton";
-import LanguageSwitcher from "../components/LanguageSwitcher";
+import Navbar from "../components/Navbar";
 import Seo from "../components/Seo";
-import ThemeToggle from "../components/ThemeToggle";
 import {
   ArrowRightIcon,
   CalendarIcon,
@@ -14,7 +13,6 @@ import {
   CloseIcon,
   HeartPulseIcon,
   LocationIcon,
-  MenuIcon,
   PhoneIcon,
   SparkIcon,
   StarIcon,
@@ -26,6 +24,8 @@ import {
   useAppContext,
   type Appointment,
   type Doctor,
+  type Hospital,
+  type HospitalRoomBooking,
 } from "../context/AppContext";
 import { useI18n } from "../context/I18nContext";
 import { aiAssistantCopy } from "../i18n/aiAssistantCopy";
@@ -40,6 +40,25 @@ import {
 } from "../lib/schedule";
 
 type TabId = "booking" | "appointments" | "profile" | "ai";
+type SearchTarget = "doctors" | "hospitals";
+type PriceSort = "none" | "price-asc" | "price-desc";
+type RatingSort = "none" | "rating-asc" | "rating-desc";
+type RoomLuxuryFilter = "all" | "lux" | "standard";
+
+const getNumericPrice = (price: string) => Number(price.replace(/[^\d]/g, "")) || 0;
+
+const getRoomCapacity = (capacity: string) => Math.max(1, Number(capacity) || 1);
+
+const addDaysToDate = (date: string, days: number) => {
+  const nextDate = new Date(`${date}T12:00:00`);
+  nextDate.setDate(nextDate.getDate() + days);
+  return nextDate.toISOString().slice(0, 10);
+};
+
+const getStayDates = (startDate: string, days: number) =>
+  Array.from({ length: Math.max(1, days) }, (_, index) => addDaysToDate(startDate, index));
+
+const isActiveHospitalBooking = (booking: HospitalRoomBooking) => booking.status !== "Bekor qilindi";
 
 const canReviewAppointment = (appointment: Appointment) =>
   (appointment.status === "Tasdiqlandi" || appointment.status === "Yakunlandi") &&
@@ -55,21 +74,26 @@ const User = () => {
   const {
     appointments,
     bookAppointment,
+    bookHospitalRoom,
     currentUser,
     doctors,
+    hospitals,
+    hospitalRoomBookings,
     localUserEmail,
     localUserId,
     profile,
-    signOutUser,
     submitDoctorReview,
     updateAppointmentStatus,
     updateProfile,
   } = useAppContext();
 
-  const [menuOpen, setMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("booking");
+  const [searchTarget, setSearchTarget] = useState<SearchTarget>("doctors");
   const [searchTerm, setSearchTerm] = useState("");
   const [regionFilter, setRegionFilter] = useState(ALL_REGIONS_OPTION);
+  const [priceSort, setPriceSort] = useState<PriceSort>("none");
+  const [ratingSort, setRatingSort] = useState<RatingSort>("rating-desc");
+  const [roomLuxuryFilter, setRoomLuxuryFilter] = useState<RoomLuxuryFilter>("all");
   const [selectedDoctorId, setSelectedDoctorId] = useState("");
   const [selectedDate, setSelectedDate] = useState(getTodayInTashkent());
   const [selectedTime, setSelectedTime] = useState("");
@@ -86,6 +110,12 @@ const User = () => {
   const [reviewComment, setReviewComment] = useState("");
   const [doctorInfoTarget, setDoctorInfoTarget] = useState<Doctor | null>(null);
   const [doctorBookingTarget, setDoctorBookingTarget] = useState<Doctor | null>(null);
+  const [hospitalBookingTarget, setHospitalBookingTarget] = useState<Hospital | null>(null);
+  const [hospitalRoomId, setHospitalRoomId] = useState("");
+  const [hospitalPlaceNumber, setHospitalPlaceNumber] = useState(1);
+  const [hospitalDays, setHospitalDays] = useState(1);
+  const [hospitalStartDate, setHospitalStartDate] = useState(getTodayInTashkent());
+  const [hospitalNotes, setHospitalNotes] = useState("");
   const seoTitle =
     language === "ru"
       ? "MedElite | Кабинет пациента"
@@ -114,9 +144,8 @@ const User = () => {
     setProfileDraft(profile);
   }, [profile]);
 
-  const filteredDoctors = useMemo(
-    () =>
-      doctors.filter((doctor) => {
+  const filteredDoctors = useMemo(() => {
+    const nextDoctors = doctors.filter((doctor) => {
         const matchesSearch =
           !deferredSearchTerm.trim() ||
           `${doctor.name} ${doctor.specialty} ${doctor.clinic} ${doctor.bio}`
@@ -126,9 +155,44 @@ const User = () => {
           regionFilter === ALL_REGIONS_OPTION || doctor.region === regionFilter;
 
         return matchesSearch && matchesRegion;
-      }),
-    [deferredSearchTerm, doctors, regionFilter],
-  );
+      });
+
+    return nextDoctors.sort((left, right) => {
+      const priceDifference = getNumericPrice(left.price) - getNumericPrice(right.price);
+      if (priceSort === "price-asc" && priceDifference !== 0) return priceDifference;
+      if (priceSort === "price-desc" && priceDifference !== 0) return -priceDifference;
+      if (ratingSort === "rating-asc") return left.rating - right.rating;
+      if (ratingSort === "rating-desc") return right.rating - left.rating;
+      return left.name.localeCompare(right.name, "uz");
+    });
+  }, [deferredSearchTerm, doctors, priceSort, ratingSort, regionFilter]);
+
+  const filteredHospitals = useMemo(() => {
+    const nextHospitals = hospitals.filter((hospital) => {
+      const matchesSearch =
+        !deferredSearchTerm.trim() ||
+        `${hospital.name} ${hospital.address} ${hospital.description} ${hospital.doctorNames.join(" ")}`
+          .toLowerCase()
+          .includes(deferredSearchTerm.trim().toLowerCase());
+      const matchesRegion = regionFilter === ALL_REGIONS_OPTION || hospital.region === regionFilter;
+      const matchesRoomType =
+        roomLuxuryFilter === "all" ||
+        hospital.rooms.some((room) => roomLuxuryFilter === "lux" ? room.isLuxury : !room.isLuxury);
+
+      return hospital.approvalStatus === "approved" && hospital.profileCompleted && matchesSearch && matchesRegion && matchesRoomType;
+    });
+
+    return nextHospitals.sort((left, right) => {
+      const leftPrice = Math.min(...left.rooms.map((room) => getNumericPrice(room.price)), Number.MAX_SAFE_INTEGER);
+      const rightPrice = Math.min(...right.rooms.map((room) => getNumericPrice(room.price)), Number.MAX_SAFE_INTEGER);
+      const priceDifference = leftPrice - rightPrice;
+      if (priceSort === "price-asc" && priceDifference !== 0) return priceDifference;
+      if (priceSort === "price-desc" && priceDifference !== 0) return -priceDifference;
+      if (ratingSort === "rating-asc") return left.rating - right.rating;
+      if (ratingSort === "rating-desc") return right.rating - left.rating;
+      return left.name.localeCompare(right.name, "uz");
+    });
+  }, [deferredSearchTerm, hospitals, priceSort, ratingSort, regionFilter, roomLuxuryFilter]);
 
   useEffect(() => {
     if (!selectedDoctorId && filteredDoctors[0]) {
@@ -264,6 +328,89 @@ const User = () => {
     [userAppointments],
   );
 
+  const userHospitalBookings = useMemo(
+    () =>
+      hospitalRoomBookings.filter((booking) => {
+        const ownerKey = booking.patientKey.trim().toLowerCase();
+        const ownerEmail = booking.patientEmail.trim().toLowerCase();
+
+        return ownerKey ? ownerKey === activeUserKey : Boolean(ownerEmail) && ownerEmail === activeUserEmail;
+      }),
+    [activeUserEmail, activeUserKey, hospitalRoomBookings],
+  );
+
+  const activeHospitalBookings = useMemo(
+    () => userHospitalBookings.filter((booking) => booking.status === "Yangi" || booking.status === "Tasdiqlandi"),
+    [userHospitalBookings],
+  );
+
+  const historyHospitalBookings = useMemo(
+    () => userHospitalBookings.filter((booking) => booking.status === "Yakunlandi" || booking.status === "Bekor qilindi"),
+    [userHospitalBookings],
+  );
+
+  const hospitalTargetRooms = useMemo(
+    () =>
+      (hospitalBookingTarget?.rooms ?? []).filter(
+        (room) => roomLuxuryFilter === "all" || (roomLuxuryFilter === "lux" ? room.isLuxury : !room.isLuxury),
+      ),
+    [hospitalBookingTarget?.rooms, roomLuxuryFilter],
+  );
+
+  const selectedHospitalRoom = useMemo(
+    () => hospitalTargetRooms.find((room) => room.id === hospitalRoomId) ?? hospitalTargetRooms[0] ?? null,
+    [hospitalRoomId, hospitalTargetRooms],
+  );
+
+  const hospitalStayDates = useMemo(
+    () => getStayDates(hospitalStartDate, hospitalDays),
+    [hospitalDays, hospitalStartDate],
+  );
+
+  const bookedHospitalPlaces = useMemo(() => {
+    if (!hospitalBookingTarget || !selectedHospitalRoom) return new Set<number>();
+
+    const stayDateSet = new Set(hospitalStayDates);
+    return new Set(
+      hospitalRoomBookings
+        .filter(
+          (booking) =>
+            isActiveHospitalBooking(booking) &&
+            booking.hospitalId === hospitalBookingTarget.id &&
+            booking.roomId === selectedHospitalRoom.id &&
+            getStayDates(booking.startDate, booking.days).some((date) => stayDateSet.has(date)),
+        )
+        .map((booking) => booking.placeNumber),
+    );
+  }, [hospitalBookingTarget, hospitalRoomBookings, hospitalStayDates, selectedHospitalRoom]);
+
+  const selectableHospitalPlaces = useMemo(
+    () =>
+      selectedHospitalRoom
+        ? Array.from({ length: getRoomCapacity(selectedHospitalRoom.capacity) }, (_, index) => index + 1).filter(
+            (placeNumber) => !bookedHospitalPlaces.has(placeNumber),
+          )
+        : [],
+    [bookedHospitalPlaces, selectedHospitalRoom],
+  );
+
+  useEffect(() => {
+    if (!selectedHospitalRoom) {
+      setHospitalRoomId("");
+      return;
+    }
+
+    if (!hospitalTargetRooms.some((room) => room.id === hospitalRoomId)) {
+      setHospitalRoomId(selectedHospitalRoom.id);
+    }
+  }, [hospitalRoomId, hospitalTargetRooms, selectedHospitalRoom]);
+
+  useEffect(() => {
+    if (!selectableHospitalPlaces.includes(hospitalPlaceNumber)) {
+      setHospitalPlaceNumber(selectableHospitalPlaces[0] ?? 1);
+    }
+  }, [hospitalPlaceNumber, selectableHospitalPlaces]);
+
   const normalizedReviewComment = reviewComment.trim();
   const reviewReadyCount = useMemo(
     () => userAppointments.filter((appointment) => canReviewAppointment(appointment)).length,
@@ -343,6 +490,47 @@ const User = () => {
           ? translateError(cancelError.message)
           : translateError("Kirishda xatolik yuz berdi."),
       );
+    }
+  };
+
+  const handleHospitalBooking = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!hospitalBookingTarget || !selectedHospitalRoom || !selectableHospitalPlaces.includes(hospitalPlaceNumber)) {
+      setError("Xona, joy va bron sanasini qayta tekshiring.");
+      setNotice("");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setError("");
+      setNotice("");
+      await bookHospitalRoom({
+        hospitalId: hospitalBookingTarget.id,
+        roomId: selectedHospitalRoom.id,
+        placeNumber: hospitalPlaceNumber,
+        days: hospitalDays,
+        startDate: hospitalStartDate,
+        patientName,
+        patientKey: activeUserKey,
+        patientEmail: activeUserEmail,
+        patientPhone,
+        notes: hospitalNotes,
+      });
+      await updateProfile({ name: patientName, phone: patientPhone, email: activeUserEmail });
+      setNotice("Xona bron qilindi. Shifoxona kabinetiga yangi bron sifatida yuborildi.");
+      setHospitalBookingTarget(null);
+      setHospitalNotes("");
+      setActiveTab("appointments");
+    } catch (bookingError) {
+      setError(
+        bookingError instanceof Error
+          ? translateError(bookingError.message)
+          : translateError("Kirishda xatolik yuz berdi."),
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -440,8 +628,26 @@ const User = () => {
 
   const closeDoctorBookingModal = () => setDoctorBookingTarget(null);
 
+  const openHospitalBookingModal = (hospital: Hospital) => {
+    const matchingRoom = hospital.rooms.find((room) =>
+      roomLuxuryFilter === "all" ? true : roomLuxuryFilter === "lux" ? room.isLuxury : !room.isLuxury,
+    );
+    setHospitalBookingTarget(hospital);
+    setHospitalRoomId(matchingRoom?.id ?? hospital.rooms[0]?.id ?? "");
+    setHospitalPlaceNumber(1);
+    setHospitalDays(1);
+    setHospitalStartDate(getTodayInTashkent());
+    setHospitalNotes("");
+    setPatientName(profile.name);
+    setPatientPhone(profile.phone);
+    setError("");
+    setNotice("");
+  };
+
+  const closeHospitalBookingModal = () => setHospitalBookingTarget(null);
+
   const isDoctorModalOpen = Boolean(doctorInfoTarget || doctorBookingTarget);
-  const isAnyModalOpen = Boolean(reviewTarget || isDoctorModalOpen);
+  const isAnyModalOpen = Boolean(reviewTarget || isDoctorModalOpen || hospitalBookingTarget);
 
   useEffect(() => {
     if (typeof window === "undefined" || !isAnyModalOpen) {
@@ -466,6 +672,11 @@ const User = () => {
 
       if (doctorInfoTarget) {
         closeDoctorInfoModal();
+        return;
+      }
+
+      if (hospitalBookingTarget) {
+        closeHospitalBookingModal();
       }
     };
 
@@ -476,8 +687,45 @@ const User = () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleEscape);
     };
-  }, [doctorBookingTarget, doctorInfoTarget, isAnyModalOpen, reviewTarget]);
+  }, [doctorBookingTarget, doctorInfoTarget, hospitalBookingTarget, isAnyModalOpen, reviewTarget]);
 
+  const bookingRules = getBookingRulesMessage(language);
+  const selectedDoctorMapUrl = getMapSearchUrl(getDoctorMapQuery(selectedDoctor ?? {}));
+  const doctorInfoMapUrl = doctorInfoTarget ? getMapSearchUrl(getDoctorMapQuery(doctorInfoTarget)) : "";
+  const doctorInfoMapLabel =
+    language === "ru" ? "Открыть на карте" : language === "en" ? "View on map" : "Xaritadan ko'rish";
+  const doctorInfoBookLabel =
+    language === "ru" ? "Записаться" : language === "en" ? "Book appointment" : "Band qilish";
+  const focusBookingSectionOnMobile = () => {
+    if (typeof window === "undefined" || !window.matchMedia("(max-width: 760px)").matches) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      bookingSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
+  const handleDoctorSelect = (doctorId: string) => {
+    setSelectedDoctorId(doctorId);
+    focusBookingSectionOnMobile();
+  };
+
+  const handleUseNearestSlot = () => {
+    if (!nearestSlot) {
+      setError("Tanlangan doktor uchun hozircha bo'sh vaqt topilmadi.");
+      setNotice("");
+      return;
+    }
+
+    setSelectedDate(nearestSlot.date);
+    setSelectedTime(nearestSlot.time);
+    setError("");
+
+    setNotice(`Eng yaqin bo'sh vaqt tanlandi: ${nearestSlotLabel}.`);
+  };
+
+  /*
   const bookingRules = getBookingRulesMessage(language);
   const selectedDoctorMapUrl = getMapSearchUrl(getDoctorMapQuery(selectedDoctor ?? {}));
   const doctorInfoMapUrl = doctorInfoTarget ? getMapSearchUrl(getDoctorMapQuery(doctorInfoTarget)) : "";
@@ -513,66 +761,12 @@ const User = () => {
     setNotice(`Eng yaqin bo'sh vaqt tanlandi: ${nearestSlotLabel}.`);
   };
 
+  */
+
   return (
     <div className="dashboard-page">
       <Seo title={seoTitle} description={seoDescription} path="/user" noIndex />
-      <header className="dashboard-topbar">
-        <div className="container dashboard-topbar-inner">
-          <Link to="/" className="brand" onClick={() => setMenuOpen(false)}>
-            <span className="brand-mark">
-              <HeartPulseIcon />
-            </span>
-            <span>
-              Med<span className="brand-accent">Elite</span>
-            </span>
-          </Link>
-
-          <div className={`dashboard-menu ${menuOpen ? "dashboard-menu-open" : ""}`}>
-            <div className="dashboard-actions">
-              <LanguageSwitcher compact />
-              <ThemeToggle compact />
-              <Link
-                to="/ai-assistant"
-                className="button button-primary dashboard-ai-button"
-                onClick={() => setMenuOpen(false)}
-              >
-                <SparkIcon />
-                AI
-              </Link>
-              <Link to="/chat" className="button button-secondary" onClick={() => setMenuOpen(false)}>
-                Chat
-              </Link>
-              <Link to="/medical-records" className="button button-secondary" onClick={() => setMenuOpen(false)}>
-                EMR
-              </Link>
-              <Link to="/body-map" className="button button-secondary" onClick={() => setMenuOpen(false)}>
-                Tana Xaritasi
-              </Link>
-              <Link to="/telemedicine" className="button button-secondary" onClick={() => setMenuOpen(false)}>
-                Telemeditsina
-              </Link>
-              <Link to="/calculators" className="button button-secondary" onClick={() => setMenuOpen(false)}>
-                Kalkulyator
-              </Link>
-              <Link to="/emergency" className="button button-danger" onClick={() => setMenuOpen(false)}>
-                103 Yordam
-              </Link>
-              <button type="button" className="button button-ghost" onClick={() => void signOutUser()}>
-                Chiqish
-              </button>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            className="mobile-menu-button"
-            onClick={() => setMenuOpen((current) => !current)}
-            aria-label={menuOpen ? "Close menu" : "Open menu"}
-          >
-            {menuOpen ? <CloseIcon /> : <MenuIcon />}
-          </button>
-        </div>
-      </header>
+      <Navbar />
 
       <main className="container dashboard-content">
         <section className="dashboard-hero">
@@ -592,16 +786,16 @@ const User = () => {
 
         <section className="admin-kpi-grid">
           <article className="dashboard-mini-card">
-            <span>Topilgan doktorlar</span>
-            <strong>{filteredDoctors.length}</strong>
+            <span>{searchTarget === "doctors" ? "Topilgan doktorlar" : "Topilgan shifoxonalar"}</span>
+            <strong>{searchTarget === "doctors" ? filteredDoctors.length : filteredHospitals.length}</strong>
           </article>
           <article className="dashboard-mini-card">
             <span>Faol buyurtmalar</span>
-            <strong>{activeAppointments.length}</strong>
+            <strong>{activeAppointments.length + activeHospitalBookings.length}</strong>
           </article>
           <article className="dashboard-mini-card">
             <span>Tarix</span>
-            <strong>{historyAppointments.length}</strong>
+            <strong>{historyAppointments.length + historyHospitalBookings.length}</strong>
           </article>
           <article className="dashboard-mini-card">
             <span>Reytingli doktor</span>
@@ -632,8 +826,8 @@ const User = () => {
             <article className="preview-card preview-highlight doctor-list-panel">
               <div className="panel-heading">
                 <div>
-                  <span className="section-chip">Doktorlar ro'yxati</span>
-                  <h2>Doktorlar ro'yxati</h2>
+                  <span className="section-chip">Qidiruv natijalari</span>
+                  <h2>{searchTarget === "doctors" ? "Doktorlar ro'yxati" : "Shifoxonalar ro'yxati"}</h2>
                 </div>
               </div>
 
@@ -645,7 +839,7 @@ const User = () => {
                     <input
                       value={searchTerm}
                       onChange={(event) => setSearchTerm(event.target.value)}
-                      placeholder="Doktor, yo'nalish yoki klinika"
+                      placeholder={searchTarget === "doctors" ? "Doktor, yo'nalish yoki klinika" : "Shifoxona, manzil yoki doktor"}
                     />
                   </div>
                 </label>
@@ -665,20 +859,158 @@ const User = () => {
                 </label>
               </div>
 
+              <div className="result-mode-toolbar">
+                <div className="result-mode-tabs" role="group" aria-label="Qidiruv turi">
+                  <button
+                    type="button"
+                    className={`category-pill ${searchTarget === "doctors" ? "category-pill-active" : ""}`}
+                    onClick={() => setSearchTarget("doctors")}
+                  >
+                    <StethoscopeIcon />
+                    Doktorlar
+                  </button>
+                  <button
+                    type="button"
+                    className={`category-pill ${searchTarget === "hospitals" ? "category-pill-active" : ""}`}
+                    onClick={() => setSearchTarget("hospitals")}
+                  >
+                    <HeartPulseIcon />
+                    Shifoxonalar
+                  </button>
+                </div>
+                <label className="field result-sort-field">
+                  <span>Narx bo'yicha</span>
+                  <select value={priceSort} onChange={(event) => setPriceSort(event.target.value as PriceSort)}>
+                    <option value="none">Standart</option>
+                    <option value="price-asc">Arzondan qimmatga</option>
+                    <option value="price-desc">Qimmatdan arzonga</option>
+                  </select>
+                </label>
+                <label className="field result-sort-field">
+                  <span>Reyting bo'yicha</span>
+                  <select value={ratingSort} onChange={(event) => setRatingSort(event.target.value as RatingSort)}>
+                    <option value="rating-desc">Yuqoridan pastga</option>
+                    <option value="rating-asc">Pastdan yuqoriga</option>
+                    <option value="none">Reytingsiz</option>
+                  </select>
+                </label>
+                {searchTarget === "hospitals" && (
+                  <label className="field result-sort-field">
+                    <span>Xona turi</span>
+                    <select value={roomLuxuryFilter} onChange={(event) => setRoomLuxuryFilter(event.target.value as RoomLuxuryFilter)}>
+                      <option value="all">Barcha xonalar</option>
+                      <option value="lux">Faqat lux</option>
+                      <option value="standard">Oddiy xonalar</option>
+                    </select>
+                  </label>
+                )}
+              </div>
+
               <div className="doctor-list-toolbar">
                 <span className="badge">
                   <StethoscopeIcon />
-                  {filteredDoctors.length} ta doktor
+                  {searchTarget === "doctors" ? `${filteredDoctors.length} ta doktor` : `${filteredHospitals.length} ta shifoxona`}
                 </span>
                 <p className="doctor-list-note">
-                  {selectedDoctor
+                  {searchTarget === "hospitals"
+                    ? "Xona narxi, turi, joylar soni va shifoxonadagi doktorlarni solishtiring."
+                    : selectedDoctor
                     ? `${selectedDoctor.name} tanlangan. Kartalarni skroll qilib tezda solishtiring.`
                     : "Kartalardan birini tanlang va bron formasi avtomatik yangilanadi."}
                 </p>
               </div>
 
               <div className="doctor-scroll-grid">
-                {filteredDoctors.map((doctor) => {
+                {searchTarget === "hospitals" && filteredHospitals.map((hospital) => {
+                  const visibleRooms = hospital.rooms.filter(
+                    (room) => roomLuxuryFilter === "all" || (roomLuxuryFilter === "lux" ? room.isLuxury : !room.isLuxury),
+                  );
+                  const minimumPrice = visibleRooms.length
+                    ? Math.min(...visibleRooms.map((room) => getNumericPrice(room.price)))
+                    : 0;
+
+                  return (
+                    <article key={hospital.id} className="doctor-select-card hospital-select-card">
+                      <div className="doctor-select-head">
+                        <div className="doctor-select-identity">
+                          <div className="doctor-card-avatar">
+                            <HeartPulseIcon />
+                          </div>
+                          <div className="doctor-select-title">
+                            <div className="doctor-name-scroll">
+                              <strong>{hospital.name}</strong>
+                            </div>
+                            <span>{translateRegion(hospital.region)}</span>
+                          </div>
+                        </div>
+                        <span className="badge doctor-status-badge doctor-status-online">Tasdiqlangan</span>
+                      </div>
+
+                      <div className="doctor-select-summary">
+                        <div className="doctor-select-summary-card">
+                          <span>Manzil</span>
+                          <strong>{hospital.address}</strong>
+                        </div>
+                        <div className="doctor-select-summary-card">
+                          <span>Eng arzon xona</span>
+                          <strong>{minimumPrice ? `${new Intl.NumberFormat("uz-UZ").format(minimumPrice)} so'm/kun` : "Narx kiritilmagan"}</strong>
+                        </div>
+                      </div>
+
+                      <div className="doctor-select-bio">
+                        <span>Shifoxona haqida</span>
+                        <p>{hospital.description}</p>
+                      </div>
+
+                      <div className="doctor-select-metrics">
+                        <div>
+                          <span>Reyting</span>
+                          <strong>{hospital.rating.toFixed(1)}</strong>
+                        </div>
+                        <div>
+                          <span>Xonalar</span>
+                          <strong>{visibleRooms.length}</strong>
+                        </div>
+                        <div>
+                          <span>Doktorlar</span>
+                          <strong>{hospital.doctorNames.length}</strong>
+                        </div>
+                      </div>
+
+                      <div className="hospital-room-list">
+                        {visibleRooms.slice(0, 3).map((room) => (
+                          <div key={room.id} className="hospital-room-row">
+                            <div>
+                              <strong>{room.name}</strong>
+                              <span>{room.isLuxury ? "Lux xona" : "Oddiy xona"} | {getRoomCapacity(room.capacity)} ta joy</span>
+                            </div>
+                            <strong>{room.price}/kun</strong>
+                            {room.description && <p>{room.description}</p>}
+                          </div>
+                        ))}
+                        {visibleRooms.length === 0 && <p className="doctor-form-warning">Bu filterga mos xona yo'q.</p>}
+                      </div>
+
+                      {hospital.doctorNames.length > 0 && (
+                        <p className="doctor-select-recommendation">Doktorlar: {hospital.doctorNames.join(", ")}</p>
+                      )}
+
+                      <div className="doctor-select-actions">
+                        <button
+                          type="button"
+                          className="button button-primary"
+                          onClick={() => openHospitalBookingModal(hospital)}
+                          disabled={visibleRooms.length === 0}
+                        >
+                          Xona bron qilish
+                          <CalendarIcon />
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+
+                {searchTarget === "doctors" && filteredDoctors.map((doctor) => {
                   const isSelected = selectedDoctor?.id === doctor.id;
                   const bookingRecommendation = getDoctorBookingRecommendation(doctor, appointments);
 
@@ -780,10 +1112,16 @@ const User = () => {
                   );
                 })}
 
-                {filteredDoctors.length === 0 && (
+                {searchTarget === "doctors" && filteredDoctors.length === 0 && (
                   <div className="empty-state doctor-empty-state">
                     <h3>Doktor topilmadi</h3>
                     <p>Qidiruv yoki hudud filterini o'zgartirib qayta urinib ko'ring.</p>
+                  </div>
+                )}
+                {searchTarget === "hospitals" && filteredHospitals.length === 0 && (
+                  <div className="empty-state doctor-empty-state">
+                    <h3>Shifoxona topilmadi</h3>
+                    <p>Qidiruv, hudud yoki xona turi filterini o'zgartirib qayta urinib ko'ring.</p>
                   </div>
                 )}
               </div>
@@ -792,12 +1130,17 @@ const User = () => {
             <article ref={bookingSectionRef} className="preview-card booking-card-anchor">
               <div className="panel-heading">
                 <div>
-                  <span className="section-chip">Buyurtma formasi</span>
-                  <h2>Buyurtma yaratish</h2>
+                  <span className="section-chip">{searchTarget === "doctors" ? "Buyurtma formasi" : "Xona bronlash"}</span>
+                  <h2>{searchTarget === "doctors" ? "Buyurtma yaratish" : "Shifoxona xonasini tanlang"}</h2>
                 </div>
               </div>
 
-              {selectedDoctor ? (
+              {searchTarget === "hospitals" ? (
+                <div className="empty-state">
+                  <h3>Shifoxona kartasidan boshlang</h3>
+                  <p>Xona turi, joy raqami va yotish kunlarini tanlash uchun kerakli shifoxonada “Xona bron qilish” tugmasini bosing.</p>
+                </div>
+              ) : selectedDoctor ? (
                 <form className="booking-form" onSubmit={handleBooking}>
                   <div className="booking-doctor-showcase">
                     <div className="doctor-card-avatar">
@@ -911,7 +1254,7 @@ const User = () => {
               )}
             </article>
 
-            <aside className="preview-column">
+            {searchTarget === "doctors" && <aside className="preview-column">
               <article className="preview-card preview-highlight">
                 <span className="badge badge-gold">
                   <SparkIcon />
@@ -945,7 +1288,7 @@ const User = () => {
                   </a>
                 )}
               </article>
-            </aside>
+            </aside>}
           </section>
         )}
 
@@ -1029,10 +1372,37 @@ const User = () => {
                   );
                 })}
 
-                {activeAppointments.length === 0 && (
+                {activeHospitalBookings.map((booking) => (
+                  <article key={booking.id} className="doctor-request-item">
+                    <div className="appointment-card-head">
+                      <div>
+                        <h3>{booking.hospitalName}</h3>
+                        <p>{booking.roomName} | {booking.placeNumber}-joy</p>
+                      </div>
+                      <span className="badge">{booking.status}</span>
+                    </div>
+                    <div className="appointment-meta-grid">
+                      <div>
+                        <CalendarIcon />
+                        <span>{booking.startDate} - {booking.endDate}</span>
+                      </div>
+                      <div>
+                        <ClockIcon />
+                        <span>{booking.days} kun</span>
+                      </div>
+                      <div>
+                        <LocationIcon />
+                        <span>{booking.roomPrice}/kun</span>
+                      </div>
+                    </div>
+                    {booking.notes && <p>{booking.notes}</p>}
+                  </article>
+                ))}
+
+                {activeAppointments.length + activeHospitalBookings.length === 0 && (
                   <div className="empty-state">
                     <h3>Faol buyurtma yo'q</h3>
-                    <p>Yangi buyurtma yaratganingizda shu yerda ko'rinadi.</p>
+                    <p>Doktor qabuliga yoki shifoxona xonasiga bron qilganingizda shu yerda ko'rinadi.</p>
                   </div>
                 )}
               </div>
@@ -1087,7 +1457,34 @@ const User = () => {
                   );
                 })}
 
-                {historyAppointments.length === 0 && (
+                {historyHospitalBookings.map((booking) => (
+                  <article key={booking.id} className="doctor-request-item">
+                    <div className="appointment-card-head">
+                      <div>
+                        <h3>{booking.hospitalName}</h3>
+                        <p>{booking.roomName} | {booking.placeNumber}-joy</p>
+                      </div>
+                      <span className="badge">{booking.status}</span>
+                    </div>
+                    <div className="appointment-meta-grid">
+                      <div>
+                        <CalendarIcon />
+                        <span>{booking.startDate} - {booking.endDate}</span>
+                      </div>
+                      <div>
+                        <ClockIcon />
+                        <span>{booking.days} kun</span>
+                      </div>
+                      <div>
+                        <LocationIcon />
+                        <span>{booking.roomPrice}/kun</span>
+                      </div>
+                    </div>
+                    {booking.notes && <p>{booking.notes}</p>}
+                  </article>
+                ))}
+
+                {historyAppointments.length + historyHospitalBookings.length === 0 && (
                   <div className="empty-state">
                     <h3>Tarix hali bo'sh</h3>
                     <p>Yakunlangan, bekor qilingan yoki rad etilgan buyurtmalar shu yerda ko'rinadi.</p>
@@ -1494,6 +1891,138 @@ const User = () => {
                 </button>
                 <button type="submit" className="button button-primary" disabled={isSubmitting}>
                   {isSubmitting ? "Yuborilmoqda..." : "Band qilish"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {hospitalBookingTarget && (
+        <div className="modal-backdrop" onClick={closeHospitalBookingModal} role="presentation">
+          <div
+            className="modal-card modal-card-wide"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="hospital-booking-title"
+          >
+            <div className="panel-heading">
+              <div>
+                <span className="section-chip">Xona bronlash</span>
+                <h2 id="hospital-booking-title">{hospitalBookingTarget.name}</h2>
+              </div>
+              <button type="button" className="icon-button" onClick={closeHospitalBookingModal} aria-label="Yopish">
+                <CloseIcon />
+              </button>
+            </div>
+
+            <form className="booking-form modal-scroll-area" onSubmit={handleHospitalBooking}>
+              <div className="booking-quick-actions">
+                <span className="doctor-slot-hint">{hospitalBookingTarget.address}</span>
+                <span className="doctor-slot-hint">{hospitalBookingTarget.phone}</span>
+              </div>
+
+              <div className="field-grid">
+                <label className="field field-full">
+                  <span>Xona</span>
+                  <select value={hospitalRoomId} onChange={(event) => setHospitalRoomId(event.target.value)} required>
+                    {hospitalTargetRooms.map((room) => (
+                      <option key={room.id} value={room.id}>
+                        {room.name} | {room.isLuxury ? "Lux" : "Oddiy"} | {room.price}/kun | {getRoomCapacity(room.capacity)} joy
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  <span>Yotish sanasi</span>
+                  <div className="field-box">
+                    <CalendarIcon />
+                    <input
+                      type="date"
+                      value={hospitalStartDate}
+                      min={getTodayInTashkent()}
+                      onChange={(event) => setHospitalStartDate(event.target.value)}
+                      required
+                    />
+                  </div>
+                </label>
+                <label className="field">
+                  <span>Kunlar soni</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={60}
+                    value={hospitalDays}
+                    onChange={(event) => setHospitalDays(Math.min(60, Math.max(1, Number(event.target.value) || 1)))}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>Joy raqami</span>
+                  <select
+                    value={hospitalPlaceNumber}
+                    onChange={(event) => setHospitalPlaceNumber(Number(event.target.value))}
+                    disabled={selectableHospitalPlaces.length === 0}
+                    required
+                  >
+                    {selectableHospitalPlaces.length > 0 ? selectableHospitalPlaces.map((placeNumber) => (
+                      <option key={placeNumber} value={placeNumber}>{placeNumber}-joy</option>
+                    )) : <option value="">Bo'sh joy qolmagan</option>}
+                  </select>
+                </label>
+                <label className="field">
+                  <span>Tanlangan davr</span>
+                  <div className="field-box">
+                    <ClockIcon />
+                    <output>{hospitalStartDate} - {addDaysToDate(hospitalStartDate, hospitalDays)}</output>
+                  </div>
+                </label>
+                <label className="field">
+                  <span>Ism</span>
+                  <div className="field-box">
+                    <UserGroupIcon />
+                    <input value={patientName} onChange={(event) => setPatientName(event.target.value)} required />
+                  </div>
+                </label>
+                <label className="field">
+                  <span>Telefon</span>
+                  <div className="field-box">
+                    <PhoneIcon />
+                    <input value={patientPhone} onChange={(event) => setPatientPhone(event.target.value)} required />
+                  </div>
+                </label>
+                <label className="field field-full">
+                  <span>Izoh</span>
+                  <textarea
+                    rows={3}
+                    value={hospitalNotes}
+                    onChange={(event) => setHospitalNotes(event.target.value)}
+                    placeholder="Holatingiz yoki qo'shimcha ehtiyojingizni yozing"
+                  />
+                </label>
+              </div>
+
+              <div className="appointment-review-banner">
+                <strong>{selectedHospitalRoom ? `${selectedHospitalRoom.price}/kun` : "Xona tanlanmagan"}</strong>
+                <p>
+                  {selectableHospitalPlaces.length > 0
+                    ? `${selectableHospitalPlaces.length} ta bo'sh joy bor. Tanlangan kunlar va joy qayta bron qilinmaydi.`
+                    : "Tanlangan xona va kunlarda bo'sh joy yo'q. Xona, sana yoki kunlarni o'zgartiring."}
+                </p>
+              </div>
+
+              <div className="modal-actions">
+                <button type="button" className="button button-ghost" onClick={closeHospitalBookingModal}>
+                  Bekor qilish
+                </button>
+                <button
+                  type="submit"
+                  className="button button-primary"
+                  disabled={isSubmitting || !selectedHospitalRoom || selectableHospitalPlaces.length === 0}
+                >
+                  {isSubmitting ? "Yuborilmoqda..." : "Xona bron qilish"}
+                  <CheckIcon />
                 </button>
               </div>
             </form>

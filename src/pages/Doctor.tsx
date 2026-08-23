@@ -1,18 +1,15 @@
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import LanguageSwitcher from "../components/LanguageSwitcher";
+import Navbar from "../components/Navbar";
 import Seo from "../components/Seo";
-import ThemeToggle from "../components/ThemeToggle";
 import {
   ArrowRightIcon,
   CalendarIcon,
   CheckIcon,
   ClockIcon,
   CloseIcon,
-  HeartPulseIcon,
   LocationIcon,
-  MenuIcon,
   PhoneIcon,
   ShieldIcon,
   SparkIcon,
@@ -97,7 +94,6 @@ const Doctor = () => {
     updateDoctorAppointmentStatus,
     updateDoctorProfile,
   } = useAppContext();
-  const [menuOpen, setMenuOpen] = useState(false);
   const [doctorForm, setDoctorForm] = useState<DoctorProfileInput>(emptyDoctorForm);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -321,49 +317,7 @@ const Doctor = () => {
   return (
     <div className="dashboard-page doctor-page">
       <Seo title={seoTitle} description={seoDescription} path="/doctor" noIndex />
-      <header className="dashboard-topbar">
-        <div className="container dashboard-topbar-inner">
-          <Link to="/" className="brand" onClick={() => setMenuOpen(false)}>
-            <span className="brand-mark">
-              <HeartPulseIcon />
-            </span>
-            <span>
-              Med<span className="brand-accent">Elite</span>
-            </span>
-          </Link>
-
-          <div className={`dashboard-menu ${menuOpen ? "dashboard-menu-open" : ""}`}>
-            <div className="dashboard-actions">
-              <LanguageSwitcher compact />
-              <ThemeToggle compact />
-              <Link to="/chat" className="button button-primary" onClick={() => setMenuOpen(false)}>
-                Bemor Chati
-              </Link>
-              <Link to="/telemedicine" className="button button-secondary" onClick={() => setMenuOpen(false)}>
-                Telemeditsina
-              </Link>
-              <Link to="/medical-records" className="button button-secondary" onClick={() => setMenuOpen(false)}>
-                EMR
-              </Link>
-              <Link to="/emergency" className="button button-danger" onClick={() => setMenuOpen(false)}>
-                103 Yordam
-              </Link>
-              <button type="button" className="button button-ghost" onClick={() => void signOutUser()}>
-                Chiqish
-              </button>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            className="mobile-menu-button"
-            onClick={() => setMenuOpen((current) => !current)}
-            aria-label={menuOpen ? "Close menu" : "Open menu"}
-          >
-            {menuOpen ? <CloseIcon /> : <MenuIcon />}
-          </button>
-        </div>
-      </header>
+      <Navbar brandSuffix="Doctor" />
 
       <main className="container dashboard-content">
         <section className="dashboard-hero doctor-hero">

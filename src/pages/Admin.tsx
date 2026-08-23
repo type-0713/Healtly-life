@@ -1,14 +1,13 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import LanguageSwitcher from "../components/LanguageSwitcher";
+import Navbar from "../components/Navbar";
 import Seo from "../components/Seo";
-import ThemeToggle from "../components/ThemeToggle";
 import {
   CheckIcon,
   CloseIcon,
   ClockIcon,
-  HeartPulseIcon,
-  MenuIcon,
+  LocationIcon,
+  PhoneIcon,
+  PillIcon,
   ShieldIcon,
   SparkIcon,
   StethoscopeIcon,
@@ -28,11 +27,15 @@ const Admin = () => {
   const {
     appointments,
     doctorRoster,
+    hospitals,
+    pharmacies,
     removeDoctor,
+    removeHospital,
+    removePharmacy,
+    setHospitalApproval,
+    setPharmacyApproval,
     setDoctorApproval,
-    signOutUser,
   } = useAppContext();
-  const [menuOpen, setMenuOpen] = useState(false);
   const [busyKey, setBusyKey] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -51,14 +54,21 @@ const Admin = () => {
     () => doctorRoster.filter((doctor) => doctor.approvalStatus === "rejected"),
     [doctorRoster],
   );
-
-  const totalRevenue = useMemo(
-    () =>
-      approvedDoctors.reduce(
-        (sum, doctor) => sum + calculateDoctorPerformance(doctor, appointments).totalEarnings,
-        0,
-      ),
-    [appointments, approvedDoctors],
+  const pendingPharmacies = useMemo(
+    () => pharmacies.filter((pharmacy) => pharmacy.approvalStatus === "pending"),
+    [pharmacies],
+  );
+  const approvedPharmacies = useMemo(
+    () => pharmacies.filter((pharmacy) => pharmacy.approvalStatus === "approved"),
+    [pharmacies],
+  );
+  const pendingHospitals = useMemo(
+    () => hospitals.filter((hospital) => hospital.approvalStatus === "pending"),
+    [hospitals],
+  );
+  const approvedHospitals = useMemo(
+    () => hospitals.filter((hospital) => hospital.approvalStatus === "approved"),
+    [hospitals],
   );
 
   const latestAppointments = useMemo(() => appointments.slice(0, 8), [appointments]);
@@ -95,52 +105,66 @@ const Admin = () => {
     }
   };
 
+  const handlePharmacyApproval = async (pharmacyId: string, status: "approved" | "rejected") => {
+    try {
+      setBusyKey(`${pharmacyId}-${status}`);
+      setNotice("");
+      setError("");
+      await setPharmacyApproval(pharmacyId, status);
+      setNotice(status === "approved" ? "Dorixona tasdiqlandi." : "Dorixona arizasi rad etildi.");
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : "Xatolik yuz berdi.");
+    } finally {
+      setBusyKey("");
+    }
+  };
+
+  const handleHospitalApproval = async (hospitalId: string, status: "approved" | "rejected") => {
+    try {
+      setBusyKey(`${hospitalId}-${status}`);
+      setNotice("");
+      setError("");
+      await setHospitalApproval(hospitalId, status);
+      setNotice(status === "approved" ? "Shifoxona tasdiqlandi." : "Shifoxona arizasi rad etildi.");
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : "Xatolik yuz berdi.");
+    } finally {
+      setBusyKey("");
+    }
+  };
+
+  const handleRemovePharmacy = async (pharmacyId: string) => {
+    try {
+      setBusyKey(`${pharmacyId}-remove`);
+      setNotice("");
+      setError("");
+      await removePharmacy(pharmacyId);
+      setNotice("Dorixona ro'yxatdan olib tashlandi.");
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : "Xatolik yuz berdi.");
+    } finally {
+      setBusyKey("");
+    }
+  };
+
+  const handleRemoveHospital = async (hospitalId: string) => {
+    try {
+      setBusyKey(`${hospitalId}-remove`);
+      setNotice("");
+      setError("");
+      await removeHospital(hospitalId);
+      setNotice("Shifoxona ro'yxatdan olib tashlandi.");
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : "Xatolik yuz berdi.");
+    } finally {
+      setBusyKey("");
+    }
+  };
+
   return (
     <div className="dashboard-page admin-page">
       <Seo title={seoTitle} description={seoDescription} path="/admin" noIndex />
-      <header className="dashboard-topbar">
-        <div className="container dashboard-topbar-inner">
-          <Link to="/" className="brand" onClick={() => setMenuOpen(false)}>
-            <span className="brand-mark">
-              <HeartPulseIcon />
-            </span>
-            <span>
-              Med<span className="brand-accent">Elite</span>
-            </span>
-          </Link>
-
-          <div className={`dashboard-menu ${menuOpen ? "dashboard-menu-open" : ""}`}>
-            <div className="dashboard-actions">
-              <LanguageSwitcher compact />
-              <ThemeToggle compact />
-              <Link to="/chat" className="button button-primary" onClick={() => setMenuOpen(false)}>
-                Realtime Chat
-              </Link>
-              <Link to="/medical-records" className="button button-secondary" onClick={() => setMenuOpen(false)}>
-                EMR
-              </Link>
-              <Link to="/telemedicine" className="button button-secondary" onClick={() => setMenuOpen(false)}>
-                Telemeditsina
-              </Link>
-              <Link to="/emergency" className="button button-danger" onClick={() => setMenuOpen(false)}>
-                103 Yordam
-              </Link>
-              <button type="button" className="button button-ghost" onClick={() => void signOutUser()}>
-                Chiqish
-              </button>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            className="mobile-menu-button"
-            onClick={() => setMenuOpen((current) => !current)}
-            aria-label={menuOpen ? "Close menu" : "Open menu"}
-          >
-            {menuOpen ? <CloseIcon /> : <MenuIcon />}
-          </button>
-        </div>
-      </header>
+      <Navbar brandSuffix="Admin" />
 
       <main className="container dashboard-content">
         <section className="dashboard-hero">
@@ -161,19 +185,19 @@ const Admin = () => {
         <section className="admin-kpi-grid">
           <article className="dashboard-mini-card">
             <span>Kutilayotgan arizalar</span>
-            <strong>{pendingDoctors.length}</strong>
+            <strong>{pendingDoctors.length + pendingPharmacies.length + pendingHospitals.length}</strong>
           </article>
           <article className="dashboard-mini-card">
             <span>Aktiv doktorlar</span>
             <strong>{approvedDoctors.length}</strong>
           </article>
           <article className="dashboard-mini-card">
-            <span>Jami buyurtma</span>
-            <strong>{appointments.length}</strong>
+            <span>Aktiv dorixona</span>
+            <strong>{approvedPharmacies.length}</strong>
           </article>
           <article className="dashboard-mini-card">
-            <span>Jami daromad</span>
-            <strong>{formatCurrency(totalRevenue)}</strong>
+            <span>Aktiv shifoxona</span>
+            <strong>{approvedHospitals.length}</strong>
           </article>
         </section>
 
@@ -254,6 +278,224 @@ const Admin = () => {
                 <div>
                   <CheckIcon />
                   <span>Hozircha rad etilgan doktor yo'q</span>
+                </div>
+              )}
+            </div>
+          </article>
+        </section>
+
+        <section className="admin-command-grid">
+          <article className="preview-card preview-highlight">
+            <div className="panel-heading">
+              <div>
+                <span className="section-chip">Dorixona arizalari</span>
+                <h2>Yangi dorixonalar</h2>
+              </div>
+              <span className="badge badge-gold">
+                <PillIcon />
+                {pendingPharmacies.length}
+              </span>
+            </div>
+
+            <div className="doctor-admin-list">
+              {pendingPharmacies.map((pharmacy) => (
+                <article key={pharmacy.id} className="doctor-admin-row doctor-admin-row-rich">
+                  <div className="doctor-admin-copy">
+                    <strong>{pharmacy.name}</strong>
+                    <span>{pharmacy.ownerEmail}</span>
+                    <span>{pharmacy.phone || "Telefon kiritilmagan"}</span>
+                    <span>{translateRegion(pharmacy.region)}</span>
+                    <p>{pharmacy.address || "Manzil kiritilmagan"}</p>
+                  </div>
+
+                  <div className="doctor-admin-actions">
+                    <button
+                      type="button"
+                      className="button button-primary"
+                      disabled={busyKey === `${pharmacy.id}-approved`}
+                      onClick={() => void handlePharmacyApproval(pharmacy.id, "approved")}
+                    >
+                      Ruxsat berish
+                    </button>
+                    <button
+                      type="button"
+                      className="button button-ghost"
+                      disabled={busyKey === `${pharmacy.id}-rejected`}
+                      onClick={() => void handlePharmacyApproval(pharmacy.id, "rejected")}
+                    >
+                      Rad etish
+                    </button>
+                  </div>
+                </article>
+              ))}
+
+              {pendingPharmacies.length === 0 && (
+                <div className="empty-state">
+                  <h3>Yangi dorixona arizasi yo'q</h3>
+                  <p>Dorixona sifatida ro'yxatdan o'tganlar shu yerda ko'rinadi.</p>
+                </div>
+              )}
+            </div>
+          </article>
+
+          <article className="preview-card preview-highlight">
+            <div className="panel-heading">
+              <div>
+                <span className="section-chip">Shifoxona arizalari</span>
+                <h2>Yangi shifoxonalar</h2>
+              </div>
+              <span className="badge badge-gold">
+                <ShieldIcon />
+                {pendingHospitals.length}
+              </span>
+            </div>
+
+            <div className="doctor-admin-list">
+              {pendingHospitals.map((hospital) => (
+                <article key={hospital.id} className="doctor-admin-row doctor-admin-row-rich">
+                  <div className="doctor-admin-copy">
+                    <strong>{hospital.name}</strong>
+                    <span>{hospital.ownerEmail}</span>
+                    <span>{hospital.phone || "Telefon kiritilmagan"}</span>
+                    <span>{translateRegion(hospital.region)}</span>
+                    <p>{hospital.address || "Manzil kiritilmagan"}</p>
+                  </div>
+
+                  <div className="doctor-admin-actions">
+                    <button
+                      type="button"
+                      className="button button-primary"
+                      disabled={busyKey === `${hospital.id}-approved`}
+                      onClick={() => void handleHospitalApproval(hospital.id, "approved")}
+                    >
+                      Ruxsat berish
+                    </button>
+                    <button
+                      type="button"
+                      className="button button-ghost"
+                      disabled={busyKey === `${hospital.id}-rejected`}
+                      onClick={() => void handleHospitalApproval(hospital.id, "rejected")}
+                    >
+                      Rad etish
+                    </button>
+                  </div>
+                </article>
+              ))}
+
+              {pendingHospitals.length === 0 && (
+                <div className="empty-state">
+                  <h3>Yangi shifoxona arizasi yo'q</h3>
+                  <p>Shifoxona sifatida ro'yxatdan o'tganlar shu yerda ko'rinadi.</p>
+                </div>
+              )}
+            </div>
+          </article>
+        </section>
+
+        <section className="admin-grid">
+          <article className="preview-card">
+            <div className="panel-heading">
+              <div>
+                <span className="section-chip">Tasdiqlangan dorixonalar</span>
+                <h2>Dorixonalar</h2>
+              </div>
+              <span className="badge">
+                <PillIcon />
+                {approvedPharmacies.length}
+              </span>
+            </div>
+            <div className="doctor-request-list">
+              {approvedPharmacies.map((pharmacy) => (
+                <article key={pharmacy.id} className="doctor-request-item">
+                  <div className="appointment-card-head">
+                    <div>
+                      <h3>{pharmacy.name}</h3>
+                      <p>{pharmacy.ownerEmail}</p>
+                    </div>
+                    <span className="badge">{pharmacy.profileCompleted ? "Profil tayyor" : "Profil kutilmoqda"}</span>
+                  </div>
+                  <div className="appointment-meta-grid">
+                    <div>
+                      <PhoneIcon />
+                      <span>{pharmacy.phone}</span>
+                    </div>
+                    <div>
+                      <LocationIcon />
+                      <span>{pharmacy.address}</span>
+                    </div>
+                    <div>
+                      <ShieldIcon />
+                      <span>{pharmacy.license}</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="button button-ghost"
+                    disabled={busyKey === `${pharmacy.id}-remove`}
+                    onClick={() => void handleRemovePharmacy(pharmacy.id)}
+                  >
+                    O'chirish
+                  </button>
+                </article>
+              ))}
+              {approvedPharmacies.length === 0 && (
+                <div className="empty-state">
+                  <h3>Tasdiqlangan dorixona yo'q</h3>
+                  <p>Ruxsat berilgan dorixonalar shu yerda boshqariladi.</p>
+                </div>
+              )}
+            </div>
+          </article>
+
+          <article className="preview-card">
+            <div className="panel-heading">
+              <div>
+                <span className="section-chip">Tasdiqlangan shifoxonalar</span>
+                <h2>Shifoxonalar</h2>
+              </div>
+              <span className="badge">
+                <ShieldIcon />
+                {approvedHospitals.length}
+              </span>
+            </div>
+            <div className="doctor-request-list">
+              {approvedHospitals.map((hospital) => (
+                <article key={hospital.id} className="doctor-request-item">
+                  <div className="appointment-card-head">
+                    <div>
+                      <h3>{hospital.name}</h3>
+                      <p>{hospital.ownerEmail}</p>
+                    </div>
+                    <span className="badge">{hospital.rooms.length} xona</span>
+                  </div>
+                  <div className="appointment-meta-grid">
+                    <div>
+                      <PhoneIcon />
+                      <span>{hospital.phone}</span>
+                    </div>
+                    <div>
+                      <LocationIcon />
+                      <span>{hospital.address}</span>
+                    </div>
+                    <div>
+                      <UserGroupIcon />
+                      <span>{hospital.doctorNames.length} doktor</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="button button-ghost"
+                    disabled={busyKey === `${hospital.id}-remove`}
+                    onClick={() => void handleRemoveHospital(hospital.id)}
+                  >
+                    O'chirish
+                  </button>
+                </article>
+              ))}
+              {approvedHospitals.length === 0 && (
+                <div className="empty-state">
+                  <h3>Tasdiqlangan shifoxona yo'q</h3>
+                  <p>Ruxsat berilgan shifoxonalar shu yerda boshqariladi.</p>
                 </div>
               )}
             </div>

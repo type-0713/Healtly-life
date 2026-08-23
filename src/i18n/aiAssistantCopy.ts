@@ -60,8 +60,8 @@ export const aiAssistantCopy: Record<
     distance: "Masofa",
     backHome: "Bosh sahifa",
     emptyState: "Savolingizni yozing yoki tez savollardan birini tanlang.",
-    aiPowered: "Gemini / GPT AI",
-    offlineMode: "Offline rejim (API kalit kerak)",
+    aiPowered: "Groq AI",
+    offlineMode: "Yordamchi rejim (AI xizmati ulanmagan)",
     modes: {
       symptoms: {
         label: "Simptom",
@@ -129,8 +129,8 @@ export const aiAssistantCopy: Record<
     distance: "Расстояние",
     backHome: "Главная",
     emptyState: "Задайте вопрос или выберите быстрый вариант.",
-    aiPowered: "Gemini / GPT AI",
-    offlineMode: "Офлайн режим (нужен API ключ)",
+    aiPowered: "Groq AI",
+    offlineMode: "Режим помощника (AI недоступен)",
     modes: {
       symptoms: {
         label: "Симптомы",
@@ -198,8 +198,8 @@ export const aiAssistantCopy: Record<
     distance: "Distance",
     backHome: "Home",
     emptyState: "Ask a question or pick a quick prompt.",
-    aiPowered: "Gemini / GPT AI",
-    offlineMode: "Offline mode (API key required)",
+    aiPowered: "Groq AI",
+    offlineMode: "Helper mode (AI service unavailable)",
     modes: {
       symptoms: {
         label: "Symptoms",

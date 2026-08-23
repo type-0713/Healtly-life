@@ -1,16 +1,14 @@
 import { useState, useRef, useEffect } from "react";
-import { Link } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
 import { useI18n } from "../context/I18nContext";
+import Navbar from "../components/Navbar";
 import Seo from "../components/Seo";
-import ThemeToggle from "../components/ThemeToggle";
-import LanguageSwitcher from "../components/LanguageSwitcher";
 import {
   ActivityIcon,
   CheckCircleIcon,
   DownloadIcon,
   FileTextIcon,
-  HeartPulseIcon,
+  PaperclipIcon,
   PillIcon,
   ShieldIcon,
   SparkIcon,
@@ -48,8 +46,19 @@ type LabReport = {
   summary: string;
 };
 
+type UploadedMedicalFile = {
+  id: string;
+  name: string;
+  size: number;
+  uploadedAt: string;
+  dataUrl: string;
+};
+
 const VITAL_STORAGE_KEY = "medelite_user_vitals";
 const PRESCRIPTION_STORAGE_KEY = "medelite_user_prescriptions";
+const LAB_STORAGE_KEY = "medelite_user_labs";
+const MEDICAL_FILE_STORAGE_KEY = "medelite_user_pdf_files";
+const MAX_PDF_SIZE = 3 * 1024 * 1024;
 
 const initialVitals: VitalEntry[] = [
   { id: "v1", type: "Qon bosimi", value: "120/80", unit: "mmHg", status: "normal", date: "2026-07-30 09:15" },
@@ -88,12 +97,23 @@ const MedicalRecords = () => {
   const { language } = useI18n();
   const { profile } = useAppContext();
   const printRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [activeTab, setActiveTab] = useState<"vitals" | "prescriptions" | "labs">("vitals");
+  const [activeTab, setActiveTab] = useState<"vitals" | "prescriptions" | "labs" | "files">("vitals");
   const [showAddVitalModal, setShowAddVitalModal] = useState(false);
   const [showAddPrescModal, setShowAddPrescModal] = useState(false);
+  const [showAddLabModal, setShowAddLabModal] = useState(false);
   const [newMedName, setNewMedName] = useState("");
   const [newDocName, setNewDocName] = useState("");
+  const [newDosage, setNewDosage] = useState("1 tabletka");
+  const [newFrequency, setNewFrequency] = useState("Kuniga 1 mahal");
+  const [newDuration, setNewDuration] = useState("14 kun");
+  const [newPrescriptionNotes, setNewPrescriptionNotes] = useState("");
+  const [newLabTitle, setNewLabTitle] = useState("");
+  const [newLabFacility, setNewLabFacility] = useState("");
+  const [newLabStatus, setNewLabStatus] = useState("Natija kutilmoqda");
+  const [newLabSummary, setNewLabSummary] = useState("");
+  const [fileError, setFileError] = useState("");
 
   const [vitals, setVitals] = useState<VitalEntry[]>(() => {
     try {
@@ -141,6 +161,19 @@ const MedicalRecords = () => {
     try { localStorage.setItem(PRESCRIPTION_STORAGE_KEY, JSON.stringify(prescriptions)); } catch { /* quota */ }
   }, [prescriptions]);
 
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedMedicalFile[]>(() => {
+    try {
+      const saved = localStorage.getItem(MEDICAL_FILE_STORAGE_KEY);
+      return saved ? (JSON.parse(saved) as UploadedMedicalFile[]) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem(MEDICAL_FILE_STORAGE_KEY, JSON.stringify(uploadedFiles)); } catch { /* quota */ }
+  }, [uploadedFiles]);
+
   const handleAddPrescription = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMedName.trim()) return;
@@ -149,19 +182,86 @@ const MedicalRecords = () => {
       doctorName: newDocName.trim() || "Shaxsiy shifokor",
       specialty: "Umumiy amaliyot",
       medication: newMedName.trim(),
-      dosage: "1 tabletka",
-      frequency: "Kuniga 1-2 mahal",
-      duration: "14 kun",
+      dosage: newDosage.trim() || "Kiritilmagan",
+      frequency: newFrequency.trim() || "Kiritilmagan",
+      duration: newDuration.trim() || "Kiritilmagan",
       date: new Date().toISOString().slice(0, 10),
-      notes: "Bemor tomonidan kiritilgan dori retsepti.",
+      notes: newPrescriptionNotes.trim() || "Bemor tomonidan kiritilgan ma'lumot.",
     };
     setPrescriptions((prev) => [item, ...prev]);
     setNewMedName("");
     setNewDocName("");
+    setNewDosage("1 tabletka");
+    setNewFrequency("Kuniga 1 mahal");
+    setNewDuration("14 kun");
+    setNewPrescriptionNotes("");
     setShowAddPrescModal(false);
   };
 
-  const [labs] = useState<LabReport[]>([
+  const handlePdfUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    setFileError("");
+
+    if (!file) {
+      return;
+    }
+
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      setFileError("Faqat PDF fayl yuklash mumkin.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > MAX_PDF_SIZE) {
+      setFileError("PDF hajmi 3MB dan oshmasligi kerak.");
+      event.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = typeof reader.result === "string" ? reader.result : "";
+
+      if (!dataUrl) {
+        setFileError("PDF faylni o'qishda xatolik yuz berdi.");
+        return;
+      }
+
+      setUploadedFiles((current) => [
+        {
+          id: `file_${Date.now()}`,
+          name: file.name,
+          size: file.size,
+          uploadedAt: new Date().toISOString(),
+          dataUrl,
+        },
+        ...current,
+      ]);
+      event.target.value = "";
+    };
+    reader.onerror = () => {
+      setFileError("PDF faylni o'qishda xatolik yuz berdi.");
+      event.target.value = "";
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const downloadUploadedPdf = (file: UploadedMedicalFile) => {
+    const link = document.createElement("a");
+    link.href = file.dataUrl;
+    link.download = file.name;
+    link.click();
+  };
+
+  const removeUploadedPdf = (fileId: string) => {
+    setUploadedFiles((current) => current.filter((file) => file.id !== fileId));
+  };
+
+  const [labs, setLabs] = useState<LabReport[]>(() => {
+    try {
+      const saved = localStorage.getItem(LAB_STORAGE_KEY);
+      if (saved) return JSON.parse(saved) as LabReport[];
+      return [
     {
       id: "l1",
       title: "Umumiy Qon Tahlili (CBC)",
@@ -178,9 +278,39 @@ const MedicalRecords = () => {
       status: "Normada",
       summary: "Sinusli ritm 72 bpm. Patologik o'zgarishlar aniqlanmadi.",
     },
-  ]);
+      ];
+    } catch {
+      return [];
+    }
+  });
 
   // ── Real PDF download using browser print ──
+  useEffect(() => {
+    try { localStorage.setItem(LAB_STORAGE_KEY, JSON.stringify(labs)); } catch { /* quota */ }
+  }, [labs]);
+
+  const handleAddLab = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!newLabTitle.trim() || !newLabSummary.trim()) return;
+
+    setLabs((current) => [
+      {
+        id: `lab_${Date.now()}`,
+        title: newLabTitle.trim(),
+        facility: newLabFacility.trim() || "Kiritilmagan",
+        date: new Date().toISOString().slice(0, 10),
+        status: newLabStatus.trim() || "Kiritilmagan",
+        summary: newLabSummary.trim(),
+      },
+      ...current,
+    ]);
+    setNewLabTitle("");
+    setNewLabFacility("");
+    setNewLabStatus("Natija kutilmoqda");
+    setNewLabSummary("");
+    setShowAddLabModal(false);
+  };
+
   const downloadAsPdf = (title: string, content: string) => {
     const w = window.open("", "_blank");
     if (!w) return;
@@ -297,6 +427,10 @@ ${content}
       tabVitals: "Vitals",
       tabPrescriptions: "Retseptlar",
       tabLabs: "Tahlillar",
+      tabFiles: "PDF fayllar",
+      uploadPdf: "PDF biriktirish",
+      uploadedFilesTitle: "Yuklangan PDF fayllar",
+      emptyFiles: "Hali PDF yuklanmagan. Tahlil, retsept yoki eski tibbiy kartangizni biriktiring.",
       addVitalBtn: "Ko'rsatkich kiritish",
       downloadReport: "To'liq PDF yuklab olish",
       patientInfo: "Bemor profili",
@@ -324,6 +458,10 @@ ${content}
       tabVitals: "Витальные",
       tabPrescriptions: "Рецепты",
       tabLabs: "Анализы",
+      tabFiles: "PDF",
+      uploadPdf: "PDF yuklash",
+      uploadedFilesTitle: "Yuklangan PDF fayllar",
+      emptyFiles: "Hali PDF yuklanmagan.",
       addVitalBtn: "Добавить показатель",
       downloadReport: "Скачать полный PDF",
       patientInfo: "Профиль пациента",
@@ -351,6 +489,10 @@ ${content}
       tabVitals: "Vitals",
       tabPrescriptions: "Prescriptions",
       tabLabs: "Lab Reports",
+      tabFiles: "PDF files",
+      uploadPdf: "Attach PDF",
+      uploadedFilesTitle: "Uploaded PDF files",
+      emptyFiles: "No PDF has been uploaded yet.",
       addVitalBtn: "Add Vital",
       downloadReport: "Download Full PDF",
       patientInfo: "Patient Profile",
@@ -380,19 +522,7 @@ ${content}
       <div className="site-orb site-orb-one" />
       <div className="site-orb site-orb-two" />
 
-      <header className="topbar">
-        <div className="container topbar-inner">
-          <Link to="/" className="brand">
-            <span className="brand-mark"><HeartPulseIcon /></span>
-            <span>Med<span className="brand-accent">Elite</span> <span className="chat-brand-label">EMR</span></span>
-          </Link>
-          <div className="nav-actions">
-            <LanguageSwitcher compact />
-            <ThemeToggle compact />
-            <Link to="/user" className="button button-ghost button-small">{copy.backHome}</Link>
-          </div>
-        </div>
-      </header>
+      <Navbar brandSuffix="EMR" />
 
       <main className="container section-block">
         {/* Hero Banner */}
@@ -410,6 +540,16 @@ ${content}
           </div>
 
           <div className="emr-hero-actions">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/pdf,.pdf"
+              className="visually-hidden-file"
+              onChange={handlePdfUpload}
+            />
+            <button type="button" onClick={() => fileInputRef.current?.click()} className="button button-secondary">
+              <PaperclipIcon />{copy.uploadPdf}
+            </button>
             <button type="button" onClick={() => setShowAddVitalModal(true)} className="button button-primary">
               <ActivityIcon />{copy.addVitalBtn}
             </button>
@@ -517,6 +657,43 @@ ${content}
                     className="hero-search-input"
                   />
                 </label>
+                <label className="field">
+                  <span>Dozasi</span>
+                  <input
+                    type="text"
+                    value={newDosage}
+                    onChange={(e) => setNewDosage(e.target.value)}
+                    className="hero-search-input"
+                  />
+                </label>
+                <label className="field">
+                  <span>Qabul tartibi</span>
+                  <input
+                    type="text"
+                    value={newFrequency}
+                    onChange={(e) => setNewFrequency(e.target.value)}
+                    className="hero-search-input"
+                  />
+                </label>
+                <label className="field">
+                  <span>Davomiyligi</span>
+                  <input
+                    type="text"
+                    value={newDuration}
+                    onChange={(e) => setNewDuration(e.target.value)}
+                    className="hero-search-input"
+                  />
+                </label>
+                <label className="field">
+                  <span>Izoh</span>
+                  <textarea
+                    rows={3}
+                    value={newPrescriptionNotes}
+                    onChange={(e) => setNewPrescriptionNotes(e.target.value)}
+                    className="hero-search-input"
+                    placeholder="Qo'shimcha ko'rsatma"
+                  />
+                </label>
                 <div className="modal-actions-row">
                   <button type="button" onClick={() => setShowAddPrescModal(false)} className="button button-ghost">
                     {copy.cancelBtn}
@@ -524,6 +701,41 @@ ${content}
                   <button type="submit" className="button button-primary">
                     <CheckCircleIcon />{copy.saveBtn}
                   </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {showAddLabModal && (
+          <div className="modal-backdrop" onClick={() => setShowAddLabModal(false)}>
+            <div className="modal-card glass-card" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-card-head">
+                <h3>Yangi tahlil kiritish</h3>
+                <button type="button" className="modal-close-btn" onClick={() => setShowAddLabModal(false)}>
+                  <CloseIcon />
+                </button>
+              </div>
+              <form onSubmit={handleAddLab} className="vital-form-stack">
+                <label className="field">
+                  <span>Tahlil nomi</span>
+                  <input className="hero-search-input" value={newLabTitle} onChange={(e) => setNewLabTitle(e.target.value)} required />
+                </label>
+                <label className="field">
+                  <span>Laboratoriya yoki klinika</span>
+                  <input className="hero-search-input" value={newLabFacility} onChange={(e) => setNewLabFacility(e.target.value)} />
+                </label>
+                <label className="field">
+                  <span>Holat</span>
+                  <input className="hero-search-input" value={newLabStatus} onChange={(e) => setNewLabStatus(e.target.value)} />
+                </label>
+                <label className="field">
+                  <span>Xulosa yoki natija</span>
+                  <textarea className="hero-search-input" rows={4} value={newLabSummary} onChange={(e) => setNewLabSummary(e.target.value)} required />
+                </label>
+                <div className="modal-actions-row">
+                  <button type="button" onClick={() => setShowAddLabModal(false)} className="button button-ghost">{copy.cancelBtn}</button>
+                  <button type="submit" className="button button-primary"><CheckCircleIcon />{copy.saveBtn}</button>
                 </div>
               </form>
             </div>
@@ -541,7 +753,22 @@ ${content}
           <button type="button" className={`emr-tab-btn ${activeTab === "labs" ? "emr-tab-active" : ""}`} onClick={() => setActiveTab("labs")}>
             <FileTextIcon />{copy.tabLabs}
           </button>
+          <button type="button" className={`emr-tab-btn ${activeTab === "files" ? "emr-tab-active" : ""}`} onClick={() => setActiveTab("files")}>
+            <PaperclipIcon />{copy.tabFiles}
+          </button>
         </div>
+
+        {fileError && (
+          <section className="confirmation-banner confirmation-banner-error">
+            <div className="confirmation-icon confirmation-icon-error">
+              <CloseIcon />
+            </div>
+            <div>
+              <h2>PDF yuklashda xatolik</h2>
+              <p>{fileError}</p>
+            </div>
+          </section>
+        )}
 
         {/* ── Vitals Tab ── */}
         {activeTab === "vitals" && (
@@ -609,6 +836,11 @@ ${content}
         {/* ── Labs Tab ── */}
         {activeTab === "labs" && (
           <div className="emr-stack">
+            <div className="emr-add-presc-bar">
+              <button type="button" className="button button-primary button-small" onClick={() => setShowAddLabModal(true)}>
+                + Tahlil kiritish
+              </button>
+            </div>
             {labs.map((l) => (
               <article key={l.id} className="emr-lab-card glass-card">
                 <div className="lab-header">
@@ -624,6 +856,64 @@ ${content}
                 </button>
               </article>
             ))}
+            {labs.length === 0 && (
+              <div className="empty-state">
+                <h3>Tahlil hali kiritilmagan</h3>
+                <p>Tahlil natijasini qo'lda kiriting yoki PDF fayl sifatida biriktiring.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "files" && (
+          <div className="emr-stack">
+            <div className="emr-add-presc-bar">
+              <button type="button" className="button button-primary button-small" onClick={() => fileInputRef.current?.click()}>
+                <PaperclipIcon />
+                {copy.uploadPdf}
+              </button>
+            </div>
+
+            <article className="emr-lab-card glass-card">
+              <div className="lab-header">
+                <div>
+                  <h3>{copy.uploadedFilesTitle}</h3>
+                  <p className="lab-sub">PDF | maksimum 3MB</p>
+                </div>
+                <span className="badge">{uploadedFiles.length}</span>
+              </div>
+
+              {uploadedFiles.length > 0 ? (
+                <div className="uploaded-file-list">
+                  {uploadedFiles.map((file) => (
+                    <div key={file.id} className="uploaded-file-row">
+                      <div>
+                        <strong>{file.name}</strong>
+                        <span>
+                          {(file.size / 1024 / 1024).toFixed(2)} MB |{" "}
+                          {new Date(file.uploadedAt).toLocaleDateString("uz-UZ")}
+                        </span>
+                      </div>
+                      <div className="uploaded-file-actions">
+                        <button type="button" className="button button-secondary button-small" onClick={() => downloadUploadedPdf(file)}>
+                          <DownloadIcon />
+                          Yuklash
+                        </button>
+                        <button type="button" className="button button-ghost button-small" onClick={() => removeUploadedPdf(file.id)}>
+                          <CloseIcon />
+                          O'chirish
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <h3>PDF yo'q</h3>
+                  <p>{copy.emptyFiles}</p>
+                </div>
+              )}
+            </article>
           </div>
         )}
       </main>

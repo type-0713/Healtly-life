@@ -20,6 +20,7 @@ const InteractiveBodyMap = lazy(() => import("./pages/InteractiveBodyMap"));
 const TelemedicineRoom = lazy(() => import("./pages/TelemedicineRoom"));
 const HealthCalculators = lazy(() => import("./pages/HealthCalculators"));
 const Pharmacy = lazy(() => import("./pages/Pharmacy"));
+const ProviderDashboard = lazy(() => import("./pages/ProviderDashboard"));
 
 const loadingCopy = {
   uz: {
@@ -109,23 +110,129 @@ const DoctorGuard = ({ children }: { children: ReactElement }) => {
   return children;
 };
 
+const PharmacyGuard = ({ children }: { children: ReactElement }) => {
+  const { authLoading, isPharmacyAuthenticated } = useAppContext();
+
+  if (authLoading) {
+    return <LoadingScreen />;
+  }
+
+  if (!isPharmacyAuthenticated) {
+    return <Navigate to="/login?mode=pharmacy" replace />;
+  }
+
+  return children;
+};
+
+const HospitalGuard = ({ children }: { children: ReactElement }) => {
+  const { authLoading, isHospitalAuthenticated } = useAppContext();
+
+  if (authLoading) {
+    return <LoadingScreen />;
+  }
+
+  if (!isHospitalAuthenticated) {
+    return <Navigate to="/login?mode=hospital" replace />;
+  }
+
+  return children;
+};
+
+const LandingRoute = () => {
+  const {
+    authLoading,
+    isAdminAuthenticated,
+    isDoctorAuthenticated,
+    isHospitalAuthenticated,
+    isPharmacyAuthenticated,
+    isUserAuthenticated,
+  } = useAppContext();
+
+  if (authLoading) {
+    return <LoadingScreen />;
+  }
+
+  const dashboardPath = isAdminAuthenticated
+    ? "/admin"
+    : isDoctorAuthenticated
+      ? "/doctor"
+      : isPharmacyAuthenticated
+        ? "/pharmacy-dashboard"
+        : isHospitalAuthenticated
+          ? "/hospital-dashboard"
+          : isUserAuthenticated
+            ? "/user"
+            : null;
+
+  return dashboardPath ? <Navigate to={dashboardPath} replace /> : <Home />;
+};
+
 const App = () => {
   return (
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/ai-assistant" element={<AiAssistant />} />
+        <Route path="/" element={<LandingRoute />} />
+        <Route
+          path="/ai-assistant"
+          element={
+            <UserGuard>
+              <AiAssistant />
+            </UserGuard>
+          }
+        />
         <Route path="/services" element={<Services />} />
         <Route path="/about" element={<About />} />
         <Route path="/health-guide" element={<HealthGuide />} />
-        <Route path="/chat" element={<DoctorPatientChatPage />} />
-        <Route path="/medical-records" element={<MedicalRecords />} />
+        <Route
+          path="/chat"
+          element={
+            <UserGuard>
+              <DoctorPatientChatPage />
+            </UserGuard>
+          }
+        />
+        <Route
+          path="/medical-records"
+          element={
+            <UserGuard>
+              <MedicalRecords />
+            </UserGuard>
+          }
+        />
         <Route path="/emergency" element={<EmergencyPage />} />
-        <Route path="/body-map" element={<InteractiveBodyMap />} />
-        <Route path="/telemedicine" element={<TelemedicineRoom />} />
-        <Route path="/calculators" element={<HealthCalculators />} />
+        <Route
+          path="/body-map"
+          element={
+            <UserGuard>
+              <InteractiveBodyMap />
+            </UserGuard>
+          }
+        />
+        <Route
+          path="/telemedicine"
+          element={
+            <UserGuard>
+              <TelemedicineRoom />
+            </UserGuard>
+          }
+        />
+        <Route
+          path="/calculators"
+          element={
+            <UserGuard>
+              <HealthCalculators />
+            </UserGuard>
+          }
+        />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/pharmacy" element={<Pharmacy />} />
+        <Route
+          path="/pharmacy"
+          element={
+            <UserGuard>
+              <Pharmacy />
+            </UserGuard>
+          }
+        />
         <Route
           path="/user"
           element={
@@ -140,6 +247,22 @@ const App = () => {
             <DoctorGuard>
               <Doctor />
             </DoctorGuard>
+          }
+        />
+        <Route
+          path="/pharmacy-dashboard"
+          element={
+            <PharmacyGuard>
+              <ProviderDashboard role="pharmacy" />
+            </PharmacyGuard>
+          }
+        />
+        <Route
+          path="/hospital-dashboard"
+          element={
+            <HospitalGuard>
+              <ProviderDashboard role="hospital" />
+            </HospitalGuard>
           }
         />
         <Route

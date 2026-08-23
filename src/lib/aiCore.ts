@@ -1,3 +1,5 @@
+import { GROQ_CHAT_MODEL } from "./aiConfig";
+
 export type AiMode = "symptoms" | "doctor" | "drugs" | "risk" | "imaging";
 
 export type HistoryMessage = {
@@ -71,11 +73,11 @@ const buildGroqMessages = (
   userMessage: string,
 ): GroqMessage[] => {
   const sysMsg: GroqMessage = { role: "system" as GroqRole, content: systemPrompt };
-  const userMsg: GroqMessage = { role: "user" as GroqRole, content: userMessage };
-  const historyMsgs: GroqMessage[] = history.map(
+  const userMsg: GroqMessage = { role: "user" as GroqRole, content: userMessage.slice(0, 1000) };
+  const historyMsgs: GroqMessage[] = history.slice(-6).map(
     (msg): GroqMessage => ({
       role: (msg.role === "user" ? "user" : "assistant") as GroqRole,
-      content: msg.content,
+      content: String(msg.content).slice(0, 800),
     }),
   );
   return [sysMsg, ...historyMsgs, userMsg];
@@ -87,6 +89,7 @@ export const callGroqApi = async (
   history: HistoryMessage[],
   userMessage: string,
   retries = 2,
+  model = GROQ_CHAT_MODEL,
 ): Promise<string> => {
   const messages = buildGroqMessages(systemPrompt, history, userMessage);
 
@@ -99,7 +102,7 @@ export const callGroqApi = async (
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: "llama-3.1-8b-instant",
+          model,
           messages,
           temperature: 0.65,
           max_tokens: 900,
@@ -169,15 +172,8 @@ export const generateAiReply = async ({
   const systemPrompt = buildSystemPrompt(mode, doctors, language);
 
   if (groqKey) {
-    try {
-      const reply = await callGroqApi(groqKey, systemPrompt, history, userMessage);
-      return { reply, provider: "groq" };
-    } catch {
-      return {
-        reply: generateMedicalFallbackReply(userMessage, doctors, language),
-        provider: "fallback",
-      };
-    }
+    const reply = await callGroqApi(groqKey, systemPrompt, history, userMessage);
+    return { reply, provider: "groq" };
   }
 
   return {

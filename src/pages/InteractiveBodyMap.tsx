@@ -2,12 +2,10 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
 import { useI18n } from "../context/I18nContext";
+import Navbar from "../components/Navbar";
 import Seo from "../components/Seo";
-import ThemeToggle from "../components/ThemeToggle";
-import LanguageSwitcher from "../components/LanguageSwitcher";
 import {
   ArrowRightIcon,
-  HeartPulseIcon,
   LocationIcon,
   ShieldIcon,
   SparkIcon,
@@ -114,26 +112,7 @@ const InteractiveBodyMap = () => {
       <div className="site-orb site-orb-one" />
       <div className="site-orb site-orb-two" />
 
-      <header className="topbar">
-        <div className="container topbar-inner">
-          <Link to="/" className="brand">
-            <span className="brand-mark">
-              <HeartPulseIcon />
-            </span>
-            <span>
-              Med<span className="brand-accent">Elite</span> BodyMap
-            </span>
-          </Link>
-
-          <div className="nav-actions">
-            <LanguageSwitcher compact />
-            <ThemeToggle compact />
-            <Link to="/user" className="button button-ghost">
-              {copy.backHome}
-            </Link>
-          </div>
-        </div>
-      </header>
+      <Navbar brandSuffix="BodyMap" />
 
       <main className="container section-block">
         <div className="body-map-hero glass-card">

@@ -1,18 +1,15 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import LanguageSwitcher from "../components/LanguageSwitcher";
+import { Link } from "react-router-dom";
+import Navbar from "../components/Navbar";
 import Seo, { SITE_URL } from "../components/Seo";
-import ThemeToggle from "../components/ThemeToggle";
 import EmergencyCallButton from "../components/EmergencyCallButton";
 import {
   ArrowRightIcon,
   CalendarIcon,
   ChartIcon,
   CheckIcon,
-  CloseIcon,
   HeartPulseIcon,
   LocationIcon,
-  MenuIcon,
   SearchIcon,
   ShieldIcon,
   SparkIcon,
@@ -30,13 +27,10 @@ import { findNearestAvailableDoctorSlot, getBookingRulesMessage, getTodayInTashk
 const Home = () => {
   const { language, format, translateRegion, translateSpecialty } = useI18n();
   const copy = homeCopy[language];
-  const navigate = useNavigate();
-  const { appointments, doctors, isAdminAuthenticated, isDoctorAuthenticated, isUserAuthenticated } =
-    useAppContext();
+  const { appointments, doctors } = useAppContext();
   const [searchTerm, setSearchTerm] = useState("");
   const [locationTerm, setLocationTerm] = useState("");
   const [regionFilter, setRegionFilter] = useState(ALL_REGIONS_OPTION);
-  const [menuOpen, setMenuOpen] = useState(false);
   const cursorFollowerRef = useRef<HTMLDivElement>(null);
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const deferredLocationTerm = useDeferredValue(locationTerm);
@@ -208,8 +202,6 @@ const Home = () => {
     [faqs, language, seoDescription],
   );
 
-  const closeMenu = () => setMenuOpen(false);
-  const menuLabel = menuOpen ? copy.closeMenu : copy.openMenu;
   const formatDoctorSlotLabel = (date: string, time: string) =>
     date === getTodayInTashkent() ? time : `${date} | ${time}`;
   const buildDoctorBookingTarget = (doctor: (typeof doctors)[number] | undefined) => {
@@ -299,26 +291,6 @@ const Home = () => {
     language === "ru" ? "Единый стиль доверия" : language === "en" ? "Unified trust language" : "Yagona ishonch uslubi",
   ];
 
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    if (isAdminAuthenticated) {
-      navigate("/admin");
-      return;
-    }
-
-    if (isDoctorAuthenticated) {
-      navigate("/doctor");
-      return;
-    }
-
-    if (isUserAuthenticated) {
-      navigate("/user");
-    }
-  }, [isAdminAuthenticated, isDoctorAuthenticated, isUserAuthenticated, navigate]);
-
   const getDoctorAvailability = (doctor: (typeof doctors)[number]) => {
     const nearestSlot = findNearestAvailableDoctorSlot(doctor, appointments);
 
@@ -340,60 +312,7 @@ const Home = () => {
       <div className="site-orb site-orb-two" />
       <div ref={cursorFollowerRef} className="cursor-glow-follower" />
 
-      <header className="topbar">
-        <div className="container topbar-inner">
-          <Link to="/" className="brand" onClick={closeMenu}>
-            <span className="brand-mark">
-              <HeartPulseIcon />
-            </span>
-            <span>
-              Med<span className="brand-accent">Elite</span>
-            </span>
-          </Link>
-
-          {/* Mobile nav backdrop */}
-          {menuOpen && (
-            <div
-              className="nav-cluster-backdrop nav-cluster-backdrop-open"
-              onClick={closeMenu}
-              aria-hidden="true"
-            />
-          )}
-
-          <div className={`nav-cluster ${menuOpen ? "nav-cluster-open" : ""}`}>
-            <nav className="nav-links">
-              <Link to="/ai-assistant" onClick={closeMenu}>AI</Link>
-              <Link to="/chat" onClick={closeMenu}>Chat</Link>
-              <Link to="/medical-records" onClick={closeMenu}>EMR</Link>
-              <Link to="/body-map" onClick={closeMenu}>Tana Xaritasi</Link>
-              <Link to="/telemedicine" onClick={closeMenu}>Telemeditsina</Link>
-              <Link to="/calculators" onClick={closeMenu}>Kalkulyator</Link>
-              <Link to="/pharmacy" onClick={closeMenu}>Dorixona</Link>
-              <Link to="/emergency" onClick={closeMenu}>103 Yordam</Link>
-            </nav>
-
-            <div className="nav-actions">
-              <LanguageSwitcher compact />
-              <ThemeToggle compact />
-              <Link to="/login" className="button button-ghost" onClick={closeMenu}>
-                {copy.enterAccount}
-              </Link>
-              <Link to="/user" className="button button-primary" onClick={closeMenu}>
-                {copy.bookNow}
-              </Link>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            className="mobile-menu-button"
-            onClick={() => setMenuOpen((current) => !current)}
-            aria-label={menuLabel}
-          >
-            {menuOpen ? <CloseIcon /> : <MenuIcon />}
-          </button>
-        </div>
-      </header>
+      <Navbar />
 
       <main>
         <section className="hero-section">

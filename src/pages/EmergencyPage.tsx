@@ -1,12 +1,9 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { useI18n } from "../context/I18nContext";
+import Navbar from "../components/Navbar";
 import Seo from "../components/Seo";
-import ThemeToggle from "../components/ThemeToggle";
-import LanguageSwitcher from "../components/LanguageSwitcher";
 import {
   AlertCircleIcon,
-  AmbulanceIcon,
   CheckCircleIcon,
   HeartPulseIcon,
   LocationIcon,
@@ -102,26 +99,7 @@ const EmergencyPage = () => {
       <div className="site-orb site-orb-one" />
       <div className="site-orb site-orb-two" />
 
-      <header className="topbar">
-        <div className="container topbar-inner">
-          <Link to="/" className="brand">
-            <span className="brand-mark red-accent">
-              <AmbulanceIcon />
-            </span>
-            <span>
-              Med<span className="brand-accent red-accent-text">Elite</span> 103
-            </span>
-          </Link>
-
-          <div className="nav-actions">
-            <LanguageSwitcher compact />
-            <ThemeToggle compact />
-            <Link to="/" className="button button-ghost">
-              {copy.backHome}
-            </Link>
-          </div>
-        </div>
-      </header>
+      <Navbar brandSuffix="103" />
 
       <main className="container section-block">
         {/* Emergency Hotline Header Card */}

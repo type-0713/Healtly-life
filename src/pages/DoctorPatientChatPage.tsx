@@ -2,15 +2,14 @@ import { useEffect, useState, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
 import { useI18n } from "../context/I18nContext";
+import Navbar from "../components/Navbar";
 import Seo from "../components/Seo";
-import ThemeToggle from "../components/ThemeToggle";
-import LanguageSwitcher from "../components/LanguageSwitcher";
 import {
   ChatIcon,
   CheckCircleIcon,
+  CloseIcon,
   HeartPulseIcon,
   MenuIcon,
-  CloseIcon,
   PhoneIcon,
   SendIcon,
   StethoscopeIcon,
@@ -32,7 +31,6 @@ const DoctorPatientChatPage = () => {
     doctors,
     currentDoctor,
     isDoctorAuthenticated,
-    isUserAuthenticated,
     localUserId,
     profile,
   } = useAppContext();
@@ -214,30 +212,7 @@ const DoctorPatientChatPage = () => {
       <div className="site-orb site-orb-one" />
       <div className="site-orb site-orb-two" />
 
-      <header className="topbar">
-        <div className="container topbar-inner">
-          <Link to="/" className="brand">
-            <span className="brand-mark">
-              <HeartPulseIcon />
-            </span>
-            <span>
-              Med<span className="brand-accent">Elite</span>
-              <span className="chat-brand-label"> Chat</span>
-            </span>
-          </Link>
-
-          <div className="nav-actions">
-            <LanguageSwitcher compact />
-            <ThemeToggle compact />
-            <Link
-              to={isDoctor ? "/doctor" : isUserAuthenticated ? "/user" : "/"}
-              className="button button-ghost button-small"
-            >
-              {copy.backHome}
-            </Link>
-          </div>
-        </div>
-      </header>
+      <Navbar brandSuffix="Chat" />
 
       <main className="container chat-page-main">
         <div className="chat-layout-card">

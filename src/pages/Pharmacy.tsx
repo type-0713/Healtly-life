@@ -1,204 +1,167 @@
-import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
-import { useI18n } from "../context/I18nContext";
+import { useMemo, useState } from "react";
+import Navbar from "../components/Navbar";
 import Seo from "../components/Seo";
-import ThemeToggle from "../components/ThemeToggle";
-import LanguageSwitcher from "../components/LanguageSwitcher";
 import {
+  CheckCircleIcon,
+  LocationIcon,
+  PaperclipIcon,
+  PhoneIcon,
   PillIcon,
   SearchIcon,
   ShieldIcon,
-  SparkIcon,
   StarIcon,
-  CheckCircleIcon,
-  PaperclipIcon,
+  UserGroupIcon,
 } from "../components/PremiumIcons";
-
-type Medicine = {
-  id: string;
-  name: string;
-  category: string;
-  price: number;
-  prescriptionRequired: boolean;
-  dosage: string;
-  manufacturer: string;
-  rating: number;
-  description: string;
-};
-
-const defaultMedicines: Medicine[] = [
-  {
-    id: "m1",
-    name: "Cardio-Mag 75mg",
-    category: "Yurak va qon tomir",
-    price: 42000,
-    prescriptionRequired: true,
-    dosage: "75 mg tabletka N30",
-    manufacturer: "Berlin-Chemie",
-    rating: 4.9,
-    description: "Yurak-qon tomir kasalliklarining oldini olish va tromb hosil bo'lish xavfini kamaytirish uchun.",
-  },
-  {
-    id: "m2",
-    name: "Vitamin D3 2000 IU Ultra",
-    category: "Vitaminlar va mineral",
-    price: 65000,
-    prescriptionRequired: false,
-    dosage: "2000 IU kapsula N60",
-    manufacturer: "Nordic Health",
-    rating: 4.8,
-    description: "Suyaklarni mustahkamlash, immunitetni oshirish va energiya balansi uchun yuqori dozali Vitamin D3.",
-  },
-  {
-    id: "m3",
-    name: "Ibuprofen Express 400mg",
-    category: "Og'riqsizlantiruvchi",
-    price: 28000,
-    prescriptionRequired: false,
-    dosage: "400 mg kapsula N20",
-    manufacturer: "Pharmstandard",
-    rating: 4.7,
-    description: "Bosh og'rig'i, tish og'rig'i va mushak og'riqlarida tez ta'sir etuvchi vosita.",
-  },
-  {
-    id: "m4",
-    name: "Amoksitsillin Forte 500mg",
-    category: "Antibiotiklar",
-    price: 35000,
-    prescriptionRequired: true,
-    dosage: "500 mg kapsula N16",
-    manufacturer: "Sandoz",
-    rating: 4.9,
-    description: "Keng qamrovli antibakterial vosita. Faqat shifokor retsepti bo'yicha qabul qilinadi.",
-  },
-  {
-    id: "m5",
-    name: "Omega-3 Fish Oil 1000mg",
-    category: "Vitaminlar va mineral",
-    price: 89000,
-    prescriptionRequired: false,
-    dosage: "1000 mg kapsula N90",
-    manufacturer: "Doppelherz",
-    rating: 4.9,
-    description: "Yurak, miya va ko'z salomatligini qo'llab-quvvatlovchi toza dengiz Omega-3 yog' kislotalari.",
-  },
-  {
-    id: "m6",
-    name: "Magne B6 Premium",
-    category: "Vitaminlar va mineral",
-    price: 54000,
-    prescriptionRequired: false,
-    dosage: "Tabletka N50",
-    manufacturer: "Sanofi",
-    rating: 4.8,
-    description: "Asab tizimini tinchlantirish, uyquni yaxshilash va mushak tortishishlariga qarshi.",
-  },
-];
+import { useAppContext, type Medicine } from "../context/AppContext";
+import { useI18n } from "../context/I18nContext";
 
 const Pharmacy = () => {
   const { language } = useI18n();
+  const {
+    currentUser,
+    localUserEmail,
+    localUserId,
+    medicines,
+    pharmacies,
+    placePharmacyOrder,
+    profile,
+    updateProfile,
+  } = useAppContext();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Barchasi");
-  const [cart, setCart] = useState<{ medicine: Medicine; count: number }[]>([]);
+  const [orderTarget, setOrderTarget] = useState<Medicine | null>(null);
+  const [quantity, setQuantity] = useState(1);
+  const [patientName, setPatientName] = useState(profile.name);
+  const [patientPhone, setPatientPhone] = useState(profile.phone);
+  const [deliveryAddress, setDeliveryAddress] = useState(profile.city);
+  const [notes, setNotes] = useState("");
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const categories = ["Barchasi", "Yurak va qon tomir", "Vitaminlar va mineral", "Og'riqsizlantiruvchi", "Antibiotiklar"];
+  const approvedPharmacyIds = useMemo(
+    () => new Set(pharmacies.filter((pharmacy) => pharmacy.approvalStatus === "approved").map((pharmacy) => pharmacy.id)),
+    [pharmacies],
+  );
+
+  const visibleMedicines = useMemo(
+    () =>
+      medicines.filter((medicine) => medicine.stock > 0 && approvedPharmacyIds.has(medicine.pharmacyId)),
+    [approvedPharmacyIds, medicines],
+  );
+
+  const categories = useMemo(
+    () => ["Barchasi", ...Array.from(new Set(visibleMedicines.map((medicine) => medicine.category))).filter(Boolean)],
+    [visibleMedicines],
+  );
 
   const filteredMedicines = useMemo(() => {
-    return defaultMedicines.filter((m) => {
-      const matchSearch = (m.name + " " + m.description).toLowerCase().includes(searchTerm.toLowerCase());
-      const matchCat = selectedCategory === "Barchasi" || m.category === selectedCategory;
-      return matchSearch && matchCat;
-    });
-  }, [searchTerm, selectedCategory]);
+    const query = searchTerm.trim().toLowerCase();
 
-  const addToCart = (medicine: Medicine) => {
-    setCart((prev) => {
-      const existing = prev.find((item) => item.medicine.id === medicine.id);
-      if (existing) {
-        return prev.map((item) =>
-          item.medicine.id === medicine.id ? { ...item, count: item.count + 1 } : item,
-        );
-      }
-      return [...prev, { medicine, count: 1 }];
+    return visibleMedicines.filter((medicine) => {
+      const matchSearch =
+        !query ||
+        `${medicine.name} ${medicine.description} ${medicine.pharmacyName} ${medicine.manufacturer}`
+          .toLowerCase()
+          .includes(query);
+      const matchCategory = selectedCategory === "Barchasi" || medicine.category === selectedCategory;
+      return matchSearch && matchCategory;
     });
+  }, [searchTerm, selectedCategory, visibleMedicines]);
+
+  const activeUserEmail = (currentUser?.email ?? localUserEmail ?? profile.email).trim().toLowerCase();
+  const activeUserKey = (currentUser?.uid ?? localUserId ?? activeUserEmail).trim().toLowerCase();
+
+  const openOrderModal = (medicine: Medicine) => {
+    setOrderTarget(medicine);
+    setQuantity(1);
+    setPatientName(profile.name);
+    setPatientPhone(profile.phone);
+    setDeliveryAddress(profile.city);
+    setNotes("");
+    setError("");
+    setNotice("");
   };
 
-  const totalPrice = cart.reduce((sum, item) => sum + item.medicine.price * item.count, 0);
+  const closeOrderModal = () => setOrderTarget(null);
+
+  const submitOrder = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!orderTarget) {
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setError("");
+      setNotice("");
+      await placePharmacyOrder({
+        medicineId: orderTarget.id,
+        quantity,
+        patientName,
+        patientKey: activeUserKey,
+        patientEmail: activeUserEmail,
+        patientPhone,
+        deliveryAddress,
+        notes,
+      });
+      await updateProfile({ name: patientName, phone: patientPhone, city: deliveryAddress, email: activeUserEmail });
+      setNotice("Buyurtma dorixonaga yuborildi. Dorixonachi siz bilan bog'lanib yetkazib beradi.");
+      closeOrderModal();
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Buyurtmada xatolik yuz berdi.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const copy = {
     uz: {
       title: "MedElite Online Dorixona",
-      subtitle: "Sertifikatlangan dorilar, vitaminlar va retsept bo'yicha yetkazib berish xizmati",
-      searchPlaceholder: "Dori nomi yoki alomatini kiriting...",
+      subtitle: "Tasdiqlangan dorixonalar qo'shgan dorilar va manzilga yetkazib berish",
+      searchPlaceholder: "Dori nomi, dorixona yoki ishlab chiqaruvchi...",
       categories: "Kategoriyalar:",
       prescriptionBadge: "Retseptli",
       freeSaleBadge: "Erkin sotuv",
-      addToCart: "Savatga qo'shish",
-      cartTitle: "Buyurtma savatchasi",
-      total: "Jami summasi:",
-      checkout: "Buyurtmani tasdiqlash",
-      uploadRx: "Retsept rasmini yuklash",
-      rxNote: "Retseptli dorilar shifokor ko'rsatmasi tekshirilgandan so'ng yetkaziladi.",
-      backHome: "Bosh sahifaga qaytish",
+      order: "Buyurtma berish",
+      emptyTitle: "Hozircha dori qo'shilmagan",
+      emptyText: "Admin tasdiqlagan dorixonalar o'z dorilarini qo'shganda ular shu yerda ko'rinadi.",
+      backHome: "Kabinetga qaytish",
     },
     ru: {
-      title: "MedElite Онлайн Аптека",
-      subtitle: "Сертифицированные лекарства, витамины и доставка по рецепту",
-      searchPlaceholder: "Введите название препарата...",
-      categories: "Категории:",
-      prescriptionBadge: "По рецепту",
-      freeSaleBadge: "Без рецепта",
-      addToCart: "В корзину",
-      cartTitle: "Корзина заказов",
-      total: "Итого:",
-      checkout: "Оформить заказ",
-      uploadRx: "Загрузить фото рецепта",
-      rxNote: "Препараты по рецепту доставляются после проверки назначения врача.",
-      backHome: "На главную",
+      title: "MedElite Online Dorixona",
+      subtitle: "Tasdiqlangan dorixonalar qo'shgan dorilar va manzilga yetkazib berish",
+      searchPlaceholder: "Dori nomi, dorixona yoki ishlab chiqaruvchi...",
+      categories: "Kategoriyalar:",
+      prescriptionBadge: "Retseptli",
+      freeSaleBadge: "Erkin sotuv",
+      order: "Buyurtma berish",
+      emptyTitle: "Hozircha dori qo'shilmagan",
+      emptyText: "Admin tasdiqlagan dorixonalar o'z dorilarini qo'shganda ular shu yerda ko'rinadi.",
+      backHome: "Kabinetga qaytish",
     },
     en: {
       title: "MedElite Online Pharmacy",
-      subtitle: "Certified pharmaceuticals, wellness supplements & prescription delivery",
-      searchPlaceholder: "Search medicine name or symptom...",
+      subtitle: "Medicines added by approved pharmacies with address-based delivery",
+      searchPlaceholder: "Search medicine, pharmacy, or manufacturer...",
       categories: "Categories:",
-      prescriptionBadge: "Prescription Only",
-      freeSaleBadge: "Over The Counter",
-      addToCart: "Add to Cart",
-      cartTitle: "Shopping Cart",
-      total: "Total:",
-      checkout: "Proceed to Checkout",
-      uploadRx: "Upload Prescription Photo",
-      rxNote: "Prescription drugs are verified by licensed pharmacists before dispatch.",
-      backHome: "Back to Home",
+      prescriptionBadge: "Prescription",
+      freeSaleBadge: "Over the counter",
+      order: "Place order",
+      emptyTitle: "No medicines yet",
+      emptyText: "Medicines from approved pharmacies will appear here after they add inventory.",
+      backHome: "Back to workspace",
     },
   }[language];
 
   return (
     <div className="page-shell">
-      <Seo title={`MedElite | ${copy.title}`} description={copy.subtitle} path="/pharmacy" />
+      <Seo title={`MedElite | ${copy.title}`} description={copy.subtitle} path="/pharmacy" noIndex />
       <div className="site-orb site-orb-one" />
       <div className="site-orb site-orb-two" />
 
-      <header className="topbar">
-        <div className="container topbar-inner">
-          <Link to="/" className="brand">
-            <span className="brand-mark">
-              <PillIcon />
-            </span>
-            <span>
-              Med<span className="brand-accent">Elite</span> Pharmacy
-            </span>
-          </Link>
-
-          <div className="nav-actions">
-            <LanguageSwitcher compact />
-            <ThemeToggle compact />
-            <Link to="/" className="button button-ghost">
-              {copy.backHome}
-            </Link>
-          </div>
-        </div>
-      </header>
+      <Navbar brandSuffix="Pharmacy" />
 
       <main className="container section-block">
         <div className="pharmacy-hero glass-card">
@@ -215,7 +178,7 @@ const Pharmacy = () => {
               <input
                 type="text"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder={copy.searchPlaceholder}
                 className="pharmacy-search-input"
               />
@@ -223,106 +186,171 @@ const Pharmacy = () => {
           </div>
 
           <div className="pharmacy-rx-card">
-            <SparkIcon className="rx-spark-icon" />
-            <h3>{copy.uploadRx}</h3>
-            <p>{copy.rxNote}</p>
-            <button
-              type="button"
-              className="button button-secondary button-small"
-              onClick={() => alert("Retsept rasmi yuklandi. Farmatsevt tekshiruviga yuborildi.")}
-            >
-              <PaperclipIcon />
-              Fayl tanlash (JPG/PDF)
-            </button>
+            <PaperclipIcon className="rx-spark-icon" />
+            <h3>Retseptli dorilar</h3>
+            <p>Retsept talab qiladigan dori buyurtmasida izohga retsept raqami yoki shifokor ko'rsatmasini yozing.</p>
           </div>
         </div>
 
-        {/* Categories */}
         <div className="pharmacy-categories">
           <span>{copy.categories}</span>
-          {categories.map((cat) => (
+          {categories.map((category) => (
             <button
-              key={cat}
+              key={category}
               type="button"
-              className={`category-pill ${selectedCategory === cat ? "category-pill-active" : ""}`}
-              onClick={() => setSelectedCategory(cat)}
+              className={`category-pill ${selectedCategory === category ? "category-pill-active" : ""}`}
+              onClick={() => setSelectedCategory(category)}
             >
-              {cat}
+              {category}
             </button>
           ))}
         </div>
 
-        {/* Products Grid */}
-        <div className="pharmacy-layout">
-          <div className="medicine-grid">
-            {filteredMedicines.map((med) => (
-              <article key={med.id} className="medicine-card glass-card">
-                <div className="medicine-card-head">
-                  <span className={`badge ${med.prescriptionRequired ? "badge-gold" : ""}`}>
-                    {med.prescriptionRequired ? copy.prescriptionBadge : copy.freeSaleBadge}
-                  </span>
-                  <span className="medicine-rating">
-                    <StarIcon /> {med.rating}
-                  </span>
-                </div>
+        {notice && (
+          <section className="confirmation-banner">
+            <div className="confirmation-icon">
+              <CheckCircleIcon />
+            </div>
+            <div>
+              <h2>Buyurtma yuborildi</h2>
+              <p>{notice}</p>
+            </div>
+          </section>
+        )}
 
-                <div className="medicine-card-body">
-                  <h3>{med.name}</h3>
-                  <p className="medicine-dosage">{med.dosage} • {med.manufacturer}</p>
-                  <p className="medicine-desc">{med.description}</p>
-                </div>
+        {error && (
+          <section className="confirmation-banner confirmation-banner-error">
+            <div className="confirmation-icon confirmation-icon-error">
+              <ShieldIcon />
+            </div>
+            <div>
+              <h2>Xatolik</h2>
+              <p>{error}</p>
+            </div>
+          </section>
+        )}
 
-                <div className="medicine-card-foot">
-                  <strong className="medicine-price">
-                    {new Intl.NumberFormat("uz-UZ").format(med.price)} so'm
-                  </strong>
-                  <button
-                    type="button"
-                    onClick={() => addToCart(med)}
-                    className="button button-primary button-small"
-                  >
-                    <PillIcon />
-                    {copy.addToCart}
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-
-          {/* Cart Sidebar */}
-          {cart.length > 0 && (
-            <aside className="pharmacy-cart-sidebar glass-card">
-              <h3>{copy.cartTitle}</h3>
-              <div className="cart-items">
-                {cart.map((item) => (
-                  <div key={item.medicine.id} className="cart-item">
-                    <div>
-                      <strong>{item.medicine.name}</strong>
-                      <p>{item.count} x {new Intl.NumberFormat("uz-UZ").format(item.medicine.price)} so'm</p>
-                    </div>
-                    <span>{new Intl.NumberFormat("uz-UZ").format(item.medicine.price * item.count)} so'm</span>
-                  </div>
-                ))}
+        <div className="medicine-grid">
+          {filteredMedicines.map((medicine) => (
+            <article key={medicine.id} className="medicine-card glass-card">
+              <div className="medicine-card-head">
+                <span className={`badge ${medicine.prescriptionRequired ? "badge-gold" : ""}`}>
+                  {medicine.prescriptionRequired ? copy.prescriptionBadge : copy.freeSaleBadge}
+                </span>
+                <span className="medicine-rating">
+                  <StarIcon /> {medicine.stock} dona
+                </span>
               </div>
-              <div className="cart-total-row">
-                <span>{copy.total}</span>
-                <strong>{new Intl.NumberFormat("uz-UZ").format(totalPrice)} so'm</strong>
+
+              <div className="medicine-card-body">
+                <h3>{medicine.name}</h3>
+                <p className="medicine-dosage">
+                  {medicine.dosage} | {medicine.manufacturer}
+                </p>
+                <p className="medicine-desc">{medicine.description}</p>
+                <p className="medicine-desc">
+                  <strong>{medicine.pharmacyName}</strong>
+                </p>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  alert("Buyurtmangiz qabul qilindi! Kuryer tez orada bog'lanadi.");
-                  setCart([]);
-                }}
-                className="button button-primary button-block"
-              >
-                <CheckCircleIcon />
-                {copy.checkout}
-              </button>
-            </aside>
+
+              <div className="medicine-card-foot">
+                <strong className="medicine-price">
+                  {new Intl.NumberFormat("uz-UZ").format(medicine.price)} so'm
+                </strong>
+                <button type="button" onClick={() => openOrderModal(medicine)} className="button button-primary button-small">
+                  <PillIcon />
+                  {copy.order}
+                </button>
+              </div>
+            </article>
+          ))}
+
+          {filteredMedicines.length === 0 && (
+            <div className="empty-state doctor-empty-state">
+              <h3>{copy.emptyTitle}</h3>
+              <p>{copy.emptyText}</p>
+            </div>
           )}
         </div>
       </main>
+
+      {orderTarget && (
+        <div className="modal-backdrop" onClick={closeOrderModal} role="presentation">
+          <div className="modal-card modal-card-wide" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true">
+            <div className="panel-heading">
+              <div>
+                <span className="section-chip">Yetkazib berish</span>
+                <h2>{orderTarget.name}</h2>
+              </div>
+              <button type="button" className="icon-button" onClick={closeOrderModal}>
+                x
+              </button>
+            </div>
+            <form className="booking-form modal-scroll-area" onSubmit={submitOrder}>
+              <div className="field-grid">
+                <label className="field">
+                  <span>Ism</span>
+                  <div className="field-box">
+                    <UserGroupIcon />
+                    <input value={patientName} onChange={(event) => setPatientName(event.target.value)} required />
+                  </div>
+                </label>
+                <label className="field">
+                  <span>Telefon</span>
+                  <div className="field-box">
+                    <PhoneIcon />
+                    <input value={patientPhone} onChange={(event) => setPatientPhone(event.target.value)} required />
+                  </div>
+                </label>
+                <label className="field">
+                  <span>Soni</span>
+                  <div className="field-box">
+                    <PillIcon />
+                    <input
+                      type="number"
+                      min={1}
+                      max={orderTarget.stock}
+                      value={quantity}
+                      onChange={(event) => setQuantity(Math.max(1, Number(event.target.value)))}
+                      required
+                    />
+                  </div>
+                </label>
+                <label className="field field-full">
+                  <span>Yashash yoki yetkazish manzili</span>
+                  <div className="field-box">
+                    <LocationIcon />
+                    <input value={deliveryAddress} onChange={(event) => setDeliveryAddress(event.target.value)} required />
+                  </div>
+                </label>
+                <label className="field field-full">
+                  <span>Izoh</span>
+                  <textarea
+                    rows={3}
+                    value={notes}
+                    onChange={(event) => setNotes(event.target.value)}
+                    placeholder="Retsept raqami, mo'ljal yoki qo'shimcha izoh"
+                  />
+                </label>
+              </div>
+
+              <div className="cart-total-row">
+                <span>Jami</span>
+                <strong>{new Intl.NumberFormat("uz-UZ").format(orderTarget.price * quantity)} so'm</strong>
+              </div>
+
+              <div className="modal-actions">
+                <button type="button" className="button button-ghost" onClick={closeOrderModal}>
+                  Bekor qilish
+                </button>
+                <button type="submit" className="button button-primary" disabled={isSubmitting}>
+                  {isSubmitting ? "Yuborilmoqda..." : "Buyurtmani yuborish"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
