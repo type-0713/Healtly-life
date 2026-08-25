@@ -4791,7 +4791,7 @@ textarea {
 
 .hospital-select-card {
   cursor: default;
-  min-height: 560px;
+  min-height: 1000px;
 }
 
 .hospital-room-list,
